@@ -1,7 +1,7 @@
 {
   "name": "expo-speech-recognition",
   "version": "0.1.0",
-  "description": "Speech Recognition for React Native Expo projects",
+  "description": "Web SpeechRecognition implementation for React Native Expo projects",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -25,14 +25,17 @@
   "bugs": {
     "url": "https://github.com/jamsch/expo-speech-recognition/issues"
   },
-  "author": "james-libros <jamsch18@student.wintec.ac.nz> (https://github.com/jamsch)",
+  "author": "jamsch (https://github.com/jamsch)",
   "license": "MIT",
   "homepage": "https://github.com/jamsch/expo-speech-recognition#readme",
-  "dependencies": {},
   "devDependencies": {
+    "@types/dom-speech-recognition": "^0.0.3",
     "@types/react": "^18.0.25",
     "expo-module-scripts": "^3.0.11",
     "expo-modules-core": "^1.5.11"
+  },
+  "prettier": {
+    "trailingComma": "all"
   },
   "peerDependencies": {
     "expo": "*",
