@@ -41,9 +41,21 @@ const eventJunk = {
 };
 
 type NativeEventAndListener = {
+  /** Event name to listen for on native side */
   eventName: string;
   nativeListener: (nativeEvent: any) => void;
 };
+
+function stubEvent<K extends keyof SpeechRecognitionEventMap>(
+  eventName: K,
+  instance: ExpoSpeechRecognition,
+  listener: (this: SpeechRecognition, ev: Event) => unknown,
+): NativeEventAndListener {
+  return {
+    eventName,
+    nativeListener: (nativeEvent) => listener.call(instance, eventJunk),
+  };
+}
 
 const ListenerTransformers: {
   [K in keyof SpeechRecognitionEventMap]?: (
@@ -51,12 +63,45 @@ const ListenerTransformers: {
     listener: (
       this: SpeechRecognition,
       ev: SpeechRecognitionEventMap[K],
-    ) => any,
+    ) => unknown,
   ) => NativeEventAndListener[];
 } = {
+  nomatch: (instance, listener) => {
+    // @ts-ignore
+    return [stubEvent("nomatch", instance, listener)];
+  },
+  end: (instance, listener) => {
+    return [stubEvent("end", instance, listener)];
+  },
+  start: (instance, listener) => {
+    return [
+      {
+        eventName: "start",
+        nativeListener() {
+          listener.call(instance, eventJunk);
+        },
+      },
+    ];
+  },
+  error: (instance, listener) => {
+    return [
+      {
+        eventName: "error",
+        nativeListener: (nativeEvent: {
+          message: string;
+          code: SpeechRecognitionErrorCode;
+        }) => {
+          const clientEvent: SpeechRecognitionEventMap["error"] = {
+            ...eventJunk,
+            error: nativeEvent.code,
+            message: nativeEvent.message,
+          };
+          listener.call(instance, clientEvent);
+        },
+      },
+    ];
+  },
   result: (instance, listener) => {
-    const boundListener = listener.bind(instance);
-
     const handlers = [
       {
         eventName: "_results",
@@ -70,7 +115,7 @@ const ListenerTransformers: {
               new ExpoSpeechRecognitionResult(true, alternatives),
             ]),
           };
-          boundListener(clientEvent);
+          listener.call(instance, clientEvent);
         },
       },
     ];
@@ -88,7 +133,7 @@ const ListenerTransformers: {
               new ExpoSpeechRecognitionResult(false, alternatives),
             ]),
           };
-          boundListener(clientEvent);
+          listener.call(instance, clientEvent);
         },
       });
     }
