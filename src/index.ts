@@ -14,7 +14,7 @@ const emitter = new EventEmitter(
 
 const noop = () => {};
 
-const eventJunk = {
+const createEventData = (target: EventTarget) => ({
   AT_TARGET: 2 as const,
   bubbles: false,
   BUBBLING_PHASE: 3 as const,
@@ -22,7 +22,7 @@ const eventJunk = {
   CAPTURING_PHASE: 1 as const,
   composed: false,
   composedPath: () => [],
-  currentTarget: null,
+  currentTarget: target,
   defaultPrevented: false,
   eventPhase: 0,
   isTrusted: true,
@@ -31,14 +31,14 @@ const eventJunk = {
   resultIndex: 0,
   stopImmediatePropagation: noop,
   stopPropagation: noop,
-  target: null,
+  target,
   timeStamp: 0,
   type: "",
   cancelBubble: false,
   returnValue: false,
   srcElement: null,
   initEvent: noop,
-};
+});
 
 type NativeEventAndListener = {
   /** Event name to listen for on native side */
@@ -53,7 +53,8 @@ function stubEvent<K extends keyof SpeechRecognitionEventMap>(
 ): NativeEventAndListener {
   return {
     eventName,
-    nativeListener: (nativeEvent) => listener.call(instance, eventJunk),
+    nativeListener: (nativeEvent) =>
+      listener.call(instance, createEventData(instance)),
   };
 }
 
@@ -78,7 +79,7 @@ const ListenerTransformers: {
       {
         eventName: "start",
         nativeListener() {
-          listener.call(instance, eventJunk);
+          listener.call(instance, createEventData(instance));
         },
       },
     ];
@@ -92,7 +93,7 @@ const ListenerTransformers: {
           code: SpeechRecognitionErrorCode;
         }) => {
           const clientEvent: SpeechRecognitionEventMap["error"] = {
-            ...eventJunk,
+            ...createEventData(instance),
             error: nativeEvent.code,
             message: nativeEvent.message,
           };
@@ -110,7 +111,7 @@ const ListenerTransformers: {
             (result) => new ExpoSpeechRecognitionAlternative(1, result),
           );
           const clientEvent: SpeechRecognitionEventMap["result"] = {
-            ...eventJunk,
+            ...createEventData(instance),
             results: new ExpoSpeechRecognitionResultList([
               new ExpoSpeechRecognitionResult(true, alternatives),
             ]),
@@ -128,7 +129,7 @@ const ListenerTransformers: {
             (result) => new ExpoSpeechRecognitionAlternative(1, result),
           );
           const clientEvent: SpeechRecognitionEventMap["result"] = {
-            ...eventJunk,
+            ...createEventData(instance),
             results: new ExpoSpeechRecognitionResultList([
               new ExpoSpeechRecognitionResult(false, alternatives),
             ]),

@@ -11,14 +11,14 @@ const {
 const withAndroidPackageVisibilityFiltering = (config) => {
   return withAndroidManifest(config, (config) => {
     /**
-     Appends the following to our AndroidManifest:
-     <queries>
-        <package android:name="com.google.android.googlequicksearchbox" />
-        <intent>
-            <action android:name="android.speech.RecognitionService" />
-        </intent>
-    </queries>
-     */
+       Appends the following to our AndroidManifest:
+       <queries>
+          <package android:name="com.google.android.googlequicksearchbox" />
+          <intent>
+              <action android:name="android.speech.RecognitionService" />
+          </intent>
+      </queries>
+       */
     config.modResults.manifest.queries = [
       ...(config.modResults.manifest.queries || []),
       {
