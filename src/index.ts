@@ -6,7 +6,6 @@ import {
 // Import the native module. On web, it will be resolved to ExpoSpeechRecognition.web.ts
 // and on native platforms to ExpoSpeechRecognition.ts
 import ExpoSpeechRecognitionModule from "./ExpoSpeechRecognitionModule";
-import "dom-speech-recognition";
 
 const emitter = new EventEmitter(
   ExpoSpeechRecognitionModule ?? NativeModulesProxy.ExpoSpeechRecognition,
@@ -171,7 +170,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onstart: SpeechListener<"start"> | null = null;
   set onstart(listener: SpeechListener<"start"> | null) {
-    this.#setListeners("start", listener, this.#onstart);
+    this._setListeners("start", listener, this.#onstart);
     this.#onstart = listener;
   }
   /** Fired when the speech recognition starts. */
@@ -181,7 +180,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onend: SpeechListener<"end"> | null = null;
   set onend(listener: SpeechListener<"end"> | null) {
-    this.#setListeners("end", listener, this.#onend);
+    this._setListeners("end", listener, this.#onend);
     this.#onend = listener;
   }
   /** Fired when the speech recognition service has disconnected. */
@@ -191,7 +190,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onerror: SpeechListener<"error"> | null = null;
   set onerror(listener: SpeechListener<"error"> | null) {
-    this.#setListeners("error", listener, this.#onerror);
+    this._setListeners("error", listener, this.#onerror);
     this.#onerror = listener;
   }
   /** Fired when the speech recognition service encounters an error. */
@@ -199,7 +198,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
     return this.#onerror;
   }
 
-  #setListeners<K extends keyof SpeechRecognitionEventMap>(
+  _setListeners<K extends keyof SpeechRecognitionEventMap>(
     key: K,
     listenerFn: SpeechListener<K> | null,
     existingListener: SpeechListener<K> | null,
@@ -214,7 +213,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onaudioend: SpeechListener<"audioend"> | null = null;
   set onaudioend(listener: SpeechListener<"audioend"> | null) {
-    this.#setListeners("audioend", listener, this.#onaudioend);
+    this._setListeners("audioend", listener, this.#onaudioend);
     this.#onaudioend = listener;
   }
   get onaudioend() {
@@ -223,7 +222,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onresult: SpeechListener<"result"> | null = null;
   set onresult(listener: SpeechListener<"result"> | null) {
-    this.#setListeners("result", listener, this.#onresult);
+    this._setListeners("result", listener, this.#onresult);
     this.#onresult = listener;
   }
   /** Fired when the speech recognition service returns a result —
@@ -234,7 +233,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onnomatch: SpeechListener<"nomatch"> | null = null;
   set onnomatch(listener: SpeechListener<"nomatch"> | null) {
-    this.#setListeners("nomatch", listener, this.#onnomatch);
+    this._setListeners("nomatch", listener, this.#onnomatch);
     this.#onnomatch = listener;
   }
   /** Fired when the speech recognition service returns a final result with no significant recognition. */
@@ -244,7 +243,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onspeechstart: SpeechListener<"speechstart"> | null = null;
   set onspeechstart(listener: SpeechListener<"speechstart"> | null) {
-    this.#setListeners("speechstart", listener, this.#onspeechstart);
+    this._setListeners("speechstart", listener, this.#onspeechstart);
     this.#onspeechstart = listener;
   }
   /** Fired when the speech recognition service returns a final result with no significant recognition. */
@@ -254,7 +253,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onspeechend: SpeechListener<"speechend"> | null = null;
   set onspeechend(listener: SpeechListener<"speechend"> | null) {
-    this.#setListeners("speechend", listener, this.#onspeechend);
+    this._setListeners("speechend", listener, this.#onspeechend);
     this.#onspeechend = listener;
   }
   /** Fired when the speech recognition service returns a final result with no significant recognition. */
