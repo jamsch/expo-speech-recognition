@@ -38,39 +38,39 @@ Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/do
 ```ts
 import { ExpoSpeechRecognition } from "@jamsch/expo-speech-recognition";
 
-const speech = new ExpoSpeechRecognition();
+const recognition = new ExpoSpeechRecognition();
 
 // Set language (Normalized)
-speech.lang = "en-US";
+recognition.lang = "en-US";
 // Enable interim results
-speech.interim = true;
+recognition.interim = true;
 // The amount of results
 recognition.maxAlternatives = 1;
 
 // Assign an event listener (Overwrites all "start" event listeners)
-speech.onstart = (event) => console.log("started!");
+recognition.onstart = (event) => console.log("started!");
 
 // ... or register an event listener
-speech.registerEventListener("start", (event) => console.log("started!"));
+recognition.registerEventListener("start", (event) => console.log("started!"));
 
-speech.registerEventListener("result", (event) => {
+recognition.registerEventListener("result", (event) => {
   // Concatenate every speech result transcript
   const result = event.results[event.resultIndex];
   const firstResult = result?.[0];
   console.log("result:", result?.transcript, "is final:", result?.isFinal);
 });
 
-speech.registerEventListener("error", (event) => {
+recognition.registerEventListener("error", (event) => {
   const errorCode = event.error;
   const errorMessage = event.message;
   console.log("an error occurred:", errorCode, "with messsage:", errorMessage);
 }
 
-speech.registerEventListener("end", (event) => console.log("ended!"));
+recognition.registerEventListener("end", (event) => console.log("ended!"));
 
 // Start speech recognition
-speech.start();
+recognition.start();
 
 // Stop speech recognition
-speech.stop(); // or speech.abort()
+recognition.stop(); // or recognition.abort()
 ```
