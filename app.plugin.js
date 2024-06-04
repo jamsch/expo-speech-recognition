@@ -6,22 +6,25 @@ const {
 } = require("expo/config-plugins");
 
 /**
- * @type {import("expo/config-plugins").ConfigPlugin}
+ * @type {import("expo/config-plugins").ConfigPlugin<{ packages: string[] }>}
  */
-const withAndroidPackageVisibilityFiltering = (config) => {
+const withAndroidPackageVisibilityFiltering = (config, { packages = [] }) => {
   return withAndroidManifest(config, (config) => {
-    // Check if the manifest already contains the intent filter
-    if (
-      Array.isArray(config.modResults.manifest.queries) &&
-      config.modResults.manifest.queries.some((query) => {
-        return (
-          query.package?.[0]?.$?.["android:name"] ===
-          "com.google.android.googlequicksearchbox"
-        );
-      })
-    ) {
-      return config;
-    }
+    // Default speech recognition packages
+    const allPackages =
+      packages.length > 0
+        ? packages
+        : [
+            "com.google.android.googlequicksearchbox",
+            // "com.samsung.android.bixby.agent",
+            // "com.microsoft.cortana",
+            // "com.nuance.balerion",
+            // "com.htc.sense.hsp",
+          ];
+
+    // Add speech recognition packages to the manifest if not already present
+    config.modResults.manifest.queries =
+      config.modResults.manifest.queries || [];
 
     /**
        Appends the following to our AndroidManifest:
@@ -32,25 +35,33 @@ const withAndroidPackageVisibilityFiltering = (config) => {
           </intent>
       </queries>
        */
-    config.modResults.manifest.queries = [
-      ...(config.modResults.manifest.queries || []),
-      {
-        package: {
-          $: { "android:name": "com.google.android.googlequicksearchbox" },
-        },
-        intent: {
-          action: {
-            $: { "android:name": "android.speech.RecognitionService" },
+    allPackages.forEach((pkg) => {
+      if (
+        !config.modResults.manifest.queries.some(
+          (query) => query.package?.[0]?.$?.["android:name"] === pkg,
+        )
+      ) {
+        config.modResults.manifest.queries.push({
+          package: { $: { "android:name": pkg } },
+          intent: {
+            action: {
+              $: { "android:name": "android.speech.RecognitionService" },
+            },
           },
-        },
-      },
-    ];
+        });
+      }
+    });
+
     return config;
   });
 };
 
 /**
- * @type {import("expo/config-plugins").ConfigPlugin<{microphonePermission?: string; speechRecognitionPermission?: string;}>}
+ * @type {import("expo/config-plugins").ConfigPlugin<{
+ * microphonePermission?: string;
+ * speechRecognitionPermission?: string;
+ * androidSpeechServicePackages?: string[];
+ * }>}
  */
 const withExpoSpeechRecognition = (config, props) => {
   if (!config.ios) {
@@ -78,7 +89,12 @@ const withExpoSpeechRecognition = (config, props) => {
       ["android.permission.RECORD_AUDIO"],
     ],
     // Android package visibility filtering (for the Google App "com.google.android.googlequicksearchbox")
-    withAndroidPackageVisibilityFiltering,
+    [
+      withAndroidPackageVisibilityFiltering,
+      {
+        packages: props.androidSpeechServicePackages,
+      },
+    ],
   ]);
 };
 

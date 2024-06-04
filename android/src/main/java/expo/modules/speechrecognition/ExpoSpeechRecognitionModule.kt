@@ -16,8 +16,8 @@ class SpeechRecognitionOptions : Record {
 
   @Field val lang: String? = "en-US"
 
-  // @Field
-  // val continuous: Boolean? = false
+  @Field
+  val continuous: Boolean? = false
 
   @Field val maxAlternatives: Number? = 1
 }

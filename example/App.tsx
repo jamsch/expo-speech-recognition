@@ -1,53 +1,95 @@
-import { Button, StyleSheet, View } from "react-native";
-
+import {
+  Button,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+} from "react-native";
 import { ExpoSpeechRecognition } from "expo-speech-recognition";
+import { useRef, useState } from "react";
 
-let recognition: ExpoSpeechRecognition | null = null;
-const start = () => {
-  if (!recognition) {
-    recognition = new ExpoSpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.onstart = () => {
-      console.log("started");
+const useSpeechRecognition = () => {
+  const [transcription, setTranscription] = useState<null | {
+    isFinal: boolean;
+    transcript: string;
+  }>(null);
+  const [status, setStatus] = useState<"idle" | "starting" | "recognizing">(
+    "idle",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const recognition = useRef<ExpoSpeechRecognition>();
+
+  const startListening = async () => {
+    if (status !== "idle") {
+      return;
+    }
+
+    // Clear the previous transcription
+    setTranscription(null);
+    setStatus("starting");
+    recognition.current = new ExpoSpeechRecognition();
+    recognition.current.lang = "en-US";
+    recognition.current.interimResults = true;
+    recognition.current.maxAlternatives = 1;
+    recognition.current.continuous = true;
+
+    recognition.current.onstart = () => {
+      setStatus("recognizing");
     };
-    recognition.onresult = (event) => {
-      console.log(event);
+
+    recognition.current.onresult = (event) => {
+      setTranscription({
+        isFinal: event.results[0].isFinal,
+        transcript: event.results[0][event.resultIndex].transcript,
+      });
     };
-    recognition.onerror = (event) => {
-      console.log(event);
+
+    recognition.current.onerror = (event) => {
+      setError(event.error);
+      setStatus("idle");
     };
-    recognition.onend = () => {
-      console.log("ended");
-    };
-  }
-  recognition.start();
+
+    recognition.current.start();
+  };
+
+  const stopListening = async () => {
+    recognition.current?.stop();
+  };
+
+  return {
+    status,
+    transcription,
+    error,
+    startListening,
+    stopListening,
+  };
 };
 
 export default function App() {
-  /*
-  const start = async () => {
-    const { status } = await ExpoSpeechRecognition.requestPermissionsAsync();
-    if (status !== "granted") {
-      alert("Permission to access speech recognition is not granted");
-      return;
-    }
-    try {
-      await ExpoSpeechRecognition.startListeningAsync({
-        language: "en-US",
-        onTranscriptionComplete: (result) => {
-          console.log(result);
-        },
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  }
-  */
+  const { status, transcription, error, startListening, stopListening } =
+    useSpeechRecognition();
 
   return (
-    <View style={styles.container}>
-      <Button title="start" onPress={start} />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <Text>Status: {status}</Text>
+      <Text>Error: {error}</Text>
+
+      <Text>Transcript</Text>
+      <ScrollView>
+        <Text>{JSON.stringify(transcription)}</Text>
+      </ScrollView>
+
+      <Button
+        title="Start"
+        disabled={status !== "idle"}
+        onPress={startListening}
+      />
+      <Button
+        title="Stop"
+        disabled={status !== "recognizing"}
+        onPress={stopListening}
+      />
+    </SafeAreaView>
   );
 }
 

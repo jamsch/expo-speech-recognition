@@ -6,6 +6,11 @@ export interface ExpoSpeechRecognitionModule extends NativeModule {
     lang: string;
     interimResults: boolean;
     maxAlternatives: number;
+    /** An array of strings that will be used to provide context to the speech recognition engine. */
+    contextualStrings: string[];
+    continuous: boolean;
+    requiresOnDeviceRecognition: boolean;
+    addsPunctuation: boolean;
   }): void;
   stop(): void;
   requestPermissionAsync(): Promise<PermissionResponse>;

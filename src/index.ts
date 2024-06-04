@@ -106,6 +106,7 @@ const ListenerTransformers: {
       {
         eventName: "_results",
         nativeListener: (nativeEvent: { results: string[] }) => {
+          console.log("_results", nativeEvent);
           const alternatives = nativeEvent.results.map(
             (result) => new ExpoSpeechRecognitionAlternative(1, result),
           );
@@ -124,6 +125,7 @@ const ListenerTransformers: {
       handlers.push({
         eventName: "_partialresults",
         nativeListener: (nativeEvent: { results: string[] }) => {
+          console.log("_partialresults", nativeEvent);
           const alternatives = nativeEvent.results.map(
             (result) => new ExpoSpeechRecognitionAlternative(1, result),
           );
@@ -133,6 +135,8 @@ const ListenerTransformers: {
               new ExpoSpeechRecognitionResult(false, alternatives),
             ]),
           };
+          console.log("_partialresults", clientEvent.results[0][0]);
+
           listener.call(instance, clientEvent);
         },
       });
@@ -154,6 +158,11 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   grammars: SpeechGrammarList = new ExpoSpeechGrammarList();
   maxAlternatives: number = 1;
   continuous: boolean = false;
+
+  contextualStrings = [];
+  requiresOnDeviceRecognition = false;
+  addsPunctuation = false;
+
   // keyed by listener function
   #subscriptionMap: Map<Function, Subscription[]> = new Map();
 
@@ -162,9 +171,16 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
       lang: this.lang,
       interimResults: this.interimResults,
       maxAlternatives: this.maxAlternatives,
+      contextualStrings: this.contextualStrings,
+      requiresOnDeviceRecognition: this.requiresOnDeviceRecognition,
+      addsPunctuation: this.addsPunctuation,
+      continuous: this.continuous,
     });
   }
-  stop = ExpoSpeechRecognitionModule.stop;
+  stop = () => {
+    console.log("stop");
+    ExpoSpeechRecognitionModule.stop();
+  };
   abort = ExpoSpeechRecognitionModule.stop;
   requestPermissionAsync = ExpoSpeechRecognitionModule.requestPermissionAsync;
 
@@ -180,7 +196,14 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 
   #onend: SpeechListener<"end"> | null = null;
   set onend(listener: SpeechListener<"end"> | null) {
-    this._setListeners("end", listener, this.#onend);
+    this._setListeners(
+      "end",
+      (ev) => {
+        console.log("onend", ev);
+        listener?.call(this, ev);
+      },
+      this.#onend,
+    );
     this.#onend = listener;
   }
   /** Fired when the speech recognition service has disconnected. */
@@ -363,6 +386,15 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
 
   constructor(results: ExpoSpeechRecognitionResult[]) {
     this.#results = results;
+
+    return new Proxy(this, {
+      get(target, prop) {
+        if (typeof prop === "string" && !isNaN(Number(prop))) {
+          return target.item(Number(prop));
+        }
+        return (target as any)[prop];
+      },
+    });
   }
 }
 
@@ -389,6 +421,15 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
   ) {
     this.isFinal = isFinal;
     this.#alternatives = alternatives;
+
+    return new Proxy(this, {
+      get(target, prop) {
+        if (typeof prop === "string" && !isNaN(Number(prop))) {
+          return target.item(Number(prop));
+        }
+        return (target as any)[prop];
+      },
+    });
   }
 }
 

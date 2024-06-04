@@ -29,10 +29,10 @@
   "license": "MIT",
   "homepage": "https://github.com/jamsch/expo-speech-recognition#readme",
   "devDependencies": {
-    "@types/dom-speech-recognition": "^0.0.3",
-    "@types/react": "^18.0.25",
-    "expo-module-scripts": "^3.0.11",
-    "expo-modules-core": "^1.5.11"
+    "@types/dom-speech-recognition": "^0.0.4",
+    "@types/react": "^18.3.3",
+    "expo-module-scripts": "^3.5.2",
+    "expo-modules-core": "^1.12.12"
   },
   "prettier": {
     "trailingComma": "all"
