@@ -35,6 +35,54 @@ npm install @jamsch/expo-speech-recognition
 
 ## Usage
 
+### Using Hooks
+
+Using hooks is the easiest way to get started. The `createSpeechRecognizer` function returns a `useEvent` hook that you can use to register event listeners and start/stop speech recognition.
+
+```tsx
+import { createSpeechRecognizer } from "@jamsch/expo-speech-recognition";
+
+const recognizer = createSpeechRecognizer();
+
+function MyComponent() {
+  const [recognizing, setRecognizing] = useState(false);
+  const [transcript, setTranscript] = useState("");
+
+  recognizer.useEvent("start", () => setRecognizing(true));
+  recognizer.useEvent("end", () => setRecognizing(false));
+  recognizer.useEvent("result", (ev) => {
+    setTranscript(ev.results[ev.resultIndex][0].transcript);
+  });
+  recognizer.useEvent("error", (ev) => {
+    console.log("error code:", ev.error, "error messsage:", ev.message);
+  });
+
+  const handleStart = () => {
+    recognizer.start({
+      lang: "en-US",
+      interimResults: true,
+      maxAlternatives: 1,
+      continuous: false,
+      requiresOnDeviceRecognition: false,
+      addsPunctuation: false,
+      contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+    });
+  };
+
+  return (
+    <View>
+      <Button title="Start" onPress={handleStart} disabled={recognizing} />
+
+      <ScrollView>
+        <Text>{transcript}</Text>
+      </ScrollView>
+    </View>
+  );
+}
+```
+
+### Using the Web SpeechRecognition API
+
 Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars` and `continuous`) on some OSes aren't yet supported.
 
 ```ts
@@ -43,21 +91,22 @@ import { ExpoSpeechRecognition } from "@jamsch/expo-speech-recognition";
 const recognition = new ExpoSpeechRecognition();
 
 recognition.lang = "en-US";
+// [Default: false] Note for iOS: final results are only available after speech recognition has stopped
 recognition.interimResults = true;
 recognition.maxAlternatives = 1;
-// [Default: false] Continuous recognition
+// [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds
 recognition.continuous = true;
 
 // Custom (non-web) properties
 
 // Short custom phrases that are unique to your app
 recognition.contextualStrings = ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"];
-// [Default: false] Prevent device from sending audio over the network
+// [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
 recognition.requiresOnDeviceRecognition = true;
-// [Default: false] Include punctuation in the recognition results
+// [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
 recognition.addsPunctuation = true;
 
-// Assign an event listener (note: overwrites all event listeners)
+// Assign an event listener (note: this overwrites all event listeners)
 recognition.onstart = (event) => console.log("started!");
 recognition.onend = (event) => console.log("ended!");
 recognition.onresult = (event) => {
@@ -92,5 +141,61 @@ recognition.registerEventListener("end", (event) => console.log("ended!"));
 recognition.start();
 
 // Stop speech recognition
-recognition.stop(); // or recognition.abort()
+recognition.stop();
+```
+
+### Direct module API
+
+You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly without web-based polyfills.
+
+```ts
+import {
+  ExpoSpeechRecognitionModule,
+  ExpoSpeechRecognitionModuleEmitter,
+} from "@jamsch/expo-speech-recognition";
+
+// Register event listeners
+
+const startListener = ExpoSpeechRecognitionModuleEmitter.addListener(
+  "start",
+  () => console.log("Speech recognition started"),
+);
+// and remove the listener when you're done:
+startListener.remove();
+
+ExpoSpeechRecognitionModuleEmitter.addListener("end", () => {
+  console.log("Speech recognition ended");
+});
+
+ExpoSpeechRecognitionModuleEmitter.addListener("result", (event) => {
+  const result = event.results[event.resultIndex]?.[0];
+  console.log("result:", result?.transcript, "final:", result?.isFinal);
+});
+
+ExpoSpeechRecognitionModuleEmitter.addListener("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+// Start speech recognition
+ExpoSpeechRecognitionModule.start({
+  lang: "en-US",
+  interimResults: true,
+  maxAlternatives: 1,
+  continuous: true,
+  requiresOnDeviceRecognition: false,
+  addsPunctuation: false,
+  contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+});
+
+// Stop speech recognition
+ExpoSpeechRecognitionModule.stop();
+
+// Get list of supported locales
+const supportedLocales = ExpoSpeechRecognitionModule.getSupportedLocales();
+console.log("Supported locales:", supportedLocales.join(", "));
+
+// Get list of speech recognition services available on the device
+// Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
+const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
+console.log("Speech recognition services:", packages.join(", "));
 ```

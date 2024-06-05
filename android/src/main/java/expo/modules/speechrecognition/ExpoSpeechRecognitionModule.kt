@@ -3,6 +3,7 @@ package expo.modules.speechrecognition
 import android.Manifest.permission.RECORD_AUDIO
 import android.content.Intent
 import android.speech.RecognitionService
+import android.speech.SpeechRecognizer
 import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
@@ -12,14 +13,23 @@ import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 
 class SpeechRecognitionOptions : Record {
-  @Field val interimResults: Boolean? = false
+    @Field val interimResults: Boolean? = false
 
-  @Field val lang: String? = "en-US"
+    @Field val lang: String? = "en-US"
 
-  @Field
-  val continuous: Boolean? = false
+    @Field
+    val continuous: Boolean? = false
 
-  @Field val maxAlternatives: Number? = 1
+    @Field val maxAlternatives: Number? = 1
+
+    @Field
+    var contextualStrings: List<String>? = null
+
+    @Field
+    var requiresOnDeviceRecognition: Boolean = false
+
+    @Field
+    var addsPunctuation: Boolean = false
 }
 
 class ExpoSpeechRecognitionModule : Module() {
@@ -65,15 +75,13 @@ class ExpoSpeechRecognitionModule : Module() {
         // Fired when the speech recognition service has begun listening to incoming audio with
         // intent to recognize grammars associated with the current SpeechRecognition
         "start",
+        // Called when there's results (as a string array, not API compliant)
+        "results",
 
         // Custom events
 
         // Called when the endpointer is ready for the user to start speaking.
         "_speechready",
-        // Called when there's partial results
-        "_partialresults",
-        // Called when there's results (as a string array, not API compliant)
-        "_results",
     )
 
     Function("getSpeechRecognitionServices") {
@@ -103,13 +111,32 @@ class ExpoSpeechRecognitionModule : Module() {
       if (hasNotGrantedPermissions()) {
         throw PermissionsException("Missing RECORD_AUDIO permissions.")
       }
-      if (appContext.reactContext == null) {
+    val service =
+        ExpoSpeechService.getInstance(appContext.reactContext!!) { name, body ->
+            val nonNullBody = body ?: emptyMap()
+            sendEvent(name, nonNullBody)
+        }
+    service.start(options)
+    }
+
+    Function("stop") {
         val service =
             ExpoSpeechService.getInstance(appContext.reactContext!!) { name, body ->
-              sendEvent(name, body)
+                val nonNullBody = body ?: emptyMap()
+                sendEvent(name, nonNullBody)
             }
-        service.start(options)
+        service.stop()
+    }
+
+    Function("getSupportedLocales") {
+      val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(appContext.reactContext!!)
+      val supportedLanguages = SpeechRecognizer.getRecognizer().supportedLanguages
+
+      val languageList = mutableListOf<String>()
+      for (language in supportedLanguages) {
+          languageList.add(language.toString())
       }
+      languageList
     }
   }
 

@@ -14,7 +14,7 @@ struct SpeechRecognitionOptions: Record {
   var maxAlternatives: Int = 1
 
   @Field
-  var contextualStrings: [String] = []
+  var contextualStrings: [String]? = nil
 
   @Field
   var requiresOnDeviceRecognition: Bool = false

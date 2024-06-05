@@ -3,6 +3,7 @@ package expo.modules.speechrecognition
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -55,6 +56,11 @@ private constructor(
         speech?.startListening(intent)
     }
 
+    fun stop() {
+        speech?.destroy()
+        recognitionState = RecognitionState.INACTIVE
+    }
+
     fun getState(): RecognitionState {
         return recognitionState
     }
@@ -67,12 +73,27 @@ private constructor(
         // The server may ignore a request for partial results in some or all cases.
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, options.interimResults ?: false)
 
-        // Use a language model based on free-form speech recognition.
-        // This is a value to use for EXTRA_LANGUAGE_MODEL.
         intent.putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM, // LANGUAGE_MODEL_WEB_SEARCH
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
         )
+
+        val contextualStrings = options.contextualStrings
+        if (!contextualStrings.isNullOrEmpty()) {
+            intent.putExtra(
+                RecognizerIntent.EXTRA_BIASING_STRINGS,
+                contextualStrings.toTypedArray()
+            )
+        }
+
+        if (options.addsPunctuation) {
+            intent.putExtra(RecognizerIntent.EXTRA_ENABLE_FORMATTING, true)
+        }
+
+        // Offline recognition
+        if (options.requiresOnDeviceRecognition && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+        }
 
         // Optional limit on the maximum number of results to return.
         // If omitted the recognizer will choose how many results to return. Must be an integer.
@@ -132,7 +153,7 @@ private constructor(
         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
             resultsList.addAll(matches)
         }
-        sendEvent("_results", mapOf("results" to resultsList))
+        sendEvent("results", mapOf("transcriptions" to resultsList, "isFinal" to true))
         Log.d("ESR", "onResults()")
     }
 
@@ -141,7 +162,7 @@ private constructor(
         partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
             partialResultsList.addAll(matches)
         }
-        sendEvent("_partialresults", mapOf("results" to partialResultsList))
+        sendEvent("results", mapOf("transcriptions" to partialResultsList, "isFinal" to false))
         Log.d("ESR", "onPartialResults()")
     }
 

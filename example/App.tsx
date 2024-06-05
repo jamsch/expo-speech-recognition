@@ -1,103 +1,141 @@
 import {
   Button,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  View,
 } from "react-native";
-import { ExpoSpeechRecognition } from "expo-speech-recognition";
-import { useRef, useState } from "react";
+import { createSpeechRecognizer } from "expo-speech-recognition";
+import { useState } from "react";
 
-const useSpeechRecognition = () => {
+const recognizer = createSpeechRecognizer();
+
+export default function App() {
+  const [error, setError] = useState<{ code: string; message: string } | null>(
+    null,
+  );
+
   const [transcription, setTranscription] = useState<null | {
     isFinal: boolean;
     transcript: string;
   }>(null);
+
   const [status, setStatus] = useState<"idle" | "starting" | "recognizing">(
     "idle",
   );
-  const [error, setError] = useState<string | null>(null);
-  const recognition = useRef<ExpoSpeechRecognition>();
 
-  const startListening = async () => {
+  recognizer.useEvent("result", (ev) => {
+    console.log("[event]: result, isFinal:", ev.results[0].isFinal);
+    setTranscription({
+      isFinal: ev.results[0].isFinal,
+      transcript: ev.results[ev.resultIndex][0].transcript,
+    });
+  });
+
+  recognizer.useEvent("start", () => {
+    console.log("[event]: start");
+    setStatus("recognizing");
+  });
+
+  recognizer.useEvent("end", () => {
+    console.log("[event]: end");
+    setStatus("idle");
+  });
+
+  recognizer.useEvent("error", (ev) => {
+    console.log("[event]: error", ev.error, ev.message);
+    setError({
+      code: ev.error,
+      message: ev.message,
+    });
+  });
+
+  const startListening = () => {
     if (status !== "idle") {
       return;
     }
-
-    // Clear the previous transcription
-    setTranscription(null);
+    setError(null);
     setStatus("starting");
-    recognition.current = new ExpoSpeechRecognition();
-    recognition.current.lang = "en-US";
-    recognition.current.interimResults = true;
-    recognition.current.maxAlternatives = 1;
-    recognition.current.continuous = true;
-
-    recognition.current.onstart = () => {
-      setStatus("recognizing");
-    };
-
-    recognition.current.onresult = (event) => {
-      setTranscription({
-        isFinal: event.results[0].isFinal,
-        transcript: event.results[0][event.resultIndex].transcript,
-      });
-    };
-
-    recognition.current.onerror = (event) => {
-      setError(event.error);
-      setStatus("idle");
-    };
-
-    recognition.current.start();
+    recognizer.start({
+      lang: "hi-IN-translit",
+      interimResults: true,
+      maxAlternatives: 3,
+      continuous: false,
+      requiresOnDeviceRecognition: false,
+      addsPunctuation: true,
+      contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
+    });
   };
 
-  const stopListening = async () => {
-    recognition.current?.stop();
+  const stopListening = () => {
+    recognizer.stop();
   };
-
-  return {
-    status,
-    transcription,
-    error,
-    startListening,
-    stopListening,
-  };
-};
-
-export default function App() {
-  const { status, transcription, error, startListening, stopListening } =
-    useSpeechRecognition();
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text>Status: {status}</Text>
-      <Text>Error: {error}</Text>
+      <View style={styles.card}>
+        <Text style={styles.text}>
+          {error ? JSON.stringify(error) : "Error messages goes here"}
+        </Text>
+      </View>
 
-      <Text>Transcript</Text>
-      <ScrollView>
-        <Text>{JSON.stringify(transcription)}</Text>
+      <ScrollView style={[styles.card, { height: 200 }]}>
+        <View>
+          <Text style={styles.text}>
+            Status:{" "}
+            <Text style={{ color: status === "idle" ? "green" : "red" }}>
+              {status}
+            </Text>
+          </Text>
+        </View>
+        <View style={{ marginTop: 10 }}>
+          <Text style={styles.text}>
+            {transcription?.transcript || "transcript goes here"}
+          </Text>
+        </View>
       </ScrollView>
 
-      <Button
-        title="Start"
-        disabled={status !== "idle"}
-        onPress={startListening}
-      />
-      <Button
-        title="Stop"
-        disabled={status !== "recognizing"}
-        onPress={stopListening}
-      />
+      <View style={styles.buttonContainer}>
+        {status === "idle" ? (
+          <Button title="Start Recognition" onPress={startListening} />
+        ) : (
+          <Button
+            title="Stop Recognition"
+            disabled={status !== "recognizing"}
+            onPress={stopListening}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    marginHorizontal: 20,
+    marginTop: 30,
+    gap: 10,
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  card: {
+    backgroundColor: "#eee",
+    padding: 10,
+    borderRadius: 10,
+    borderColor: "#ccc",
+    borderWidth: 2,
+    width: "100%",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+  },
+  text: {
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
 });

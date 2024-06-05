@@ -4,7 +4,6 @@ import Speech
 
 /// A helper for transcribing speech to text using SFSpeechRecognizer and AVAudioEngine.
 actor ExpoSpeechRecognizer: ObservableObject {
-
   enum RecognizerError: Error {
     case nilRecognizer
     case notAuthorizedToRecognize
@@ -21,23 +20,25 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  @MainActor var transcript: String = ""
-
   private var options: SpeechRecognitionOptions?
   private var audioEngine: AVAudioEngine?
   private var request: SFSpeechAudioBufferRecognitionRequest?
   private var task: SFSpeechRecognitionTask?
   private var recognizer: SFSpeechRecognizer?
+  private var speechStartHandler: (() -> Void)?
+
+  /// Detection timer, for non-continuous speech recognition
+  @MainActor var detectionTimer: Timer?
 
   @MainActor var endHandler: (() -> Void)?
 
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
   init(
-    locale: String
+    locale: Locale
   ) async throws {
     recognizer = SFSpeechRecognizer(
-      locale: Locale(identifier: locale)
+      locale: locale
     )
 
     guard recognizer != nil else {
@@ -61,7 +62,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     options: SpeechRecognitionOptions,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
     errorHandler: @escaping (Error) -> Void,
-    endHandler: (() -> Void)?
+    endHandler: (() -> Void)?,
+    speechStartHandler: @escaping (() -> Void)
   ) {
     // assign the end handler to the task
     self.endHandler = endHandler
@@ -69,7 +71,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
       await startRecognizer(
         options: options,
         resultHandler: resultHandler,
-        errorHandler: errorHandler
+        errorHandler: errorHandler,
+        speechStartHandler: speechStartHandler
       )
     }
   }
@@ -86,8 +89,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private func startRecognizer(
     options: SpeechRecognitionOptions,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
-    errorHandler: @escaping (Error) -> Void
+    errorHandler: @escaping (Error) -> Void,
+    speechStartHandler: @escaping () -> Void
   ) {
+    self.speechStartHandler = speechStartHandler
+
     guard let recognizer: SFSpeechRecognizer, recognizer.isAvailable else {
       errorHandler(RecognizerError.recognizerIsUnavailable)
       return
@@ -101,6 +107,14 @@ actor ExpoSpeechRecognizer: ObservableObject {
       self.task = recognizer.recognitionTask(
         with: request,
         resultHandler: { [weak self] result, error in
+          // Speech start event
+          if result != nil && error == nil {
+            Task { [weak self] in
+              await self?.handleSpeechStart()
+            }
+          }
+
+          // Result handler
           self?.recognitionHandler(
             audioEngine: audioEngine,
             result: result,
@@ -110,20 +124,35 @@ actor ExpoSpeechRecognizer: ObservableObject {
             continuous: options.continuous
           )
         })
+
+      if !options.continuous {
+        invalidateAndScheduleTimer()
+      }
+
     } catch {
       self.reset()
       errorHandler(error)
     }
   }
 
+  private func handleSpeechStart() {
+    speechStartHandler?()
+    speechStartHandler = nil
+  }
+
   /// Reset the speech recognizer.
   private func reset() {
     let taskWasRunning = task != nil
+
     task?.cancel()
     audioEngine?.stop()
+    audioEngine?.inputNode.removeTap(onBus: 0)
     audioEngine = nil
     request = nil
     task = nil
+    speechStartHandler = nil
+    invalidateDetectionTimer()
+
     // If the task was running, emit the end handler
     // This avoids emitting the end handler multiple times
 
@@ -131,7 +160,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     print("SpeechRecognizer: end")
     if taskWasRunning {
       Task {
-
         await MainActor.run {
           self.endHandler?()
         }
@@ -146,10 +174,15 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     let request = SFSpeechAudioBufferRecognitionRequest()
     request.shouldReportPartialResults = options.interimResults
+
     if recognizer.supportsOnDeviceRecognition {
       request.requiresOnDeviceRecognition = options.requiresOnDeviceRecognition
     }
-    request.contextualStrings = options.contextualStrings
+
+    if let contextualStrings = options.contextualStrings {
+      request.contextualStrings = contextualStrings
+    }
+
     if #available(iOS 16, *) {
       request.addsPunctuation = options.addsPunctuation
     }
@@ -181,28 +214,62 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let receivedFinalResult = result?.isFinal ?? false
     let receivedError = error != nil
 
-    if receivedFinalResult || receivedError {
-      audioEngine.stop()
-      audioEngine.inputNode.removeTap(onBus: 0)
-    }
-
     if let result: SFSpeechRecognitionResult {
       Task { @MainActor in
-        resultHandler(result)
-      }
-      if !continuous && receivedFinalResult {
-        // Stop the speech recognizer
-        Task {
-          await self.reset()
+        let taskState = await task?.state
+        // Make sure the task is running before emitting the result
+        if taskState != .none {
+          resultHandler(result)
         }
       }
     }
 
     if let error: Error {
-      errorHandler(error)
-      return
+      Task { @MainActor in
+        errorHandler(error)
+      }
+    }
+
+    if receivedFinalResult || receivedError {
+      audioEngine.stop()
+      audioEngine.inputNode.removeTap(onBus: 0)
+    }
+
+    // Non-continuous speech recognition
+    // Stop the speech recognizer if the timer fires after not receiving a result for 3 seconds
+    if !continuous && !receivedError {
+      invalidateAndScheduleTimer()
     }
   }
+
+  nonisolated private func invalidateDetectionTimer() {
+    Task { @MainActor in
+      self.detectionTimer?.invalidate()
+    }
+  }
+
+  nonisolated private func invalidateAndScheduleTimer() {
+    Task { @MainActor in
+      let taskState = await task?.state
+
+      self.detectionTimer?.invalidate()
+
+      // Don't schedule a timer if recognition isn't running
+      if taskState == .none {
+        return
+      }
+
+      self.detectionTimer = Timer.scheduledTimer(
+        withTimeInterval: 3,
+        repeats: false
+      ) { [weak self] _ in
+        Task { [weak self] in
+          await self?.reset()
+        }
+      }
+    }
+  }
+
 }
 
 extension SFSpeechRecognizer {
