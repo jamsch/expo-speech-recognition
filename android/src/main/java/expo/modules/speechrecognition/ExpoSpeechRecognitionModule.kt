@@ -1,8 +1,12 @@
 package expo.modules.speechrecognition
 
 import android.Manifest.permission.RECORD_AUDIO
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.speech.RecognitionService
+import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
 import expo.modules.kotlin.Promise
@@ -13,14 +17,14 @@ import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 
 class SpeechRecognitionOptions : Record {
-    @Field val interimResults: Boolean? = false
+    @Field val interimResults: Boolean = false
 
-    @Field val lang: String? = "en-US"
+    @Field val lang: String = "en-US"
 
     @Field
-    val continuous: Boolean? = false
+    val continuous: Boolean = false
 
-    @Field val maxAlternatives: Number? = 1
+    @Field val maxAlternatives: Number = 1
 
     @Field
     var contextualStrings: List<String>? = null
@@ -129,20 +133,33 @@ class ExpoSpeechRecognitionModule : Module() {
     }
 
     Function("getSupportedLocales") {
-      val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(appContext.reactContext!!)
-      val supportedLanguages = SpeechRecognizer.getRecognizer().supportedLanguages
-
-      val languageList = mutableListOf<String>()
-      for (language in supportedLanguages) {
-          languageList.add(language.toString())
-      }
-      languageList
+      getSupportedLocales(appContext.reactContext!!)
     }
   }
 
-  private fun hasNotGrantedPermissions(): Boolean {
-    return appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
-  }
+    private fun hasNotGrantedPermissions(): Boolean {
+        return appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
+    }
+
+    private fun getSupportedLocales(appContext: Context): List<String> {
+        //  val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(appContext)
+        val languageList = mutableListOf<String>()
+        val intent = Intent(RecognizerIntent.ACTION_GET_LANGUAGE_DETAILS)
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val supportedLanguages = intent?.getStringArrayListExtra(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES)
+                supportedLanguages?.let { languageList.addAll(it) }
+                appContext.unregisterReceiver(this)
+            }
+        }
+
+        appContext.registerReceiver(receiver, IntentFilter(RecognizerIntent.ACTION_GET_LANGUAGE_DETAILS))
+        appContext.sendBroadcast(intent)
+
+        // Return the list (this might be empty initially and populated later)
+        return languageList
+    }
 }
 
 class PermissionsException(message: String) : CodedException(message)

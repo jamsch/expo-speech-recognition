@@ -83,7 +83,7 @@ function MyComponent() {
 
 ### Using the Web SpeechRecognition API
 
-Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars` and `continuous`) on some OSes aren't yet supported.
+Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars`) on some OSes aren't yet supported.
 
 ```ts
 import { ExpoSpeechRecognition } from "@jamsch/expo-speech-recognition";
@@ -112,9 +112,9 @@ recognition.onend = (event) => console.log("ended!");
 recognition.onresult = (event) => {
   console.log(
     "result:",
-    event.results[0][0].transcript,
+    event.results[event.resultIndex][0].transcript,
     "final:",
-    event.results[0][0].isFinal,
+    event.results[event.resultIndex][0].isFinal,
   );
 };
 
@@ -125,8 +125,7 @@ recognition.registerEventListener("start", handleStart);
 recognition.unregisterEventListener("start", handleStart);
 
 const handleResult = (event: SpeechRecognitionEvent) => {
-  const result = event.results[event.resultIndex]?.[0];
-  console.log("result:", result?.transcript, "final:", result?.isFinal);
+  console.log("result:", event.results[event.resultIndex][0].transcript);
 };
 
 recognition.registerEventListener("result", handleResult);
@@ -168,8 +167,9 @@ ExpoSpeechRecognitionModuleEmitter.addListener("end", () => {
 });
 
 ExpoSpeechRecognitionModuleEmitter.addListener("result", (event) => {
-  const result = event.results[event.resultIndex]?.[0];
-  console.log("result:", result?.transcript, "final:", result?.isFinal);
+  // Note: this is not the same as the `result` event listener on the web speech API
+  const { transcriptions, isFinal } = event;
+  console.log("result:", transcriptions, "final:", isFinal);
 });
 
 ExpoSpeechRecognitionModuleEmitter.addListener("error", (event) => {

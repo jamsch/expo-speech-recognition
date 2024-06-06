@@ -23,3 +23,5 @@ export const getSupportedLocales =
 
 export const requestPermissionAsync =
   ExpoSpeechRecognitionModule.requestPermissionAsync;
+
+export { type ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";

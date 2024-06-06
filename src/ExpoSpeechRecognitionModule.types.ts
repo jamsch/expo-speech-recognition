@@ -1,7 +1,7 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
 
-export type SpeechRecognitionOptions = {
+export type ExpoSpeechRecognitionOptions = {
   lang: string;
   interimResults: boolean;
   maxAlternatives: number;
@@ -13,7 +13,7 @@ export type SpeechRecognitionOptions = {
 };
 
 export interface ExpoSpeechRecognitionModuleType extends NativeModule {
-  start(options: SpeechRecognitionOptions): void;
+  start(options: ExpoSpeechRecognitionOptions): void;
   stop(): void;
   /** Requests speech recognition and recording permissions prior to starting speech recognition. */
   requestPermissionAsync(): Promise<PermissionResponse>;
