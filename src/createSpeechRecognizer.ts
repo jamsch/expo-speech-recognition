@@ -1,6 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { ExpoSpeechRecognition } from "./ExpoSpeechRecognition";
-import { SpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
+import { ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
 
 function createStoreApi<S>(initialState: S) {
   let state = initialState;
@@ -30,14 +30,14 @@ function createStoreApi<S>(initialState: S) {
  * and returns a `useEvent` hook that you can use to register event listeners, and start/stop functions.
  */
 export const createSpeechRecognizer = (
-  options: Partial<SpeechRecognitionOptions> = {},
+  options: Partial<ExpoSpeechRecognitionOptions> = {},
 ) => {
   const recognition = new ExpoSpeechRecognition();
 
   const optionsStore =
-    createStoreApi<Partial<SpeechRecognitionOptions>>(options);
+    createStoreApi<Partial<ExpoSpeechRecognitionOptions>>(options);
 
-  const configure = (options: Partial<SpeechRecognitionOptions> = {}) => {
+  const configure = (options: Partial<ExpoSpeechRecognitionOptions> = {}) => {
     const newOptions = { ...optionsStore.getState(), ...options };
     recognition.lang = newOptions.lang ?? "en-US";
     recognition.interimResults = newOptions.interimResults ?? true;
@@ -55,7 +55,7 @@ export const createSpeechRecognizer = (
 
   return {
     recognition,
-    start: (options: Partial<SpeechRecognitionOptions> = {}) => {
+    start: (options: Partial<ExpoSpeechRecognitionOptions> = {}) => {
       // Re-configure the recognizer with the new options
       configure(options);
       recognition.start();
