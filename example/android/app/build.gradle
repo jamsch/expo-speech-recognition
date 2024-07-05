@@ -83,9 +83,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'expo.modules.speechrecog.example'
+    namespace 'expo.modules.speechrecognition.example'
     defaultConfig {
-        applicationId 'expo.modules.speechrecog.example'
+        applicationId 'expo.modules.speechrecognition.example'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
