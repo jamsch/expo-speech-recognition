@@ -23,7 +23,7 @@ npm install @jamsch/expo-speech-recognition
         "expo-speech-recognition",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone.",
-          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition."
+          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition.",
           // default: ["com.google.android.googlequicksearchbox"]
           "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
@@ -162,15 +162,21 @@ const startListener = ExpoSpeechRecognitionModuleEmitter.addListener(
 // and remove the listener when you're done:
 startListener.remove();
 
-ExpoSpeechRecognitionModuleEmitter.addListener("end", () => {
-  console.log("Speech recognition ended");
-});
+const endListener = ExpoSpeechRecognitionModuleEmitter.addListener(
+  "end",
+  () => {
+    console.log("Speech recognition ended");
+  },
+);
 
-ExpoSpeechRecognitionModuleEmitter.addListener("result", (event) => {
-  // Note: this is not the same as the `result` event listener on the web speech API
-  const { transcriptions, isFinal } = event;
-  console.log("result:", transcriptions, "final:", isFinal);
-});
+const resultListener = ExpoSpeechRecognitionModuleEmitter.addListener(
+  "result",
+  (event) => {
+    // Note: this is not the same as the `result` event listener on the web speech API
+    const { transcriptions, isFinal } = event;
+    console.log("result:", transcriptions, "final:", isFinal);
+  },
+);
 
 ExpoSpeechRecognitionModuleEmitter.addListener("error", (event) => {
   console.log("error code:", event.error, "error messsage:", event.message);
