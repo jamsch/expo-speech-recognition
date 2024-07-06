@@ -40,7 +40,7 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       status: "granted",
     } as PermissionResponse);
   },
-  getSupportedLocales: () => {
+  getSupportedLocales: async () => {
     console.warn(
       "getSupportedLocales is not supported on the web. Returning an empty array.",
     );

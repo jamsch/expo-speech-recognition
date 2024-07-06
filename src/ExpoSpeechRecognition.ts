@@ -194,7 +194,6 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
     this._setListeners(
       "end",
       (ev) => {
-        console.log("onend", ev);
         listener?.call(this, ev);
       },
       this.#onend,
@@ -300,8 +299,13 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
       type
     ]?.(this, listener) ?? [{ eventName: type, nativeListener: listener }];
 
-    const subscriptions = enhancedEvents.map(({ eventName, nativeListener }) =>
-      ExpoSpeechRecognitionModuleEmitter.addListener(eventName, nativeListener),
+    const subscriptions = enhancedEvents.map(
+      ({ eventName, nativeListener }) => {
+        return ExpoSpeechRecognitionModuleEmitter.addListener(
+          eventName,
+          nativeListener,
+        );
+      },
     );
 
     // Store the subscriptions so we can remove them later

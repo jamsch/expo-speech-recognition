@@ -121,8 +121,8 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
-    Function("getSupportedLocales") { () -> [String] in
-      return SFSpeechRecognizer.supportedLocales().map { $0.identifier }.sorted()
+    AsyncFunction("getSupportedLocales") { (promise: Promise) in
+      promise.resolve(SFSpeechRecognizer.supportedLocales().map { $0.identifier }.sorted())
     }
   }
 

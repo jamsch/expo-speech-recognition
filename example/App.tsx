@@ -9,10 +9,10 @@ import {
 } from "react-native";
 import {
   createSpeechRecognizer,
-  type ExpoSpeechRecognitionOptions,
   getSupportedLocales,
+  type ExpoSpeechRecognitionOptions,
 } from "expo-speech-recognition";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   OptionButton,
   CheckboxButton,
@@ -20,7 +20,6 @@ import {
 } from "./components/Buttons";
 
 const recognizer = createSpeechRecognizer();
-const locales = getSupportedLocales();
 
 export default function App() {
   const [error, setError] = useState<{ code: string; message: string } | null>(
@@ -128,8 +127,8 @@ export default function App() {
           <BigRedButton title="Start Recognition" onPress={startListening} />
         ) : (
           <BigRedButton
-            title="Stop Recognition"
-            disabled={status !== "recognizing"}
+            title="Stosp Recognition"
+            // disabled={status !== "recognizing"}
             onPress={stopListening}
           />
         )}
@@ -150,6 +149,11 @@ function Settings(props: {
   ) => {
     onChange({ ...props.value, [key]: value });
   };
+
+  const [locales, setLocales] = useState<string[]>([]);
+  useEffect(() => {
+    getSupportedLocales().then(setLocales);
+  }, []);
 
   return (
     <View>
