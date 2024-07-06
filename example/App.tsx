@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import {
   createSpeechRecognizer,
+  getSpeechRecognitionServices,
   getSupportedLocales,
   type ExpoSpeechRecognitionOptions,
 } from "expo-speech-recognition";
@@ -123,11 +124,19 @@ export default function App() {
       <Settings value={settings} onChange={setSettings} />
 
       <View style={styles.buttonContainer}>
+        {Platform.OS === "android" && (
+          <BigRedButton
+            title="Get speech recognition services"
+            onPress={() => {
+              console.log("services:", getSpeechRecognitionServices());
+            }}
+          />
+        )}
         {status === "idle" ? (
           <BigRedButton title="Start Recognition" onPress={startListening} />
         ) : (
           <BigRedButton
-            title="Stosp Recognition"
+            title="Stop Recognition"
             // disabled={status !== "recognizing"}
             onPress={stopListening}
           />
@@ -159,7 +168,7 @@ function Settings(props: {
     <View>
       <View style={{ flexDirection: "row", gap: 2, flexWrap: "wrap" }}>
         <CheckboxButton
-          title="Continuous"
+          title="Continuous (iOS only)"
           checked={settings.continuous}
           onPress={() => handleChange("continuous", !settings.continuous)}
         />

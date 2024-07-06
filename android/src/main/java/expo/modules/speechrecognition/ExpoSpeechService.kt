@@ -1,13 +1,16 @@
 package expo.modules.speechrecognition
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ResolveInfo
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
+import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
@@ -50,6 +53,20 @@ class ExpoSpeechService
             }
         }
 
+        private fun findComponentNameByPackageName(packageName: String): ComponentName? {
+            val packageManager = reactContext.packageManager
+            val services: List<ResolveInfo> = packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
+
+            for (service in services) {
+                if (service.serviceInfo.packageName == packageName) {
+                    Log.d("ESR", "Found service for package $packageName: ${service.serviceInfo.name}")
+                    return ComponentName(service.serviceInfo.packageName, service.serviceInfo.name)
+                }
+            }
+
+            throw Exception("No service found for package $packageName")
+        }
+
         /** Starts speech recognition */
         fun start(options: SpeechRecognitionOptions) {
             mainHandler.post {
@@ -61,23 +78,55 @@ class ExpoSpeechService
                 soundStartEventCalled = false
 
                 val intent = createSpeechIntent(options)
-
-                speech =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.requiresOnDeviceRecognition) {
-                        SpeechRecognizer.createOnDeviceSpeechRecognizer(reactContext)
-                    } else {
-                        SpeechRecognizer.createSpeechRecognizer(reactContext)
-                    }
-                speech?.setRecognitionListener(this)
-                speech?.startListening(intent)
+                try {
+                    speech =
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.requiresOnDeviceRecognition -> {
+                                SpeechRecognizer.createOnDeviceSpeechRecognizer(reactContext)
+                            }
+                            // Custom service package, e.g. "com.google.android.googlequicksearchbox"
+                            // Note: requires to be listed in AppManifest <queries> for this intent (android.speech.RecognitionService)
+                            // Otherwise it will throw "Bind to system recognition service failed with error 10"
+                            options.androidRecognitionServicePackage != null -> {
+                                SpeechRecognizer.createSpeechRecognizer(
+                                    reactContext,
+                                    findComponentNameByPackageName(options.androidRecognitionServicePackage),
+                                )
+                            }
+                            else -> {
+                                SpeechRecognizer.createSpeechRecognizer(reactContext)
+                            }
+                        }
+                    speech?.setRecognitionListener(this)
+                    speech?.startListening(intent)
+                } catch (e: Exception) {
+                    Log.e("ExpoSpeechService", "Failed to create Speech Recognizer", e)
+                    // Catch any binding exception
+                    handleBindingError(e)
+                }
             }
         }
 
         fun stop() {
             mainHandler.post {
                 speech?.destroy()
+                sendEvent("end", null)
                 recognitionState = RecognitionState.INACTIVE
             }
+        }
+
+        /** Handle binding error */
+        private fun handleBindingError(e: Exception) {
+            Log.e("ExpoSpeechService", "Failed to bind to Speech Recognition Service", e)
+            // Binding failed, most likely due to
+            // missing <queries> element in AndroidManifest.xml
+            if (e.message?.contains("error 10") == true) {
+                sendEvent("error", mapOf("code" to "service-not-allowed", "message" to e.localizedMessage))
+            } else {
+                // Handle other generic exceptions, if needed
+                sendEvent("error", mapOf("code" to "unknown", "message" to e.localizedMessage))
+            }
+            sendEvent("end", null)
         }
 
         private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
@@ -94,30 +143,53 @@ class ExpoSpeechService
             )
 
             val contextualStrings = options.contextualStrings
-            if (!contextualStrings.isNullOrEmpty()) {
+            if (!contextualStrings.isNullOrEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.putExtra(
                     RecognizerIntent.EXTRA_BIASING_STRINGS,
                     contextualStrings.toTypedArray(),
                 )
             }
 
-            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 10000)
-
-            if (options.addsPunctuation) {
+            if (options.addsPunctuation && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.putExtra(RecognizerIntent.EXTRA_ENABLE_FORMATTING, RecognizerIntent.FORMATTING_OPTIMIZE_QUALITY)
             }
 
             // Offline recognition
-            if (options.requiresOnDeviceRecognition && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            }
+            // to be used with ACTION_RECOGNIZE_SPEECH, ACTION_VOICE_SEARCH_HANDS_FREE, ACTION_WEB_SEARCH
+            // if (options.requiresOnDeviceRecognition) {
+            //     intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            // }
 
             // Optional limit on the maximum number of results to return.
             // If omitted the recognizer will choose how many results to return. Must be an integer.
             intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, options.maxAlternatives)
 
-            val language = options.lang.takeIf { !it.isNullOrEmpty() } ?: Locale.getDefault().toString()
+            val language = options.lang.takeIf { it.isNotEmpty() } ?: Locale.getDefault().toString()
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
+
+            Log.d("ESR", "androidIntentOptions: ${options.androidIntentOptions}")
+
+            // Add any additional intent extras provided by the user
+            options.androidIntentOptions?.forEach { (key, value) ->
+                // Use reflection to set the extra
+                // i.e. RecognizerIntent[key
+                val field = RecognizerIntent::class.java.getDeclaredField(key)
+                val fieldValue = field.get(null) as? String
+
+                Log.d("ESR", "Resolved key $key -> $fieldValue with value: $value (${value.javaClass.name})")
+                when (value) {
+                    is Boolean -> intent.putExtra(fieldValue, value)
+                    is Int -> intent.putExtra(fieldValue, value)
+                    is String -> intent.putExtra(fieldValue, value)
+                    is List<*> -> {
+                        if (value.all { it is String }) {
+                            intent.putExtra(fieldValue, value.filterIsInstance<String>().toTypedArray())
+                        }
+                    }
+                    is Double -> intent.putExtra(fieldValue, value.toInt())
+                    else -> throw IllegalArgumentException("Unsupported type for androidIntentOptions.$key: ${value.javaClass.name}")
+                }
+            }
 
             return intent
         }
@@ -172,6 +244,10 @@ class ExpoSpeechService
             val resultsList = mutableListOf<String>()
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
                 resultsList.addAll(matches)
+            }
+            // Ensure we have at least one result
+            if (resultsList.isEmpty()) {
+                resultsList.add("")
             }
             sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
             Log.d("ESR", "onResults()")

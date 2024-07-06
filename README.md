@@ -105,6 +105,13 @@ recognition.contextualStrings = ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"];
 recognition.requiresOnDeviceRecognition = true;
 // [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
 recognition.addsPunctuation = true;
+// [Default: undefined] Android-specific options to pass to the recognizer.
+recognition.androidOptions = {
+  EXTRA_LANGUAGE_MODEL: "quick_response",
+};
+// [Default: undefined] The package name of the speech recognition service to use.
+recognition.androidRecognitionServicePackage =
+  "com.google.android.googlequicksearchbox";
 
 // Assign an event listener (note: this overwrites all event listeners)
 recognition.onstart = (event) => console.log("started!");
@@ -191,14 +198,20 @@ ExpoSpeechRecognitionModule.start({
   requiresOnDeviceRecognition: false,
   addsPunctuation: false,
   contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+  androidIntentOptions: {
+    EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
+    EXTRA_MASK_OFFENSIVE_WORDS: false,
+  },
+  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
 });
 
 // Stop speech recognition
 ExpoSpeechRecognitionModule.stop();
 
 // Get list of supported locales
-const supportedLocales = ExpoSpeechRecognitionModule.getSupportedLocales();
-console.log("Supported locales:", supportedLocales.join(", "));
+ExpoSpeechRecognitionModule.getSupportedLocales().then((supportedLocales) => {
+  console.log("Supported locales:", supportedLocales.join(", "));
+});
 
 // Get list of speech recognition services available on the device
 // Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.

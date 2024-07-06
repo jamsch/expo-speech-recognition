@@ -47,6 +47,9 @@ export const createSpeechRecognizer = (
       newOptions.requiresOnDeviceRecognition ?? false;
     recognition.addsPunctuation = newOptions.addsPunctuation ?? false;
     recognition.contextualStrings = newOptions.contextualStrings ?? [];
+    recognition.androidIntentOptions = newOptions.androidIntentOptions;
+    recognition.androidRecognitionServicePackage =
+      newOptions.androidRecognitionServicePackage;
     optionsStore.setState(newOptions);
   };
 

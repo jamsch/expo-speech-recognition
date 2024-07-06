@@ -21,6 +21,9 @@ export {
 export const getSupportedLocales =
   ExpoSpeechRecognitionModule.getSupportedLocales;
 
+export const getSpeechRecognitionServices =
+  ExpoSpeechRecognitionModule.getSpeechRecognitionServices;
+
 export const requestPermissionAsync =
   ExpoSpeechRecognitionModule.requestPermissionAsync;
 

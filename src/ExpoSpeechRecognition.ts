@@ -5,6 +5,7 @@ import {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionModuleEmitter,
 } from "./ExpoSpeechRecognitionModule";
+import type { ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
 
 const noop = () => {};
 
@@ -160,6 +161,19 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   requiresOnDeviceRecognition = false;
   /** [EXTENDED, default: false] Whether the speech recognition engine should add punctuation to the transcription. */
   addsPunctuation = false;
+  /** [EXTENDED, default: undefined] Android-specific options to pass to the recognizer. */
+  androidIntentOptions: ExpoSpeechRecognitionOptions["androidIntentOptions"];
+  /**
+   * [EXTENDED, default: undefined]
+   *
+   * The package name of the speech recognition service to use.
+   * If not provided, the default service will be used.
+   *
+   * Obtain the supported packages by running `ExpoSpeechRecognitionModule.getSpeechRecognitionServices()`
+   *
+   * e.g. "com.google.android.googlequicksearchbox"
+   */
+  androidRecognitionServicePackage: ExpoSpeechRecognitionOptions["androidRecognitionServicePackage"];
 
   // keyed by listener function
   #subscriptionMap: Map<Function, Subscription[]> = new Map();
@@ -173,6 +187,8 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
       requiresOnDeviceRecognition: this.requiresOnDeviceRecognition,
       addsPunctuation: this.addsPunctuation,
       continuous: this.continuous,
+      androidIntentOptions: this.androidIntentOptions,
+      androidRecognitionServicePackage: this.androidRecognitionServicePackage,
     });
   }
   stop = ExpoSpeechRecognitionModule.stop;

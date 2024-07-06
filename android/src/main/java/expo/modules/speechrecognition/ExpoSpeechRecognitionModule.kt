@@ -38,6 +38,12 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     var addsPunctuation: Boolean = false
+
+    @Field
+    var androidIntentOptions: Map<String, Any>? = null
+
+    @Field
+    val androidRecognitionServicePackage: String? = null
 }
 
 class ExpoSpeechRecognitionModule : Module() {
