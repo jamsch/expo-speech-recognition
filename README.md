@@ -106,7 +106,7 @@ recognition.requiresOnDeviceRecognition = true;
 // [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
 recognition.addsPunctuation = true;
 // [Default: undefined] Android-specific options to pass to the recognizer.
-recognition.androidOptions = {
+recognition.androidIntentOptions = {
   EXTRA_LANGUAGE_MODEL: "quick_response",
 };
 // [Default: undefined] The package name of the speech recognition service to use.
