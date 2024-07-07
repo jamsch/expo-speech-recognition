@@ -10,6 +10,7 @@ import android.speech.RecognitionSupport
 import android.speech.RecognitionSupportCallback
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import androidx.annotation.RequiresApi
 import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
 import expo.modules.kotlin.Promise
@@ -44,6 +45,14 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val androidRecognitionServicePackage: String? = null
+}
+
+class GetSupportedLocaleOptions : Record {
+    @Field
+    val androidRecognitionServicePackage: String? = null
+
+    @Field
+    val onDevice: Boolean = false
 }
 
 class ExpoSpeechRecognitionModule : Module() {
@@ -142,14 +151,23 @@ class ExpoSpeechRecognitionModule : Module() {
                 service.stop()
             }
 
-            AsyncFunction("getSupportedLocales") { promise: Promise ->
-                getSupportedLocales(appContext.reactContext!!, promise)
+            AsyncFunction("getSupportedLocales") { options: GetSupportedLocaleOptions, promise: Promise ->
+                getSupportedLocales(options, appContext.reactContext!!, promise)
+            }
+
+            Function("isOnDeviceRecognitionAvailable") {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext.reactContext!!)
+                } else {
+                    false
+                }
             }
         }
 
     private fun hasNotGrantedPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
 
     private fun getSupportedLocales(
+        options: GetSupportedLocaleOptions,
         appContext: Context,
         promise: Promise,
     ) {
@@ -158,7 +176,12 @@ class ExpoSpeechRecognitionModule : Module() {
             return
         }
 
-        if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
+        if (options.onDevice && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
+            promise.resolve(mutableListOf<String>())
+            return
+        }
+
+        if (!options.onDevice && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
             promise.resolve(mutableListOf<String>())
             return
         }
@@ -167,8 +190,17 @@ class ExpoSpeechRecognitionModule : Module() {
 
         // Speech Recognizer can only be ran on main thread
         Handler(appContext.mainLooper).post {
-            val recognizer = SpeechRecognizer.createSpeechRecognizer(appContext)
+            val recognizer =
+                if (options.onDevice) {
+                    SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
+                } else {
+                    SpeechRecognizer.createSpeechRecognizer(appContext)
+                }
+
             val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            val pkg = options.androidRecognitionServicePackage ?: "com.google.android.googlequicksearchbox"
+            recognizerIntent.setPackage(pkg)
+            Log.d("ESR", "Recognizer intent: $recognizerIntent with package: $pkg")
 
             recognizer?.checkRecognitionSupport(
                 recognizerIntent,

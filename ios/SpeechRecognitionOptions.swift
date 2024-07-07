@@ -22,3 +22,11 @@ struct SpeechRecognitionOptions: Record {
   @Field
   var addsPunctuation: Bool = false
 }
+
+struct GetSupportedLocaleOptions: Record {
+  @Field
+  var androidRecognitionServicePackage: String? = nil
+
+  @Field
+  var onDevice: Bool = false
+}

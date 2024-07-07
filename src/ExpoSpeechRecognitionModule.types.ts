@@ -194,7 +194,12 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   /** Requests speech recognition and recording permissions prior to starting speech recognition. */
   requestPermissionAsync(): Promise<PermissionResponse>;
   /** Returns an array of locales supported by the speech recognizer. */
-  getSupportedLocales(): Promise<string[]>;
+  getSupportedLocales(options: {
+    /** The package name of the speech recognition service to use. */
+    androidRecognitionServicePackage?: string;
+    /** If true, will return the supported locales of the on-device speech recognition service. */
+    onDevice?: boolean;
+  }): Promise<string[]>;
   /**
    * Returns an array of package names of speech recognition services that are available on the device.
    * Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
@@ -202,4 +207,8 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * e.g. `["com.google.android.googlequicksearchbox"]`
    */
   getSpeechRecognitionServices(): string[];
+  /**
+   * Whether the on-device speech recognition is available on the device.
+   */
+  isOnDeviceRecognitionAvailable(): boolean;
 }

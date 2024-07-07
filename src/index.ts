@@ -18,13 +18,18 @@ export {
   ExpoSpeechRecognitionModuleEmitter,
 } from "./ExpoSpeechRecognitionModule";
 
-export const getSupportedLocales =
-  ExpoSpeechRecognitionModule.getSupportedLocales;
+export const getSupportedLocales = (options?: {
+  androidRecognitionServicePackage?: string;
+  onDevice?: boolean;
+}) => ExpoSpeechRecognitionModule.getSupportedLocales(options ?? {});
 
 export const getSpeechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices;
 
 export const requestPermissionAsync =
   ExpoSpeechRecognitionModule.requestPermissionAsync;
+
+export const isOnDeviceRecognitionAvailable =
+  ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable;
 
 export { type ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";

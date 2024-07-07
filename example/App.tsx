@@ -19,8 +19,11 @@ import {
   CheckboxButton,
   BigRedButton,
 } from "./components/Buttons";
+import { StatusBar } from "expo-status-bar";
 
 const recognizer = createSpeechRecognizer();
+
+const speechRecognitionServices = getSpeechRecognitionServices();
 
 export default function App() {
   const [error, setError] = useState<{ code: string; message: string } | null>(
@@ -44,6 +47,7 @@ export default function App() {
     requiresOnDeviceRecognition: false,
     addsPunctuation: true,
     contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
+    androidRecognitionServicePackage: "com.google.android.googlequicksearchbox",
   });
 
   recognizer.useEvent("result", (ev) => {
@@ -99,6 +103,8 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" translucent={false} />
+
       <View style={styles.card}>
         <Text style={styles.text}>
           {error ? JSON.stringify(error) : "Error messages goes here"}
@@ -124,14 +130,6 @@ export default function App() {
       <Settings value={settings} onChange={setSettings} />
 
       <View style={styles.buttonContainer}>
-        {Platform.OS === "android" && (
-          <BigRedButton
-            title="Get speech recognition services"
-            onPress={() => {
-              console.log("services:", getSpeechRecognitionServices());
-            }}
-          />
-        )}
         {status === "idle" ? (
           <BigRedButton title="Start Recognition" onPress={startListening} />
         ) : (
@@ -161,8 +159,16 @@ function Settings(props: {
 
   const [locales, setLocales] = useState<string[]>([]);
   useEffect(() => {
-    getSupportedLocales().then(setLocales);
-  }, []);
+    getSupportedLocales({
+      onDevice: settings.requiresOnDeviceRecognition,
+      androidRecognitionServicePackage:
+        settings.androidRecognitionServicePackage ||
+        "com.google.android.googlequicksearchbox",
+    }).then(setLocales);
+  }, [
+    settings.requiresOnDeviceRecognition,
+    settings.androidRecognitionServicePackage,
+  ]);
 
   return (
     <View>
@@ -208,19 +214,33 @@ function Settings(props: {
           onChangeText={(v) => handleChange("maxAlternatives", Number(v) || 1)}
         />
       </View>
+      {Platform.OS === "android" && (
+        <View>
+          <Text style={styles.textLabel}>Android Recognition Service</Text>
+          <View style={[styles.row, styles.flexWrap]}>
+            {speechRecognitionServices.map((service) => (
+              <OptionButton
+                key={service}
+                title={service}
+                active={settings.androidRecognitionServicePackage === service}
+                onPress={() => {
+                  handleChange("androidRecognitionServicePackage", service);
+                }}
+              />
+            ))}
+          </View>
+        </View>
+      )}
       <View>
         <Text style={styles.textLabel}>Locale</Text>
-        <Text style={[styles.textLabel, { marginTop: 5, color: "#999" }]}>
-          Only showing locales supported by your device ({Platform.OS})
+        <Text style={[styles.textLabel, { color: "#999" }]}>
+          Your {Platform.OS} device supports {locales.length} locales
         </Text>
-        <TextInput
-          style={styles.textInput}
-          defaultValue={settings.lang}
-          keyboardType="number-pad"
-          autoCorrect={false}
-          onChangeText={(v) => handleChange("lang", v)}
-        />
-        <ScrollView style={{ height: 100, maxHeight: 150 }}>
+
+        <ScrollView
+          style={{ height: 100, maxHeight: 150 }}
+          contentContainerStyle={[styles.row, styles.flexWrap]}
+        >
           {locales.map((locale) => (
             <OptionButton
               key={locale}
@@ -237,10 +257,10 @@ function Settings(props: {
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 20,
-    marginTop: 30,
+    flex: 1,
     gap: 10,
-    backgroundColor: "#fff",
+    padding: 10,
+    backgroundColor: "#eee",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -278,5 +298,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 5,
+  },
+  row: {
+    flexDirection: "row",
+  },
+  flexWrap: {
+    flexWrap: "wrap",
   },
 });

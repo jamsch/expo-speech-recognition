@@ -115,13 +115,18 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
+    Function("isOnDeviceRecognitionAvailable") {
+      let recognizer = SFSpeechRecognizer()
+      recognizer?.supportsOnDeviceRecognition
+    }
+
     Function("stop") {
       Task {
         await speechRecognizer?.stop()
       }
     }
 
-    AsyncFunction("getSupportedLocales") { (promise: Promise) in
+    AsyncFunction("getSupportedLocales") { (options: GetSupportedLocaleOptions, promise: Promise) in
       promise.resolve(SFSpeechRecognizer.supportedLocales().map { $0.identifier }.sorted())
     }
   }

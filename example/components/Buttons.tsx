@@ -16,6 +16,7 @@ export function CheckboxButton(props: {
         props.checked && styles.bgBlue,
         props.disabled && styles.opacity50,
       ]}
+      android_ripple={{ color: "#333" }}
     >
       <View>
         {props.checked && !props.hideMark && (
@@ -45,6 +46,7 @@ export function OptionButton(props: {
         { borderWidth: 2, borderColor: "transparent" },
         props.active ? styles.bgBlue : styles.borderBlue,
       ]}
+      android_ripple={{ color: "#333" }}
     >
       <Text
         style={[styles.fontBold, props.active ? styles.textWhite : undefined]}
@@ -69,6 +71,7 @@ export function BigRedButton(props: {
         styles.bgRed,
         props.disabled && styles.opacity50,
       ]}
+      android_ripple={{ color: "#333" }}
     >
       <Text style={[styles.fontBold, styles.textWhite]}>{props.title}</Text>
     </Pressable>

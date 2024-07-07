@@ -67,10 +67,14 @@ class ExpoSpeechService
             throw Exception("No service found for package $packageName")
         }
 
+        private fun log(message: String) {
+            Log.d("ExpoSpeechService", message)
+        }
+
         /** Starts speech recognition */
         fun start(options: SpeechRecognitionOptions) {
             mainHandler.post {
-                Log.d("ExpoSpeechService", "Start recognition.")
+                log("Start recognition.")
 
                 // Destroy any previous SpeechRecognizer
                 speech?.destroy()
@@ -100,33 +104,20 @@ class ExpoSpeechService
                     speech?.setRecognitionListener(this)
                     speech?.startListening(intent)
                 } catch (e: Exception) {
-                    Log.e("ExpoSpeechService", "Failed to create Speech Recognizer", e)
-                    // Catch any binding exception
-                    handleBindingError(e)
+                    log("Failed to create Speech Recognizer")
+                    sendEvent("error", mapOf("code" to "unknown", "message" to e.localizedMessage))
+                    sendEvent("end", null)
                 }
             }
         }
 
         fun stop() {
             mainHandler.post {
+                speech?.stopListening()
                 speech?.destroy()
                 sendEvent("end", null)
                 recognitionState = RecognitionState.INACTIVE
             }
-        }
-
-        /** Handle binding error */
-        private fun handleBindingError(e: Exception) {
-            Log.e("ExpoSpeechService", "Failed to bind to Speech Recognition Service", e)
-            // Binding failed, most likely due to
-            // missing <queries> element in AndroidManifest.xml
-            if (e.message?.contains("error 10") == true) {
-                sendEvent("error", mapOf("code" to "service-not-allowed", "message" to e.localizedMessage))
-            } else {
-                // Handle other generic exceptions, if needed
-                sendEvent("error", mapOf("code" to "unknown", "message" to e.localizedMessage))
-            }
-            sendEvent("end", null)
         }
 
         private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
