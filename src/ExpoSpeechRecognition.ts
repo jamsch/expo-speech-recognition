@@ -171,7 +171,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
    *
    * Obtain the supported packages by running `ExpoSpeechRecognitionModule.getSpeechRecognitionServices()`
    *
-   * e.g. "com.google.android.googlequicksearchbox"
+   * e.g. com.samsung.android.bixby.agent"
    */
   androidRecognitionServicePackage: ExpoSpeechRecognitionOptions["androidRecognitionServicePackage"];
 

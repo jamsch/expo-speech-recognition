@@ -1,10 +1,12 @@
 package expo.modules.speechrecognition
 
 import android.Manifest.permission.RECORD_AUDIO
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Handler
+import android.speech.ModelDownloadListener
 import android.speech.RecognitionService
 import android.speech.RecognitionSupport
 import android.speech.RecognitionSupportCallback
@@ -22,14 +24,17 @@ import expo.modules.kotlin.records.Record
 import java.util.concurrent.Executors
 
 class SpeechRecognitionOptions : Record {
-    @Field val interimResults: Boolean = false
+    @Field
+    val interimResults: Boolean = false
 
-    @Field val lang: String = "en-US"
+    @Field
+    val lang: String = "en-US"
 
     @Field
     val continuous: Boolean = false
 
-    @Field val maxAlternatives: Int = 1
+    @Field
+    val maxAlternatives: Int = 1
 
     @Field
     var contextualStrings: List<String>? = null
@@ -53,6 +58,11 @@ class GetSupportedLocaleOptions : Record {
 
     @Field
     val onDevice: Boolean = false
+}
+
+class TriggerOfflineModelDownloadOptions : Record {
+    @Field
+    val locale: String = "en-US"
 }
 
 class ExpoSpeechRecognitionModule : Module() {
@@ -136,7 +146,6 @@ class ExpoSpeechRecognitionModule : Module() {
                 val service =
                     ExpoSpeechService.getInstance(appContext.reactContext!!) { name, body ->
                         val nonNullBody = body ?: emptyMap()
-                        // Log.d("ESR", "Send event: $name with body: $nonNullBody")
                         sendEvent(name, nonNullBody)
                     }
                 service.start(options)
@@ -162,9 +171,62 @@ class ExpoSpeechRecognitionModule : Module() {
                     false
                 }
             }
+
+            var isDownloadingModel = false
+
+            AsyncFunction("androidTriggerOfflineModelDownload") { options: TriggerOfflineModelDownloadOptions, promise: Promise ->
+                if (isDownloadingModel) {
+                    promise.reject("download_in_progress", "An offline model download is already in progress.", Throwable())
+                    return@AsyncFunction
+                }
+
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    promise.reject("not_supported", "Android version is too old to trigger offline model download.", Throwable())
+                    return@AsyncFunction
+                }
+                isDownloadingModel = true
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, options.locale)
+                Handler(appContext.reactContext!!.mainLooper).post {
+                    val recognizer =
+                        SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
+                    recognizer.triggerModelDownload(
+                        intent,
+                        Executors.newSingleThreadExecutor(),
+                        @SuppressLint("NewApi")
+                        object : ModelDownloadListener {
+                            override fun onProgress(p0: Int) {
+                                // Todo: let user know the progress
+                            }
+
+                            override fun onSuccess() {
+                                promise.resolve(true)
+                                isDownloadingModel = false
+                                recognizer.destroy()
+                            }
+
+                            override fun onScheduled() {
+                                //
+                            }
+
+                            override fun onError(error: Int) {
+                                isDownloadingModel = false
+                                promise.reject(
+                                    "error_$error",
+                                    "Failed to download offline model download with error: $error",
+                                    Throwable(),
+                                )
+                                recognizer.destroy()
+                            }
+                        },
+                    )
+                }
+            }
         }
 
     private fun hasNotGrantedPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
+
+    // private fun getAvailableLocales(appContext: Context, promise: Promise) {
 
     private fun getSupportedLocales(
         options: GetSupportedLocaleOptions,
@@ -198,9 +260,11 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
 
             val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            val pkg = options.androidRecognitionServicePackage ?: "com.google.android.googlequicksearchbox"
-            recognizerIntent.setPackage(pkg)
-            Log.d("ESR", "Recognizer intent: $recognizerIntent with package: $pkg")
+            if (!options.onDevice) {
+                val pkg = options.androidRecognitionServicePackage ?: "com.google.android.googlequicksearchbox"
+                recognizerIntent.setPackage(pkg)
+            }
+            Log.d("ESR", "Recognizer intent: $recognizerIntent")
 
             recognizer?.checkRecognitionSupport(
                 recognizerIntent,
@@ -213,8 +277,17 @@ class ExpoSpeechRecognitionModule : Module() {
                             return
                         }
                         didResolve = true
-                        val supportedLocales = recognitionSupport.supportedOnDeviceLanguages
-                        promise.resolve(supportedLocales)
+                        // These languages are supported but need to be downloaded before use.
+                        val installedLocales = recognitionSupport.installedOnDeviceLanguages
+
+                        val locales = recognitionSupport.supportedOnDeviceLanguages.union(installedLocales)
+
+                        promise.resolve(
+                            mapOf(
+                                "locales" to locales,
+                                "installedLocales" to installedLocales,
+                            ),
+                        )
                         recognizer.destroy()
                     }
 
@@ -228,6 +301,7 @@ class ExpoSpeechRecognitionModule : Module() {
                                 Throwable(),
                             )
                         }
+                        recognizer.destroy()
                     }
                 },
             )

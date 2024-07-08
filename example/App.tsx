@@ -1,4 +1,5 @@
 import {
+  Alert,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -9,16 +10,13 @@ import {
 } from "react-native";
 import {
   createSpeechRecognizer,
+  ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
   type ExpoSpeechRecognitionOptions,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
-import {
-  OptionButton,
-  CheckboxButton,
-  BigRedButton,
-} from "./components/Buttons";
+import { OptionButton, CheckboxButton, BigButton } from "./components/Buttons";
 import { StatusBar } from "expo-status-bar";
 
 const recognizer = createSpeechRecognizer();
@@ -47,7 +45,6 @@ export default function App() {
     requiresOnDeviceRecognition: false,
     addsPunctuation: true,
     contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
-    androidRecognitionServicePackage: "com.google.android.googlequicksearchbox",
   });
 
   recognizer.useEvent("result", (ev) => {
@@ -107,11 +104,11 @@ export default function App() {
 
       <View style={styles.card}>
         <Text style={styles.text}>
-          {error ? JSON.stringify(error) : "Error messages goes here"}
+          {error ? JSON.stringify(error) : "Error messages go here"}
         </Text>
       </View>
 
-      <ScrollView style={[styles.card, { height: 140 }]}>
+      <ScrollView style={[styles.card, { height: 140, maxHeight: 140 }]}>
         <View>
           <Text style={styles.text}>
             Status:{" "}
@@ -127,20 +124,65 @@ export default function App() {
         </View>
       </ScrollView>
 
-      <Settings value={settings} onChange={setSettings} />
+      <ScrollView style={styles.card}>
+        <Settings value={settings} onChange={setSettings} />
+      </ScrollView>
 
-      <View style={styles.buttonContainer}>
+      <View
+        style={[
+          styles.card,
+          styles.buttonContainer,
+          { justifyContent: "space-between" },
+        ]}
+      >
+        {Platform.OS === "android" && (
+          <DownloadOfflineModel locale={settings.lang} />
+        )}
+
         {status === "idle" ? (
-          <BigRedButton title="Start Recognition" onPress={startListening} />
+          <BigButton title="Start Recognition" onPress={startListening} />
         ) : (
-          <BigRedButton
+          <BigButton
             title="Stop Recognition"
-            // disabled={status !== "recognizing"}
+            disabled={status !== "recognizing"}
             onPress={stopListening}
           />
         )}
       </View>
     </SafeAreaView>
+  );
+}
+
+function DownloadOfflineModel(props: { locale: string }) {
+  const [downloading, setDownloading] = useState<{ locale: string } | null>(
+    null,
+  );
+
+  const handleDownload = () => {
+    setDownloading({ locale: props.locale });
+
+    ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
+      locale: props.locale,
+    })
+      .then(() => {
+        Alert.alert("Offline model downloaded successfully!");
+      })
+      .catch((err) => {
+        Alert.alert("Failed to download offline model!", err.message);
+      })
+      .finally(() => setDownloading(null));
+  };
+
+  return (
+    <BigButton
+      disabled={Boolean(downloading)}
+      title={
+        downloading
+          ? `Downloading ${props.locale} model...`
+          : "Download Offline Model"
+      }
+      onPress={handleDownload}
+    />
   );
 }
 
@@ -157,14 +199,16 @@ function Settings(props: {
     onChange({ ...props.value, [key]: value });
   };
 
-  const [locales, setLocales] = useState<string[]>([]);
+  const [supportedLocales, setSupportedLocales] = useState<{
+    locales: string[];
+    installedLocales: string[];
+  }>({ locales: [], installedLocales: [] });
   useEffect(() => {
     getSupportedLocales({
       onDevice: settings.requiresOnDeviceRecognition,
       androidRecognitionServicePackage:
-        settings.androidRecognitionServicePackage ||
-        "com.google.android.googlequicksearchbox",
-    }).then(setLocales);
+        settings.androidRecognitionServicePackage,
+    }).then(setSupportedLocales);
   }, [
     settings.requiresOnDeviceRecognition,
     settings.androidRecognitionServicePackage,
@@ -234,21 +278,39 @@ function Settings(props: {
       <View>
         <Text style={styles.textLabel}>Locale</Text>
         <Text style={[styles.textLabel, { color: "#999" }]}>
-          Your {Platform.OS} device supports {locales.length} locales
+          Your {Platform.OS} device supports {supportedLocales.locales.length}{" "}
+          locales{" "}
+          {settings.requiresOnDeviceRecognition
+            ? `(${supportedLocales.installedLocales.length} installed)`
+            : ""}
         </Text>
 
         <ScrollView
           style={{ height: 100, maxHeight: 150 }}
           contentContainerStyle={[styles.row, styles.flexWrap]}
         >
-          {locales.map((locale) => (
-            <OptionButton
-              key={locale}
-              title={locale}
-              active={settings.lang === locale}
-              onPress={() => handleChange("lang", locale)}
-            />
-          ))}
+          {supportedLocales.locales.map((locale) => {
+            const isInstalled =
+              Platform.OS === "android" &&
+              supportedLocales.installedLocales.includes(locale);
+            return (
+              <OptionButton
+                key={locale}
+                color={isInstalled ? "#00c853" : "#999"}
+                title={
+                  isInstalled
+                    ? `${locale} (${
+                        supportedLocales.installedLocales.includes(locale)
+                          ? "installed"
+                          : "not installed"
+                      })`
+                    : locale
+                }
+                active={settings.lang === locale}
+                onPress={() => handleChange("lang", locale)}
+              />
+            );
+          })}
         </ScrollView>
       </View>
     </View>
@@ -298,6 +360,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 5,
+  },
+  flex1: {
+    flex: 1,
   },
   row: {
     flexDirection: "row",

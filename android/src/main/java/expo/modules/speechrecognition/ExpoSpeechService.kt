@@ -59,7 +59,7 @@ class ExpoSpeechService
 
             for (service in services) {
                 if (service.serviceInfo.packageName == packageName) {
-                    Log.d("ESR", "Found service for package $packageName: ${service.serviceInfo.name}")
+                    log("Found service for package $packageName: ${service.serviceInfo.name}")
                     return ComponentName(service.serviceInfo.packageName, service.serviceInfo.name)
                 }
             }
@@ -128,10 +128,13 @@ class ExpoSpeechService
             // The server may ignore a request for partial results in some or all cases.
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, options.interimResults)
 
-            intent.putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-            )
+            // Allow users to override the language mode
+            if (options.androidIntentOptions?.containsKey("EXTRA_LANGUAGE_MODEL") != true) {
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+                )
+            }
 
             val contextualStrings = options.contextualStrings
             if (!contextualStrings.isNullOrEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -147,9 +150,9 @@ class ExpoSpeechService
 
             // Offline recognition
             // to be used with ACTION_RECOGNIZE_SPEECH, ACTION_VOICE_SEARCH_HANDS_FREE, ACTION_WEB_SEARCH
-            // if (options.requiresOnDeviceRecognition) {
-            //     intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            // }
+            if (options.requiresOnDeviceRecognition) {
+                intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            }
 
             // Optional limit on the maximum number of results to return.
             // If omitted the recognizer will choose how many results to return. Must be an integer.
@@ -158,7 +161,7 @@ class ExpoSpeechService
             val language = options.lang.takeIf { it.isNotEmpty() } ?: Locale.getDefault().toString()
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
 
-            Log.d("ESR", "androidIntentOptions: ${options.androidIntentOptions}")
+            log("androidIntentOptions: ${options.androidIntentOptions}")
 
             // Add any additional intent extras provided by the user
             options.androidIntentOptions?.forEach { (key, value) ->
@@ -167,7 +170,7 @@ class ExpoSpeechService
                 val field = RecognizerIntent::class.java.getDeclaredField(key)
                 val fieldValue = field.get(null) as? String
 
-                Log.d("ESR", "Resolved key $key -> $fieldValue with value: $value (${value.javaClass.name})")
+                log("Resolved key $key -> $fieldValue with value: $value (${value.javaClass.name})")
                 when (value) {
                     is Boolean -> intent.putExtra(fieldValue, value)
                     is Int -> intent.putExtra(fieldValue, value)
@@ -213,7 +216,7 @@ class ExpoSpeechService
         override fun onEndOfSpeech() {
             // recognitionState = RecognitionState.INACTIVE
             // sendEvent("end", null)
-            Log.d("ESR", "onEndOfSpeech()")
+            log("onEndOfSpeech()")
         }
 
         override fun onError(error: Int) {
@@ -227,7 +230,7 @@ class ExpoSpeechService
 
             sendEvent("error", mapOf("code" to errorInfo.error, "message" to errorInfo.message))
             sendEvent("end", null)
-            Log.d("ESR", "onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
+            log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
         }
 
         override fun onResults(results: Bundle?) {
@@ -241,7 +244,7 @@ class ExpoSpeechService
                 resultsList.add("")
             }
             sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
-            Log.d("ESR", "onResults()")
+            log("onResults(), transcriptions: ${resultsList.joinToString(", ")}")
             sendEvent("end", null)
         }
 
@@ -251,7 +254,7 @@ class ExpoSpeechService
                 partialResultsList.addAll(matches)
             }
             sendEvent("result", mapOf("transcriptions" to partialResultsList, "isFinal" to false))
-            Log.d("ESR", "onPartialResults()")
+            log("onPartialResults(), transcriptions: ${partialResultsList.joinToString(", ")}")
         }
 
         override fun onEvent(
@@ -293,7 +296,7 @@ class ExpoSpeechService
                     // Extra codes/messages
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RecognitionService busy."
                     SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input."
-                    SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "The selected language is not available."
+                    SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "Requested language is supported, but not yet downloaded."
                     else -> "Unknown error"
                 }
 

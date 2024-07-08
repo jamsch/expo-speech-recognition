@@ -44,7 +44,10 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     console.warn(
       "getSupportedLocales is not supported on the web. Returning an empty array.",
     );
-    return [] as string[];
+    return {
+      locales: [] as string[],
+      installedLocales: [] as string[],
+    };
   },
   addListener: () => {
     console.warn(
@@ -61,6 +64,18 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       "getSpeechRecognitionServices is not supported on the web. Returning an empty array.",
     );
     return [] as string[];
+  },
+  isOnDeviceRecognitionAvailable: () => {
+    console.warn(
+      "isOnDeviceRecognitionAvailable is not supported on the web. Returning false.",
+    );
+    return false;
+  },
+  androidTriggerOfflineModelDownload: () => {
+    console.warn(
+      "androidTriggerOfflineModelDownload is not supported on the web. Returning false.",
+    );
+    return Promise.resolve(false);
   },
 };
 

@@ -37,6 +37,7 @@ export function OptionButton(props: {
   title: string;
   onPress: () => void;
   active?: boolean;
+  color?: string;
 }) {
   return (
     <Pressable
@@ -45,6 +46,7 @@ export function OptionButton(props: {
         styles.button,
         { borderWidth: 2, borderColor: "transparent" },
         props.active ? styles.bgBlue : styles.borderBlue,
+        props.color ? { borderColor: props.color } : undefined,
       ]}
       android_ripple={{ color: "#333" }}
     >
@@ -57,18 +59,20 @@ export function OptionButton(props: {
   );
 }
 
-export function BigRedButton(props: {
+export function BigButton(props: {
   title: string;
+  color?: string;
   onPress: () => void;
   disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={props.onPress}
+      disabled={props.disabled}
       style={[
         styles.button,
         { paddingHorizontal: 16, paddingVertical: 12 },
-        styles.bgRed,
+        props.color ? { backgroundColor: props.color } : styles.bgRed,
         props.disabled && styles.opacity50,
       ]}
       android_ripple={{ color: "#333" }}

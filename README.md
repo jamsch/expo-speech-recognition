@@ -222,3 +222,30 @@ console.log("Speech recognition services:", packages.join(", "));
 const available = ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable();
 console.log("OnDevice recognition available:", available);
 ```
+
+### On Device Speech Recognition (Android)
+
+Users on Android devices will first need to download the offline model for the locale they want to use in order to use the on-device speech recognition.
+
+You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
+
+To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
+
+```ts
+import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+
+// Download the offline model for the specified locale
+ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
+  locale: "en-US",
+})
+  .then(() => {
+    console.log("Offline model downloaded successfully!");
+  })
+  .catch((err) => {
+    console.log("Failed to download offline model!", err.message);
+  });
+```
+
+The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
+
+![On Device Recognition](./images/on-device-recognition.jpg)

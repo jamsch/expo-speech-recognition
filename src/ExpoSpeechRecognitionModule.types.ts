@@ -197,9 +197,18 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   getSupportedLocales(options: {
     /** The package name of the speech recognition service to use. */
     androidRecognitionServicePackage?: string;
-    /** If true, will return the supported locales of the on-device speech recognition service. */
+    /** If true, will return the installed locales of the on-device speech recognition service. */
     onDevice?: boolean;
-  }): Promise<string[]>;
+  }): Promise<{
+    /**
+     * All supported languages on the device. This includes both installed and supported languages.
+     */
+    locales: string[];
+    /**
+     * These languages are installed on to the device for offline use.
+     */
+    installedLocales: string[];
+  }>;
   /**
    * Returns an array of package names of speech recognition services that are available on the device.
    * Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
@@ -211,4 +220,12 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * Whether the on-device speech recognition is available on the device.
    */
   isOnDeviceRecognitionAvailable(): boolean;
+  /**
+   * Downloads the offline model for the specified locale.
+   * Note: this is only supported on Android 12 and above.
+   */
+  androidTriggerOfflineModelDownload(options: {
+    /** The locale to download the model for, e.g. "en-US" */
+    locale: string;
+  }): Promise<boolean>;
 }
