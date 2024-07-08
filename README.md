@@ -210,7 +210,7 @@ ExpoSpeechRecognitionModule.stop();
 
 // Get list of supported locales
 ExpoSpeechRecognitionModule.getSupportedLocales().then((supportedLocales) => {
-  console.log("Supported locales:", supportedLocales.join(", "));
+  console.log("Supported locales:", supportedLocales.locales.join(", "));
 });
 
 // Get list of speech recognition services available on the device
