@@ -2,6 +2,8 @@
 
 expo-speech-recognition implements `SpeechRecognition` from the [Web Speech API](https://wicg.github.io/speech-api/) specification for React Native projects with the goal of code reuse across web and mobile.
 
+<img src="./images/preview.jpg" width="240" alt="expo-speech-recognition preview" />
+
 ## Installation
 
 1. Install the package
