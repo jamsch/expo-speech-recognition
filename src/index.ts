@@ -32,4 +32,7 @@ export const requestPermissionAsync =
 export const isOnDeviceRecognitionAvailable =
   ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable;
 
-export { type ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
+export {
+  type ExpoSpeechRecognitionOptions,
+  type AndroidIntentOptions,
+} from "./ExpoSpeechRecognitionModule.types";

@@ -126,6 +126,11 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
+    Function("getSpeechRecognitionServices") {
+      // Return an empty array on iOS
+      return []
+    }
+
     AsyncFunction("getSupportedLocales") { (options: GetSupportedLocaleOptions, promise: Promise) in
       let supportedLocales = SFSpeechRecognizer.supportedLocales().map { $0.identifier }.sorted()
       let installedLocales = supportedLocales

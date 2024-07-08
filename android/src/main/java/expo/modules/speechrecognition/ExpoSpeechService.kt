@@ -215,7 +215,7 @@ class ExpoSpeechService
 
         override fun onEndOfSpeech() {
             // recognitionState = RecognitionState.INACTIVE
-            // sendEvent("end", null)
+            sendEvent("speechend", null)
             log("onEndOfSpeech()")
         }
 
@@ -250,11 +250,16 @@ class ExpoSpeechService
 
         override fun onPartialResults(partialResults: Bundle?) {
             val partialResultsList = mutableListOf<String>()
-            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
-                partialResultsList.addAll(matches)
-            }
-            sendEvent("result", mapOf("transcriptions" to partialResultsList, "isFinal" to false))
+            partialResults
+                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                ?.let { matches ->
+                    partialResultsList.addAll(matches)
+                }.filter { it.isNotEmpty() }
             log("onPartialResults(), transcriptions: ${partialResultsList.joinToString(", ")}")
+            // Avoid sending result event if there was an empty result or the first result is an empty string
+            if (partialResultsList.isNotEmpty()) {
+                sendEvent("result", mapOf("transcriptions" to partialResultsList, "isFinal" to false))
+            }
         }
 
         override fun onEvent(

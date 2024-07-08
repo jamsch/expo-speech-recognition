@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableNativeFeedback,
   View,
 } from "react-native";
 import {
@@ -16,8 +17,14 @@ import {
   type ExpoSpeechRecognitionOptions,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
-import { OptionButton, CheckboxButton, BigButton } from "./components/Buttons";
+import {
+  OptionButton,
+  CheckboxButton,
+  BigButton,
+  TabButton,
+} from "./components/Buttons";
 import { StatusBar } from "expo-status-bar";
+import type { AndroidIntentOptions } from "expo-speech-recognition/ExpoSpeechRecognitionModule.types";
 
 const recognizer = createSpeechRecognizer();
 
@@ -124,7 +131,10 @@ export default function App() {
         </View>
       </ScrollView>
 
-      <ScrollView style={styles.card}>
+      <ScrollView
+        style={styles.card}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
         <Settings value={settings} onChange={setSettings} />
       </ScrollView>
 
@@ -135,7 +145,7 @@ export default function App() {
           { justifyContent: "space-between" },
         ]}
       >
-        {Platform.OS === "android" && (
+        {Platform.OS === "android" && settings.requiresOnDeviceRecognition && (
           <DownloadOfflineModel locale={settings.lang} />
         )}
 
@@ -174,15 +184,23 @@ function DownloadOfflineModel(props: { locale: string }) {
   };
 
   return (
-    <BigButton
+    <TouchableNativeFeedback
       disabled={Boolean(downloading)}
-      title={
-        downloading
-          ? `Downloading ${props.locale} model...`
-          : "Download Offline Model"
-      }
       onPress={handleDownload}
-    />
+    >
+      <View style={{ maxWidth: 200 }}>
+        <Text
+          style={{
+            fontWeight: "bold",
+            color: downloading ? "#999" : "#539bf5",
+          }}
+        >
+          {downloading
+            ? `Downloading ${props.locale} model...`
+            : `Download ${props.locale} Offline Model`}
+        </Text>
+      </View>
+    </TouchableNativeFeedback>
   );
 }
 
@@ -192,6 +210,8 @@ function Settings(props: {
 }) {
   const { value: settings, onChange } = props;
 
+  const [tab, setTab] = useState<"general" | "android" | "ios">("general");
+
   const handleChange = <T extends keyof ExpoSpeechRecognitionOptions>(
     key: T,
     value: ExpoSpeechRecognitionOptions[T],
@@ -199,10 +219,58 @@ function Settings(props: {
     onChange({ ...props.value, [key]: value });
   };
 
+  return (
+    <View>
+      <View style={[styles.flex1, styles.row, styles.mb2, styles.gap1]}>
+        <TabButton
+          title="General Settings"
+          active={tab === "general"}
+          onPress={() => {
+            setTab("general");
+          }}
+        />
+        <TabButton
+          title="Android-specific"
+          active={tab === "android"}
+          onPress={() => {
+            setTab("android");
+          }}
+        />
+        <TabButton
+          title="iOS-specific"
+          active={tab === "ios"}
+          onPress={() => {
+            setTab("ios");
+          }}
+        />
+      </View>
+      {tab === "general" && (
+        <GeneralSettings value={settings} onChange={handleChange} />
+      )}
+      {tab === "android" && (
+        <AndroidSettings value={settings} onChange={handleChange} />
+      )}
+      {tab === "ios" && (
+        <IOSSettings value={settings} onChange={handleChange} />
+      )}
+    </View>
+  );
+}
+
+function GeneralSettings(props: {
+  value: ExpoSpeechRecognitionOptions;
+  onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
+    key: T,
+    value: ExpoSpeechRecognitionOptions[T],
+  ) => void;
+}) {
+  const { value: settings, onChange: handleChange } = props;
+
   const [supportedLocales, setSupportedLocales] = useState<{
     locales: string[];
     installedLocales: string[];
   }>({ locales: [], installedLocales: [] });
+
   useEffect(() => {
     getSupportedLocales({
       onDevice: settings.requiresOnDeviceRecognition,
@@ -216,12 +284,9 @@ function Settings(props: {
 
   return (
     <View>
-      <View style={{ flexDirection: "row", gap: 2, flexWrap: "wrap" }}>
-        <CheckboxButton
-          title="Continuous (iOS only)"
-          checked={settings.continuous}
-          onPress={() => handleChange("continuous", !settings.continuous)}
-        />
+      <View
+        style={[styles.row, styles.flexWrap, { flexDirection: "row", gap: 2 }]}
+      >
         <CheckboxButton
           title="Interim Results"
           checked={settings.interimResults}
@@ -258,23 +323,6 @@ function Settings(props: {
           onChangeText={(v) => handleChange("maxAlternatives", Number(v) || 1)}
         />
       </View>
-      {Platform.OS === "android" && (
-        <View>
-          <Text style={styles.textLabel}>Android Recognition Service</Text>
-          <View style={[styles.row, styles.flexWrap]}>
-            {speechRecognitionServices.map((service) => (
-              <OptionButton
-                key={service}
-                title={service}
-                active={settings.androidRecognitionServicePackage === service}
-                onPress={() => {
-                  handleChange("androidRecognitionServicePackage", service);
-                }}
-              />
-            ))}
-          </View>
-        </View>
-      )}
       <View>
         <Text style={styles.textLabel}>Locale</Text>
         <Text style={[styles.textLabel, { color: "#999" }]}>
@@ -285,10 +333,7 @@ function Settings(props: {
             : ""}
         </Text>
 
-        <ScrollView
-          style={{ height: 100, maxHeight: 150 }}
-          contentContainerStyle={[styles.row, styles.flexWrap]}
-        >
+        <ScrollView contentContainerStyle={[styles.row, styles.flexWrap]}>
           {supportedLocales.locales.map((locale) => {
             const isInstalled =
               Platform.OS === "android" &&
@@ -313,6 +358,146 @@ function Settings(props: {
           })}
         </ScrollView>
       </View>
+    </View>
+  );
+}
+
+const androidIntentNumberInputOptions = [
+  "EXTRA_LANGUAGE_SWITCH_MAX_SWITCHES",
+  "EXTRA_ORIGIN",
+  "EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS",
+  "EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS",
+  "EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS",
+] satisfies (keyof AndroidIntentOptions)[];
+
+const androidIntentBooleanInputOptions = [
+  "EXTRA_ENABLE_BIASING_DEVICE_CONTEXT",
+  "EXTRA_ENABLE_LANGUAGE_DETECTION",
+  "EXTRA_ENABLE_LANGUAGE_SWITCH",
+  "EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION",
+  "EXTRA_MASK_OFFENSIVE_WORDS",
+  "EXTRA_REQUEST_WORD_CONFIDENCE",
+  "EXTRA_REQUEST_WORD_TIMING",
+  "EXTRA_SECURE",
+] satisfies (keyof AndroidIntentOptions)[];
+
+function AndroidSettings(props: {
+  value: ExpoSpeechRecognitionOptions;
+  onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
+    key: T,
+    value: ExpoSpeechRecognitionOptions[T],
+  ) => void;
+}) {
+  const { value: settings, onChange: handleChange } = props;
+  return (
+    <View style={styles.gap1}>
+      <View>
+        <Text style={styles.textLabel}>Android Recognition Service</Text>
+        <View style={[styles.row, styles.flexWrap]}>
+          {speechRecognitionServices.map((service) => (
+            <OptionButton
+              key={service}
+              title={service}
+              active={settings.androidRecognitionServicePackage === service}
+              onPress={() => {
+                handleChange("androidRecognitionServicePackage", service);
+              }}
+            />
+          ))}
+          {speechRecognitionServices.length === 0 && (
+            <Text style={styles.text}>No services found</Text>
+          )}
+        </View>
+      </View>
+
+      <View>
+        <Text style={[styles.textLabel, styles.mb2]}>
+          Android Intent Options
+        </Text>
+        <View style={styles.gap1}>
+          <View style={styles.flex1}>
+            <Text style={styles.textLabel}>EXTRA_LANGUAGE_MODEL</Text>
+            <View style={[styles.row, styles.flexWrap]}>
+              {[
+                "free_form",
+                "web_search",
+                "balanced",
+                "quick_response",
+                "high_precision",
+              ].map((model) => (
+                <OptionButton
+                  key={model}
+                  title={model}
+                  active={Boolean(
+                    settings.androidIntentOptions?.EXTRA_LANGUAGE_MODEL ===
+                      model,
+                  )}
+                  onPress={() =>
+                    handleChange("androidIntentOptions", {
+                      ...settings.androidIntentOptions,
+                      EXTRA_LANGUAGE_MODEL:
+                        model as AndroidIntentOptions["EXTRA_LANGUAGE_MODEL"],
+                    })
+                  }
+                />
+              ))}
+            </View>
+          </View>
+          {androidIntentNumberInputOptions.map((key) => (
+            <TextInput
+              key={key}
+              style={[styles.textInput, styles.flex1]}
+              keyboardType="number-pad"
+              autoCorrect={false}
+              placeholder={key}
+              defaultValue={
+                settings.androidIntentOptions?.[key]
+                  ? String(settings.androidIntentOptions?.[key])
+                  : ""
+              }
+              onChangeText={(v) =>
+                handleChange("androidIntentOptions", {
+                  ...settings.androidIntentOptions,
+                  [key]: Number(v) || 0,
+                })
+              }
+            />
+          ))}
+          {androidIntentBooleanInputOptions.map((key) => (
+            <CheckboxButton
+              key={key}
+              title={key}
+              checked={Boolean(settings.androidIntentOptions?.[key]) ?? false}
+              onPress={() =>
+                handleChange("androidIntentOptions", {
+                  ...settings.androidIntentOptions,
+                  [key]: !settings.androidIntentOptions?.[key] ?? false,
+                })
+              }
+            />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function IOSSettings(props: {
+  value: ExpoSpeechRecognitionOptions;
+  onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
+    key: T,
+    value: ExpoSpeechRecognitionOptions[T],
+  ) => void;
+}) {
+  const { value: settings, onChange: handleChange } = props;
+
+  return (
+    <View style={styles.row}>
+      <CheckboxButton
+        title="Continuous (iOS only)"
+        checked={settings.continuous}
+        onPress={() => handleChange("continuous", !settings.continuous)}
+      />
     </View>
   );
 }
@@ -369,5 +554,11 @@ const styles = StyleSheet.create({
   },
   flexWrap: {
     flexWrap: "wrap",
+  },
+  mb2: {
+    marginBottom: 8,
+  },
+  gap1: {
+    gap: 4,
   },
 });

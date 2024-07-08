@@ -213,7 +213,7 @@ ExpoSpeechRecognitionModule.getSupportedLocales().then((supportedLocales) => {
   console.log("Supported locales:", supportedLocales.locales.join(", "));
 });
 
-// Get list of speech recognition services available on the device
+// [Android only] Get list of speech recognition services available on the device
 // Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
 const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
 console.log("Speech recognition services:", packages.join(", "));

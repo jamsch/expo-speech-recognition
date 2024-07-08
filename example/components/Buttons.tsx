@@ -33,6 +33,25 @@ export function CheckboxButton(props: {
   );
 }
 
+export function TabButton(props: {
+  title: string;
+  onPress: () => void;
+  active?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={[
+        { borderBottomWidth: 2, borderColor: "transparent", padding: 4 },
+        props.active && styles.borderBlue,
+      ]}
+      android_ripple={{ color: "#333" }}
+    >
+      <Text style={styles.fontBold}>{props.title}</Text>
+    </Pressable>
+  );
+}
+
 export function OptionButton(props: {
   title: string;
   onPress: () => void;
@@ -95,7 +114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: "#eee",
+    backgroundColor: "#dfdfdf",
     margin: 2,
   },
   checkboxButton: {

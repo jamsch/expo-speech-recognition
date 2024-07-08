@@ -260,9 +260,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
 
             val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            if (!options.onDevice) {
-                val pkg = options.androidRecognitionServicePackage ?: "com.google.android.googlequicksearchbox"
-                recognizerIntent.setPackage(pkg)
+            if (!options.onDevice && options.androidRecognitionServicePackage != null) {
+                recognizerIntent.setPackage(options.androidRecognitionServicePackage)
             }
             Log.d("ESR", "Recognizer intent: $recognizerIntent")
 
@@ -280,8 +279,11 @@ class ExpoSpeechRecognitionModule : Module() {
                         // These languages are supported but need to be downloaded before use.
                         val installedLocales = recognitionSupport.installedOnDeviceLanguages
 
-                        val locales = recognitionSupport.supportedOnDeviceLanguages.union(installedLocales)
-
+                        val locales =
+                            recognitionSupport.supportedOnDeviceLanguages
+                                .union(installedLocales)
+                                .union(recognitionSupport.onlineLanguages)
+                                .sorted()
                         promise.resolve(
                             mapOf(
                                 "locales" to locales,
