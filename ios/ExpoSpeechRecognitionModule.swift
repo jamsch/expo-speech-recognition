@@ -117,7 +117,7 @@ public class ExpoSpeechRecognitionModule: Module {
 
     Function("isOnDeviceRecognitionAvailable") {
       let recognizer = SFSpeechRecognizer()
-      recognizer?.supportsOnDeviceRecognition
+      return recognizer?.supportsOnDeviceRecognition ?? false
     }
 
     Function("stop") {
