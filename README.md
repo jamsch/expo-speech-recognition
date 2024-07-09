@@ -22,10 +22,12 @@ npm install @jamsch/expo-speech-recognition
   "expo": {
     "plugins": [
       [
-        "expo-speech-recognition",
+        "@jamsch/expo-speech-recognition",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition.",
+          // Add additional speech service packages here that aren't under the `forceQueryable` section
+          // when running the command: "adb shell dumpsys package queries"
           // default: ["com.google.android.googlequicksearchbox"]
           "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
@@ -209,23 +211,58 @@ ExpoSpeechRecognitionModule.start({
 
 // Stop speech recognition
 ExpoSpeechRecognitionModule.stop();
+```
 
-// Get list of supported locales
-ExpoSpeechRecognitionModule.getSupportedLocales().then((supportedLocales) => {
+### API: `getSupportedLocales`
+
+Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
+
+```ts
+import { getSupportedLocales } from "@jamsch/expo-speech-recognition";
+
+getSupportedLocales({
+  /**
+   * The package name of the speech recognition service to use.
+   * If not provided, the default service will be used.
+   */
+  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
+  /** If true, will return the locales that are able to be used for on-device recognition. */
+  onDevice: false,
+}).then((supportedLocales) => {
   console.log("Supported locales:", supportedLocales.locales.join(", "));
+  console.log(
+    "On-device locales:",
+    supportedLocales.installedLocales.join(", "),
+  );
 });
+```
 
-// [Android only] Get list of speech recognition services available on the device
-// Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
+### API: `getSpeechRecognitionServices` (Android only)
+
+Get list of speech recognition services available on the device.
+
+> Note: this only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
+
+```ts
+import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
+
 const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
 console.log("Speech recognition services:", packages.join(", "));
+// e.g. ["com.google.android.tts", "com.samsung.android.bixby.agent"]
+```
 
-// Whether the onDevice speech recognition is available
-const available = ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable();
+### API: `isOnDeviceRecognitionAvailable`
+
+Whether the on-device speech recognition is available on the device.
+
+```ts
+import { isOnDeviceRecognitionAvailable } from "@jamsch/expo-speech-recognition";
+
+const available = isOnDeviceRecognitionAvailable();
 console.log("OnDevice recognition available:", available);
 ```
 
-### On Device Speech Recognition (Android)
+### API: `androidTriggerOfflineModelDownload` (Android only)
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use the on-device speech recognition.
 
