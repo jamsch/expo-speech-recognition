@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.ResolveInfo
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
@@ -55,7 +54,7 @@ class ExpoSpeechService
             }
         }
 
-        private fun findComponentNameByPackageName(packageName: String): ComponentName? {
+        private fun findComponentNameByPackageName(packageName: String): ComponentName {
             val packageManager = reactContext.packageManager
             val services: List<ResolveInfo> = packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
 
@@ -172,7 +171,7 @@ class ExpoSpeechService
             }
 
             // Stream microphone input to SpeechRecognition so the user can access the audio blob
-            if (options.audioSource?.persistRecording == true && options.audioSource.type == "microphone") {
+            if (options.audioSource?.persistRecording == true) { // && options.audioSource.type == "microphone"
                 val outputFilePath = options.audioSource.outputFilePath
                 log("outputFilePath: $outputFilePath")
 
@@ -180,32 +179,50 @@ class ExpoSpeechService
                     if (outputFilePath != null) {
                         outputFilePath
                     } else {
-                        // Write to temp file path
-                        val filename = System.currentTimeMillis().toString()
-                        Environment.getDownloadCacheDirectory().absolutePath + "/audio_$filename" + ".wav"
+                        // Write to cache file path
+                        val timestamp = System.currentTimeMillis().toString()
+                        // e.g. " /data/user/0/expo.modules.speechrecognition.example/cache/audio_1720674256115.wav"
+                        reactContext.cacheDir.absolutePath + "/audio_$timestamp.wav"
                     }
 
                 try {
-                    audioRecorder =
-                        ExpoAudioRecorder(reactContext, filePath).apply {
-                            intent.putExtra(
-                                RecognizerIntent.EXTRA_AUDIO_SOURCE,
-                                this.recordingParcel,
-                            )
-                            intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
-                            intent.putExtra(
-                                RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
-                                this.audioFormat,
-                            )
-                            intent.putExtra(
-                                RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
-                                this.sampleRateInHz,
-                            )
-                            intent.putExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION, RecognizerIntent.EXTRA_AUDIO_SOURCE)
-                            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000)
-                            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000)
-                            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000)
-                        }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        audioRecorder =
+                            ExpoAudioRecorder(reactContext, filePath).apply {
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_AUDIO_SOURCE,
+                                    this.recordingParcel,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
+                                    1,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
+                                    this.audioFormat,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
+                                    this.sampleRateInHz,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_SEGMENTED_SESSION,
+                                    RecognizerIntent.EXTRA_AUDIO_SOURCE,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+                                    2000,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
+                                    1000,
+                                )
+                                intent.putExtra(
+                                    RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+                                    2000,
+                                )
+                            }
+                    }
                 } catch (e: Exception) {
                     // We'd rather not crash the app.
                     log("Error setting up audio recorder: $e")
@@ -333,7 +350,7 @@ class ExpoSpeechService
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
-            var partialResultsList = mutableListOf<String>()
+            val partialResultsList = mutableListOf<String>()
             partialResults
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 ?.let { matches ->
@@ -354,7 +371,7 @@ class ExpoSpeechService
          */
         override fun onSegmentResults(segmentResults: Bundle) {
             val resultsList = mutableListOf<String>()
-            segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
+            segmentResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
                 resultsList.addAll(matches)
             }
             // Ensure we have at least one result

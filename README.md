@@ -337,7 +337,7 @@ import {
 
 function RecordAudio() {
   const [recording, setRecording] = useState(false);
-  const [recordingPath, setRecordingPath] = useState(null);
+  const [recordingPath, setRecordingPath] = useState<string | null>(null);
 
   const handleStart = () => {
     setRecording(true);
@@ -360,13 +360,13 @@ function RecordAudio() {
         console.log("Local file path:", event.filePath);
 
         // Android: Will be saved as a .wav file
-        // e.g. "/storage/emulated/0/Android/data/com.jamsch.expo.speechrecognition.example/files/recording.wav"
+        // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
         setRecordingPath(event.filePath);
         setRecording(false);
       },
     );
     return listener.remove;
-  });
+  }, []);
 
   return (
     <View>
@@ -381,7 +381,7 @@ import { Button } from "react-native";
 import { useAudioPlayer } from "expo-audio";
 
 function AudioPlayer(props: { source: string }) {
-  const player = useAudioPlayer(props.source, 500);
+  const player = useAudioPlayer(props.source);
   return <Button title="Play" onPress={player.play} />;
 }
 ```

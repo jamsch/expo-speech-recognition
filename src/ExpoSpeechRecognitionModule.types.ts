@@ -1,6 +1,10 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
 
+export type ExpoSpeechRecognitionEventMap = {
+  recording: { filePath: string };
+};
+
 export type ExpoSpeechRecognitionOptions = {
   lang: string;
   interimResults: boolean;
@@ -243,7 +247,7 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   start(options: ExpoSpeechRecognitionOptions): void;
   stop(): void;
   /** Requests speech recognition and recording permissions prior to starting speech recognition. */
-  requestPermissionAsync(): Promise<PermissionResponse>;
+  requestPermissionsAsync(): Promise<PermissionResponse>;
   /** Returns an array of locales supported by the speech recognizer. */
   getSupportedLocales(options: {
     /** The package name of the speech recognition service to use. */

@@ -196,7 +196,6 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   }
   stop = ExpoSpeechRecognitionModule.stop;
   abort = ExpoSpeechRecognitionModule.stop;
-  requestPermissionAsync = ExpoSpeechRecognitionModule.requestPermissionAsync;
 
   #onstart: SpeechListener<"start"> | null = null;
   set onstart(listener: SpeechListener<"start"> | null) {

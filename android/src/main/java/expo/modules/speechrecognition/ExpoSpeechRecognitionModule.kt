@@ -16,7 +16,6 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
 import expo.modules.kotlin.Promise
-import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
@@ -60,7 +59,7 @@ class SpeechRecognitionOptions : Record {
 
 class AudioSourceOptions : Record {
     @Field
-    val type: String? = "microphone"
+    val type: String = "microphone"
 
     @Field
     val sourceUri: String? = null
@@ -178,8 +177,10 @@ class ExpoSpeechRecognitionModule : Module() {
 
             /** Start recognition with args: lang, interimResults, maxAlternatives */
             Function("start") { options: SpeechRecognitionOptions ->
-                if (hasNotGrantedPermissions()) {
-                    throw PermissionsException("Missing RECORD_AUDIO permissions.")
+                if (hasNotGrantedRecordPermissions()) {
+                    sendEvent("error", mapOf("code" to "not-allowed", "message" to "Missing RECORD_AUDIO permissions."))
+                    sendEvent("end")
+                    return@Function
                 }
                 val service =
                     ExpoSpeechService.getInstance(appContext.reactContext!!) { name, body ->
@@ -284,9 +285,7 @@ class ExpoSpeechRecognitionModule : Module() {
             }
         }
 
-    private fun hasNotGrantedPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
-
-    // private fun getAvailableLocales(appContext: Context, promise: Promise) {
+    private fun hasNotGrantedRecordPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
 
     private fun getSupportedLocales(
         options: GetSupportedLocaleOptions,
@@ -370,7 +369,3 @@ class ExpoSpeechRecognitionModule : Module() {
         }
     }
 }
-
-class PermissionsException(
-    message: String,
-) : CodedException(message)
