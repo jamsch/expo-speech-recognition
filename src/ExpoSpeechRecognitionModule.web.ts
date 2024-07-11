@@ -77,6 +77,19 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     );
     return Promise.resolve(false);
   },
+  setCategoryIOS: () => {
+    console.warn("setCategoryIOS is not supported on the web.");
+  },
+  getAudioSessionCategoryAndOptionsIOS: () => {
+    console.warn(
+      "getAudioSessionCategoryAndOptionsIOS is not supported on the web.",
+    );
+    return {
+      category: "playAndRecord",
+      categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
+      mode: "measurement",
+    };
+  },
 };
 
 export const ExpoSpeechRecognitionModuleEmitter = {

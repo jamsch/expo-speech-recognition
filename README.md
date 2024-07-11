@@ -26,8 +26,9 @@ npm install @jamsch/expo-speech-recognition
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition.",
-          // Add additional speech service packages here that aren't under the `forceQueryable` section
-          // when running the command: "adb shell dumpsys package queries"
+          // Add additional speech service packages here that aren't listed
+          // under the `forceQueryable` section when running the command:
+          // "adb shell dumpsys package queries"
           // default: ["com.google.android.googlequicksearchbox"]
           "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
@@ -184,8 +185,7 @@ const resultListener = ExpoSpeechRecognitionModuleEmitter.addListener(
   "result",
   (event) => {
     // Note: this is not the same as the `result` event listener on the web speech API
-    const { transcriptions, isFinal } = event;
-    console.log("result:", transcriptions, "final:", isFinal);
+    console.log("result:", result.transcriptions, "final:", result.isFinal);
   },
 );
 
@@ -253,7 +253,7 @@ console.log("Speech recognition services:", packages.join(", "));
 
 ### API: `isOnDeviceRecognitionAvailable`
 
-Whether the on-device speech recognition is available on the device.
+Whether on-device speech recognition is available on the device.
 
 ```ts
 import { isOnDeviceRecognitionAvailable } from "@jamsch/expo-speech-recognition";
@@ -288,3 +288,30 @@ ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
 The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
 
 ![On Device Recognition](./images/on-device-recognition.jpg)
+
+### API: `setCategoryIOS` (iOS only)
+
+This function is an implementation of [AVAudioSession.setCategory](https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory) for iOS. For multimedia applications, you may want to set the audio session category and mode to control the audio routing.
+
+> Note: when starting speech recognition, audio session category is changed to `playAndRecord` with option `defaultToSpeaker` amd `allowBluetooth` and mode `measurement`.
+
+```ts
+import { setCategoryIOS } from "@jamsch/expo-speech-recognition";
+
+setCategoryIOS({
+  category: "playAndRecord",
+  categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
+  mode: "measurement",
+});
+```
+
+### API: `getAudioSessionCategoryAndOptionsIOS` (iOS only)
+
+Returns the current audio session category and options. For advanced use cases, you may want to use this function to safely configure the audio session category and mode.
+
+```ts
+import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recognition";
+
+const values = getAudioSessionCategoryAndOptionsIOS();
+console.log(values); // { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
+```

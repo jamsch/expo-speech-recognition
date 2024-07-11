@@ -188,7 +188,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
 
     let audioSession = AVAudioSession.sharedInstance()
-    try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
+
+    try audioSession.setCategory(
+      .playAndRecord, mode: .measurement, options: .defaultToSpeaker|.allowBluetooth)
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
     let inputNode = audioEngine.inputNode
 

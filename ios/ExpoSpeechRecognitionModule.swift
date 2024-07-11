@@ -115,6 +115,54 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
+    Function("setCategoryIOS") { (options: SetCategoryOptions) in
+      // Convert the array of category options to a bitmask
+      let categoryOptions = options.categoryOptions.reduce(AVAudioSession.CategoryOptions()) {
+        result, option in
+        result.union(option.avCategoryOption)
+      }
+
+      try AVAudioSession.sharedInstance().setCategory(
+        options.category.avCategory,
+        mode: options.mode.avMode,
+        options: categoryOptions
+      )
+    }
+
+    Function("getAudioSessionCategoryAndOptionsIOS") {
+      let instance = AVAudioSession.sharedInstance()
+
+      let categoryOptions: AVAudioSession.CategoryOptions = instance.categoryOptions
+
+      var allCategoryOptions: [(option: AVAudioSession.CategoryOptions, string: String)] = [
+        (.mixWithOthers, "mixWithOthers"),
+        (.duckOthers, "duckOthers"),
+        (.allowBluetooth, "allowBluetooth"),
+        (.defaultToSpeaker, "defaultToSpeaker"),
+        (.interruptSpokenAudioAndMixWithOthers, "interruptSpokenAudioAndMixWithOthers"),
+        (.allowBluetoothA2DP, "allowBluetoothA2DP"),
+        (.allowAirPlay, "allowAirPlay"),
+      ]
+
+      // Define a mapping from CategoryOptions to their string representations
+      if #available(iOS 14.5, *) {
+        allCategoryOptions.append(
+          (.overrideMutedMicrophoneInterruption, "overrideMutedMicrophoneInterruption"))
+      }
+
+      // Filter and map the options that are set
+      let categoryOptionsStrings =
+        allCategoryOptions
+        .filter { categoryOptions.contains($0.option) }
+        .map { $0.string }
+
+      return [
+        "category": instance.category.rawValue,
+        "categoryOptions": categoryOptionsStrings,
+        "mode": instance.mode.rawValue,
+      ]
+    }
+
     Function("isOnDeviceRecognitionAvailable") {
       let recognizer = SFSpeechRecognizer()
       return recognizer?.supportsOnDeviceRecognition ?? false

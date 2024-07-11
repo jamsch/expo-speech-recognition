@@ -230,4 +230,56 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     /** The locale to download the model for, e.g. "en-US" */
     locale: string;
   }): Promise<boolean>;
+  /**
+   * [iOS only] For advanced use cases, you may use this function to set the audio session category and mode.
+   *
+   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory
+   */
+  setCategoryIOS(options: {
+    category: AVAudioSessionCategory;
+    categoryOptions: AVAudioSessionCategoryOptions[];
+    mode?: AVAudioSessionMode;
+  }): void;
+  /**
+   * [iOS only] Returns the current audio session category and options.
+   *
+   * See:
+   * - [AVAudioSession.Category](https://developer.apple.com/documentation/avfaudio/avaudiosession/category)
+   * - [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions)
+   * - [AVAudioSession.Mode](https://developer.apple.com/documentation/avfaudio/avaudiosession/mode)
+   */
+  getAudioSessionCategoryAndOptionsIOS(): {
+    category: AVAudioSessionCategory;
+    categoryOptions: AVAudioSessionCategoryOptions[];
+    mode: AVAudioSessionMode;
+  };
 }
+
+export type AVAudioSessionCategory =
+  | "ambient"
+  | "soloAmbient"
+  | "playback"
+  | "record"
+  | "playAndRecord"
+  | "multiRoute";
+
+export type AVAudioSessionCategoryOptions =
+  | "mixWithOthers"
+  | "duckOthers"
+  | "interruptSpokenAudioAndMixWithOthers"
+  | "allowBluetooth"
+  | "allowBluetoothA2DP"
+  | "allowAirPlay"
+  | "defaultToSpeaker"
+  | "overrideMutedMicrophoneInterruption";
+
+export type AVAudioSessionMode =
+  | "default"
+  | "gameChat"
+  | "measurement"
+  | "moviePlayback"
+  | "spokenAudio"
+  | "videoChat"
+  | "videoRecording"
+  | "voiceChat"
+  | "voicePrompt";
