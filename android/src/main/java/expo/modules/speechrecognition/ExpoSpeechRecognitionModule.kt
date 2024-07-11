@@ -4,6 +4,7 @@ import android.Manifest.permission.RECORD_AUDIO
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.media.AudioFormat
 import android.os.Build
 import android.os.Handler
 import android.speech.ModelDownloadListener
@@ -20,6 +21,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import expo.modules.kotlin.types.Enumerable
 import java.util.concurrent.Executors
 
 class SpeechRecognitionOptions : Record {
@@ -55,29 +57,48 @@ class SpeechRecognitionOptions : Record {
      */
     @Field
     val audioSource: AudioSourceOptions? = null
+
+    @Field
+    val recordingOptions: RecordingOptions? = null
+}
+
+class RecordingOptions : Record {
+    @Field
+    val persist: Boolean = false
+
+    @Field
+    val outputFilePath: String? = null
+}
+
+enum class AudioEncodingOption(
+    val value: String,
+    val androidAudioFormat: Int,
+) : Enumerable {
+    ENCODING_MP3("ENCODING_MP3", AudioFormat.ENCODING_MP3),
+    ENCODING_MPEGH_BL_L3("ENCODING_MPEGH_BL_L3", AudioFormat.ENCODING_MPEGH_BL_L3),
+    ENCODING_MPEGH_BL_L4("ENCODING_MPEGH_BL_L4", AudioFormat.ENCODING_MPEGH_BL_L4),
+    ENCODING_MPEGH_LC_L3("ENCODING_MPEGH_LC_L3", AudioFormat.ENCODING_MPEGH_LC_L3),
+    ENCODING_MPEGH_LC_L4("ENCODING_MPEGH_LC_L4", AudioFormat.ENCODING_MPEGH_LC_L4),
+    ENCODING_OPUS("ENCODING_OPUS", AudioFormat.ENCODING_OPUS),
+    ENCODING_PCM_16BIT("ENCODING_PCM_16BIT", AudioFormat.ENCODING_PCM_16BIT),
+    ENCODING_PCM_24BIT_PACKED("ENCODING_PCM_24BIT_PACKED", AudioFormat.ENCODING_PCM_24BIT_PACKED),
+    ENCODING_PCM_32BIT("ENCODING_PCM_32BIT", AudioFormat.ENCODING_PCM_32BIT),
+    ENCODING_PCM_8BIT("ENCODING_PCM_8BIT", AudioFormat.ENCODING_PCM_8BIT),
+    ENCODING_PCM_FLOAT("ENCODING_PCM_FLOAT", AudioFormat.ENCODING_PCM_FLOAT),
 }
 
 class AudioSourceOptions : Record {
     @Field
-    val type: String = "microphone"
+    val uri: String = ""
 
     @Field
-    val sourceUri: String? = null
+    val audioEncoding: AudioEncodingOption? = AudioEncodingOption.ENCODING_PCM_16BIT
 
     @Field
-    val persistRecording: Boolean = false
+    val sampleRate: Number? = 16000
 
     @Field
-    val outputFilePath: String? = null
-
-    @Field
-    val outputFormat: String? = null
-
-    @Field
-    val audioEncoder: String? = null
-
-    @Field
-    val audioChannels: Int? = null
+    val audioChannels: Int? = 1
 }
 
 class GetSupportedLocaleOptions : Record {

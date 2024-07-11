@@ -9,6 +9,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     case notAuthorizedToRecognize
     case notPermittedToRecord
     case recognizerIsUnavailable
+    case invalidAudioSource
 
     var message: String {
       switch self {
@@ -16,13 +17,14 @@ actor ExpoSpeechRecognizer: ObservableObject {
       case .notAuthorizedToRecognize: return "Not authorized to recognize speech"
       case .notPermittedToRecord: return "Not permitted to record audio"
       case .recognizerIsUnavailable: return "Recognizer is unavailable"
+      case .invalidAudioSource: return "Invalid audio source"
       }
     }
   }
 
   private var options: SpeechRecognitionOptions?
   private var audioEngine: AVAudioEngine?
-  private var request: SFSpeechAudioBufferRecognitionRequest?
+  private var request: SFSpeechRecognitionRequest?
   private var task: SFSpeechRecognitionTask?
   private var recognizer: SFSpeechRecognizer?
   private var speechStartHandler: (() -> Void)?
@@ -94,15 +96,34 @@ actor ExpoSpeechRecognizer: ObservableObject {
   ) {
     self.speechStartHandler = speechStartHandler
 
-    guard let recognizer: SFSpeechRecognizer, recognizer.isAvailable else {
+    guard let recognizer, recognizer.isAvailable else {
       errorHandler(RecognizerError.recognizerIsUnavailable)
       return
     }
 
     do {
-      let (audioEngine, request) = try Self.prepareEngine(options: options, recognizer: recognizer)
-      self.audioEngine = audioEngine
+      let request = Self.prepareRequest(
+        options: options,
+        recognizer: recognizer
+      )
       self.request = request
+
+      // Check if options.audioSource is set, if it is, then it is sourced from a file
+      let isSourcedFromFile = options.audioSource?.uri != nil
+
+      var audioEngine: AVAudioEngine?
+      if !isSourcedFromFile {
+        audioEngine = try Self.prepareEngine(
+          options: options,
+          request: request
+        )
+        self.audioEngine = audioEngine
+      } else {
+        self.audioEngine = nil
+      }
+
+      // Don't run any timers if the audio source is from a file
+      let continuous = options.continuous || isSourcedFromFile
 
       self.task = recognizer.recognitionTask(
         with: request,
@@ -121,14 +142,13 @@ actor ExpoSpeechRecognizer: ObservableObject {
             error: error,
             resultHandler: resultHandler,
             errorHandler: errorHandler,
-            continuous: options.continuous
+            continuous: continuous
           )
         })
 
-      if !options.continuous {
+      if !continuous {
         invalidateAndScheduleTimer()
       }
-
     } catch {
       self.reset()
       errorHandler(error)
@@ -167,12 +187,17 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  private static func prepareEngine(
+  private static func prepareRequest(
     options: SpeechRecognitionOptions, recognizer: SFSpeechRecognizer
-  ) throws -> (AVAudioEngine, SFSpeechAudioBufferRecognitionRequest) {
-    let audioEngine = AVAudioEngine()
+  ) -> SFSpeechRecognitionRequest {
 
-    let request = SFSpeechAudioBufferRecognitionRequest()
+    let request: SFSpeechRecognitionRequest
+    if let audioSource = options.audioSource {
+      request = SFSpeechURLRecognitionRequest(url: URL(string: audioSource.uri)!)
+    } else {
+      request = SFSpeechAudioBufferRecognitionRequest()
+    }
+
     request.shouldReportPartialResults = options.interimResults
 
     if recognizer.supportsOnDeviceRecognition {
@@ -187,26 +212,39 @@ actor ExpoSpeechRecognizer: ObservableObject {
       request.addsPunctuation = options.addsPunctuation
     }
 
+    return request
+  }
+
+  private static func prepareEngine(
+    options: SpeechRecognitionOptions, request: SFSpeechRecognitionRequest
+  ) throws -> AVAudioEngine {
+    let audioEngine = AVAudioEngine()
     let audioSession = AVAudioSession.sharedInstance()
 
     try audioSession.setCategory(
-      .playAndRecord, mode: .measurement, options: .defaultToSpeaker|.allowBluetooth)
+      .playAndRecord,
+      mode: .measurement,
+      options: [.defaultToSpeaker, .allowBluetooth]
+    )
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
     let inputNode = audioEngine.inputNode
-
     let recordingFormat = inputNode.outputFormat(forBus: 0)
-    inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
-      (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-      request.append(buffer)
+
+    // check if the request is a SFSpeechAudioBufferRecognitionRequest
+    if let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest {
+      inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
+        (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
+        audioBufferRequest.append(buffer)
+      }
     }
     audioEngine.prepare()
     try audioEngine.start()
 
-    return (audioEngine, request)
+    return audioEngine
   }
 
   nonisolated private func recognitionHandler(
-    audioEngine: AVAudioEngine,
+    audioEngine: AVAudioEngine?,
     result: SFSpeechRecognitionResult?,
     error: Error?,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
@@ -233,8 +271,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
 
     if receivedFinalResult || receivedError {
-      audioEngine.stop()
-      audioEngine.inputNode.removeTap(onBus: 0)
+      audioEngine?.stop()
+      audioEngine?.inputNode.removeTap(onBus: 0)
     }
 
     // Non-continuous speech recognition

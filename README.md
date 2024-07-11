@@ -318,7 +318,7 @@ console.log(values); // { category: "playAndRecord", categoryOptions: ["defaultT
 
 ## Persisting Audio Recordings
 
-If you would like to persist the recognized audio for later use, you can enable the `audioSource.persistRecording` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
+If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
 
 > **Important notes before using this feature:**
 >
@@ -343,9 +343,8 @@ function RecordAudio() {
     // Start recording
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
-      audioSource: {
-        type: "microphone",
-        persistRecording: true,
+      recordingOptions: {
+        persist: true,
         // Optional: Specify the output file path to save the recording to
         outputFilePath: "/path/to/save/recording.wav",
       },
@@ -382,5 +381,42 @@ import { useAudioPlayer } from "expo-audio";
 function AudioPlayer(props: { source: string }) {
   const player = useAudioPlayer(props.source);
   return <Button title="Play" onPress={player.play} />;
+}
+```
+
+## Transcribing audio files
+
+You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
+
+```tsx
+import { Button, View } from "react-native";
+import { createSpeechRecognizer } from "@jamsch/expo-speech-recognition";
+
+const recognizer = createSpeechRecognizer();
+
+function TranscribeAudio() {
+  const [transcription, setTranscription] = useState("");
+
+  const handleStart = () => {
+    recognizer.start({
+      lang: "en-US",
+      interimResults: true,
+      audioSource: {
+        type: "file",
+        sourceUri: "/path/to/audio.wav", // or remote URL e.g. "https://example.com/audio.wav"
+      },
+    });
+  };
+
+  recognizer.useEvent("result", (ev) => {
+    setTranscription(ev.results[ev.resultIndex][0].transcript);
+  });
+
+  return (
+    <View>
+      <Button title="Start" onPress={handleStart} />
+      <Text>{transcription}</Text>
+    </View>
+  );
 }
 ```

@@ -566,15 +566,15 @@ function OtherSettings(props: {
     <View>
       <CheckboxButton
         title="Persist audio recording to filesystem"
-        checked={Boolean(settings.audioSource?.persistRecording)}
+        checked={Boolean(settings.recordingOptions?.persist)}
         onPress={() =>
-          handleChange("audioSource", {
-            ...(settings.audioSource ?? {}),
-            persistRecording: !settings.audioSource?.persistRecording,
+          handleChange("recordingOptions", {
+            ...(settings.recordingOptions ?? {}),
+            persist: !settings.recordingOptions?.persist,
           })
         }
       />
-      {settings.audioSource?.persistRecording ? (
+      {settings.recordingOptions?.persist ? (
         <View
           style={{
             borderStyle: "dashed",

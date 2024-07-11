@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
+import android.media.AudioFormat
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -14,7 +15,12 @@ import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import java.io.File
+import java.io.FileOutputStream
+import java.lang.ref.WeakReference
+import java.net.URL
 import java.util.Locale
+import java.util.UUID
 
 data class SpeechRecognitionErrorEvent(
     val error: String,
@@ -39,21 +45,27 @@ class ExpoSpeechService
         private val mainHandler = Handler(Looper.getMainLooper())
         private var audioRecorder: ExpoAudioRecorder? = null
 
+        /**
+         * Reference for a remote file, for file-based recognition
+         */
+        private var downloadedFileHandle: File? = null
+
         companion object {
-            @SuppressLint("StaticFieldLeak")
-            private var instance: ExpoSpeechService? = null
+            @Volatile
+            private var instance: WeakReference<ExpoSpeechService>? = null
 
             fun getInstance(
                 reactContext: Context,
                 sendEventFunction: (name: String, body: Map<String, Any?>?) -> Unit,
-            ): ExpoSpeechService {
-                if (instance == null) {
-                    instance = ExpoSpeechService(reactContext, sendEventFunction)
+            ): ExpoSpeechService =
+                instance?.get() ?: synchronized(this) {
+                    instance?.get() ?: ExpoSpeechService(reactContext, sendEventFunction).also {
+                        instance = WeakReference(it)
+                    }
                 }
-                return instance!!
-            }
         }
 
+        @SuppressLint("QueryPermissionsNeeded")
         private fun findComponentNameByPackageName(packageName: String): ComponentName {
             val packageManager = reactContext.packageManager
             val services: List<ResolveInfo> = packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
@@ -107,8 +119,8 @@ class ExpoSpeechService
                 recognitionState = RecognitionState.ACTIVE
                 soundStartEventCalled = false
 
-                val intent = createSpeechIntent(options)
                 try {
+                    val intent = createSpeechIntent(options)
                     speech = createSpeechRecognizer(options)
                     // Start the audio recorder, if necessary
                     audioRecorder?.start()
@@ -118,7 +130,7 @@ class ExpoSpeechService
                     speech?.startListening(intent)
                 } catch (e: Exception) {
                     log("Failed to create Speech Recognizer")
-                    sendEvent("error", mapOf("code" to "unknown", "message" to e.localizedMessage))
+                    sendEvent("error", mapOf("code" to "audio-capture", "message" to e.localizedMessage))
                     stop()
                 }
             }
@@ -141,6 +153,13 @@ class ExpoSpeechService
         }
 
         fun stop() {
+            teardownAndEnd()
+        }
+
+        /**
+         * Stops speech recognition, recording and updates state
+         */
+        private fun teardownAndEnd(state: RecognitionState = RecognitionState.INACTIVE) {
             mainHandler.post {
                 try {
                     speech?.stopListening()
@@ -149,8 +168,14 @@ class ExpoSpeechService
                 }
                 speech?.destroy()
                 stopRecording()
+                // sendEvent("audioend", null)
                 sendEvent("end", null)
-                recognitionState = RecognitionState.INACTIVE
+                try {
+                    downloadedFileHandle?.delete()
+                } catch (e: Exception) {
+                    //
+                }
+                recognitionState = state
             }
         }
 
@@ -170,64 +195,69 @@ class ExpoSpeechService
                 )
             }
 
-            // Stream microphone input to SpeechRecognition so the user can access the audio blob
-            if (options.audioSource?.persistRecording == true) { // && options.audioSource.type == "microphone"
-                val outputFilePath = options.audioSource.outputFilePath
-                log("outputFilePath: $outputFilePath")
-
+            // Feature: Stream microphone input to SpeechRecognition so the user can access the audio blob
+            if (options.recordingOptions?.persist == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val filePath =
-                    if (outputFilePath != null) {
-                        outputFilePath
-                    } else {
-                        // Write to cache file path
+                    options.recordingOptions.outputFilePath ?: run {
                         val timestamp = System.currentTimeMillis().toString()
-                        // e.g. " /data/user/0/expo.modules.speechrecognition.example/cache/audio_1720674256115.wav"
-                        reactContext.cacheDir.absolutePath + "/audio_$timestamp.wav"
+                        "${reactContext.cacheDir.absolutePath}/audio_$timestamp.wav"
                     }
 
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        audioRecorder =
-                            ExpoAudioRecorder(reactContext, filePath).apply {
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_AUDIO_SOURCE,
-                                    this.recordingParcel,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
-                                    1,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
-                                    this.audioFormat,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
-                                    this.sampleRateInHz,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_SEGMENTED_SESSION,
-                                    RecognizerIntent.EXTRA_AUDIO_SOURCE,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-                                    2000,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
-                                    1000,
-                                )
-                                intent.putExtra(
-                                    RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-                                    2000,
-                                )
-                            }
+                audioRecorder =
+                    ExpoAudioRecorder(reactContext, filePath).apply {
+                        intent.putExtra(
+                            RecognizerIntent.EXTRA_AUDIO_SOURCE,
+                            this.recordingParcel,
+                        )
+                        intent.putExtra(
+                            RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
+                            1,
+                        )
+                        intent.putExtra(
+                            RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
+                            this.audioFormat,
+                        )
+                        intent.putExtra(
+                            RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
+                            this.sampleRateInHz,
+                        )
+                        intent.putExtra(
+                            RecognizerIntent.EXTRA_SEGMENTED_SESSION,
+                            if (options.continuous) {
+                                RecognizerIntent.EXTRA_AUDIO_SOURCE
+                            } else {
+                                RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
+                            },
+                        )
+                        if (!options.continuous) {
+                            intent.putExtra(
+                                RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+                                2000,
+                            )
+                            intent.putExtra(
+                                RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
+                                1000,
+                            )
+                            intent.putExtra(
+                                RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+                                2000,
+                            )
+                        }
                     }
-                } catch (e: Exception) {
-                    // We'd rather not crash the app.
-                    log("Error setting up audio recorder: $e")
-                    sendEvent("error", mapOf("code" to "audio-capture", "message" to e.localizedMessage))
-                }
+            }
+
+            // Feature: Transcribe audio from a local or remote file
+            if (options.audioSource?.uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val file = resolveSourceUri(options.audioSource.uri)
+                intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, file.absolutePath)
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
+                    options.audioSource.audioEncoding?.androidAudioFormat ?: AudioFormat.ENCODING_MP3,
+                )
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
+                    options.audioSource.sampleRate ?: 16000,
+                )
             }
 
             val contextualStrings = options.contextualStrings
@@ -287,6 +317,32 @@ class ExpoSpeechService
             return intent
         }
 
+        /**
+         * Resolves the source URI to a local file path
+         */
+        private fun resolveSourceUri(sourceUri: String): File {
+            // Local file assets
+            if (!sourceUri.startsWith("https://")) {
+                return File(sourceUri)
+            }
+            // Download the file
+            val generatedFileName = UUID.randomUUID().toString()
+            val file = File(reactContext.cacheDir, generatedFileName)
+            val url = URL(sourceUri)
+            val connection = url.openConnection()
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+            connection.doInput = true
+            connection.connect()
+            val input = connection.getInputStream()
+            val output = FileOutputStream(file)
+            input.copyTo(output)
+            output.close()
+            input.close()
+            downloadedFileHandle = file
+            return file
+        }
+
         override fun onReadyForSpeech(params: Bundle?) {
             // Avoid sending this event if there was an error
             // An error may preempt this event in the case of a permission error or a language not supported error
@@ -319,7 +375,6 @@ class ExpoSpeechService
         }
 
         override fun onError(error: Int) {
-            recognitionState = RecognitionState.ERROR
             val errorInfo = getErrorInfo(error)
             // Web Speech API:
             // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
@@ -328,13 +383,11 @@ class ExpoSpeechService
             }
 
             sendEvent("error", mapOf("code" to errorInfo.error, "message" to errorInfo.message))
-            // stopRecording()
-            sendEvent("end", null)
+            teardownAndEnd(RecognitionState.ERROR)
             log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
         }
 
         override fun onResults(results: Bundle?) {
-            recognitionState = RecognitionState.INACTIVE
             val resultsList = mutableListOf<String>()
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
                 resultsList.addAll(matches)
@@ -345,8 +398,8 @@ class ExpoSpeechService
             }
             sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
             log("onResults(), transcriptions: ${resultsList.joinToString(", ")}")
-            stopRecording()
-            sendEvent("end", null)
+
+            teardownAndEnd()
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
@@ -383,11 +436,8 @@ class ExpoSpeechService
         }
 
         override fun onEndOfSegmentedSession() {
-            recognitionState = RecognitionState.INACTIVE
             log("onEndOfSegmentedSession()")
-            stopRecording()
-            speech?.destroy()
-            sendEvent("end", null)
+            teardownAndEnd()
         }
 
         override fun onEvent(
