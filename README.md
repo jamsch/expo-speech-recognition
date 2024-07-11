@@ -362,6 +362,7 @@ function RecordAudio() {
         // Android: Will be saved as a .wav file
         // e.g. "/storage/emulated/0/Android/data/com.jamsch.expo.speechrecognition.example/files/recording.wav"
         setRecordingPath(event.filePath);
+        setRecording(false);
       },
     );
     return listener.remove;
