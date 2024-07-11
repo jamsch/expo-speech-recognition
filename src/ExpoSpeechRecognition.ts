@@ -163,6 +163,8 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   addsPunctuation = false;
   /** [EXTENDED, default: undefined] Android-specific options to pass to the recognizer. */
   androidIntentOptions: ExpoSpeechRecognitionOptions["androidIntentOptions"];
+  /** [EXTENDED, default: undefined] Audio source options to pass to the recognizer. */
+  audioSource?: ExpoSpeechRecognitionOptions["audioSource"];
   /**
    * [EXTENDED, default: undefined]
    *
@@ -189,6 +191,7 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
       continuous: this.continuous,
       androidIntentOptions: this.androidIntentOptions,
       androidRecognitionServicePackage: this.androidRecognitionServicePackage,
+      audioSource: this.audioSource,
     });
   }
   stop = ExpoSpeechRecognitionModule.stop;

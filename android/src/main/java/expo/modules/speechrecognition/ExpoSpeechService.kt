@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ResolveInfo
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
@@ -37,6 +38,7 @@ class ExpoSpeechService
         private var recognitionState = RecognitionState.INACTIVE
         private var soundStartEventCalled = false
         private val mainHandler = Handler(Looper.getMainLooper())
+        private var audioRecorder: ExpoAudioRecorder? = null
 
         companion object {
             @SuppressLint("StaticFieldLeak")
@@ -71,50 +73,83 @@ class ExpoSpeechService
             Log.d("ExpoSpeechService", message)
         }
 
+        private fun createSpeechRecognizer(options: SpeechRecognitionOptions): SpeechRecognizer? {
+            val value =
+                when {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.requiresOnDeviceRecognition -> {
+                        SpeechRecognizer.createOnDeviceSpeechRecognizer(reactContext)
+                    }
+                    // Custom service package, e.g. "com.google.android.googlequicksearchbox"
+                    // Note: requires to be listed in AppManifest <queries> for this intent (android.speech.RecognitionService)
+                    // Otherwise it will throw "Bind to system recognition service failed with error 10"
+                    options.androidRecognitionServicePackage != null -> {
+                        SpeechRecognizer.createSpeechRecognizer(
+                            reactContext,
+                            findComponentNameByPackageName(options.androidRecognitionServicePackage),
+                        )
+                    }
+                    else -> {
+                        SpeechRecognizer.createSpeechRecognizer(reactContext)
+                    }
+                }
+
+            return value
+        }
+
         /** Starts speech recognition */
         fun start(options: SpeechRecognitionOptions) {
             mainHandler.post {
                 log("Start recognition.")
 
-                // Destroy any previous SpeechRecognizer
+                // Destroy any previous SpeechRecognizer / audio recorder
                 speech?.destroy()
+                audioRecorder?.stop()
+                audioRecorder = null
                 recognitionState = RecognitionState.ACTIVE
                 soundStartEventCalled = false
 
                 val intent = createSpeechIntent(options)
                 try {
-                    speech =
-                        when {
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.requiresOnDeviceRecognition -> {
-                                SpeechRecognizer.createOnDeviceSpeechRecognizer(reactContext)
-                            }
-                            // Custom service package, e.g. "com.google.android.googlequicksearchbox"
-                            // Note: requires to be listed in AppManifest <queries> for this intent (android.speech.RecognitionService)
-                            // Otherwise it will throw "Bind to system recognition service failed with error 10"
-                            options.androidRecognitionServicePackage != null -> {
-                                SpeechRecognizer.createSpeechRecognizer(
-                                    reactContext,
-                                    findComponentNameByPackageName(options.androidRecognitionServicePackage),
-                                )
-                            }
-                            else -> {
-                                SpeechRecognizer.createSpeechRecognizer(reactContext)
-                            }
-                        }
+                    speech = createSpeechRecognizer(options)
+                    // Start the audio recorder, if necessary
+                    audioRecorder?.start()
+
+                    // Start listening
                     speech?.setRecognitionListener(this)
                     speech?.startListening(intent)
                 } catch (e: Exception) {
                     log("Failed to create Speech Recognizer")
                     sendEvent("error", mapOf("code" to "unknown", "message" to e.localizedMessage))
-                    sendEvent("end", null)
+                    stop()
                 }
             }
         }
 
+        /**
+         * Stops the audio recorder and sends the recorded audio file path to the app.
+         */
+        private fun stopRecording() {
+            audioRecorder?.stop()
+            if (audioRecorder?.outputFile != null) {
+                sendEvent(
+                    "recording",
+                    mapOf(
+                        "filePath" to audioRecorder?.outputFile?.absolutePath,
+                    ),
+                )
+            }
+            audioRecorder = null
+        }
+
         fun stop() {
             mainHandler.post {
-                speech?.stopListening()
+                try {
+                    speech?.stopListening()
+                } catch (e: Exception) {
+                    // do nothing
+                }
                 speech?.destroy()
+                stopRecording()
                 sendEvent("end", null)
                 recognitionState = RecognitionState.INACTIVE
             }
@@ -136,11 +171,58 @@ class ExpoSpeechService
                 )
             }
 
+            // Stream microphone input to SpeechRecognition so the user can access the audio blob
+            if (options.audioSource?.persistRecording == true && options.audioSource.type == "microphone") {
+                val outputFilePath = options.audioSource.outputFilePath
+                log("outputFilePath: $outputFilePath")
+
+                val filePath =
+                    if (outputFilePath != null) {
+                        outputFilePath
+                    } else {
+                        // Write to temp file path
+                        val filename = System.currentTimeMillis().toString()
+                        Environment.getDownloadCacheDirectory().absolutePath + "/audio_$filename" + ".wav"
+                    }
+
+                try {
+                    audioRecorder =
+                        ExpoAudioRecorder(reactContext, filePath).apply {
+                            intent.putExtra(
+                                RecognizerIntent.EXTRA_AUDIO_SOURCE,
+                                this.recordingParcel,
+                            )
+                            intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
+                            intent.putExtra(
+                                RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
+                                this.audioFormat,
+                            )
+                            intent.putExtra(
+                                RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
+                                this.sampleRateInHz,
+                            )
+                            intent.putExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION, RecognizerIntent.EXTRA_AUDIO_SOURCE)
+                            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000)
+                            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000)
+                            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000)
+                        }
+                } catch (e: Exception) {
+                    // We'd rather not crash the app.
+                    log("Error setting up audio recorder: $e")
+                    sendEvent("error", mapOf("code" to "audio-capture", "message" to e.localizedMessage))
+                }
+            }
+
             val contextualStrings = options.contextualStrings
             if (!contextualStrings.isNullOrEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Optional list of strings, towards which the recognizer should bias the recognition results.
+                // These are separate from the device context.
+                val strings = ArrayList(contextualStrings)
+                log("biasing strings: ${strings.joinToString(", ")}")
                 intent.putExtra(
                     RecognizerIntent.EXTRA_BIASING_STRINGS,
-                    contextualStrings.toTypedArray(),
+                    // List<String> -> ArrayList<java.lang.String>
+                    ArrayList(contextualStrings),
                 )
             }
 
@@ -229,6 +311,7 @@ class ExpoSpeechService
             }
 
             sendEvent("error", mapOf("code" to errorInfo.error, "message" to errorInfo.message))
+            // stopRecording()
             sendEvent("end", null)
             log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
         }
@@ -245,21 +328,49 @@ class ExpoSpeechService
             }
             sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
             log("onResults(), transcriptions: ${resultsList.joinToString(", ")}")
+            stopRecording()
             sendEvent("end", null)
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
-            val partialResultsList = mutableListOf<String>()
+            var partialResultsList = mutableListOf<String>()
             partialResults
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 ?.let { matches ->
                     partialResultsList.addAll(matches)
-                }.filter { it.isNotEmpty() }
-            log("onPartialResults(), transcriptions: ${partialResultsList.joinToString(", ")}")
-            // Avoid sending result event if there was an empty result or the first result is an empty string
-            if (partialResultsList.isNotEmpty()) {
-                sendEvent("result", mapOf("transcriptions" to partialResultsList, "isFinal" to false))
+                }
+
+            // Avoid sending result event if there was an empty result, or the first result is an empty string
+            val nonEmptyStrings = partialResultsList.filter { it.isNotEmpty() }
+
+            log("onPartialResults(), transcriptions: ${nonEmptyStrings.joinToString(", ")}")
+            if (nonEmptyStrings.isNotEmpty()) {
+                sendEvent("result", mapOf("transcriptions" to nonEmptyStrings, "isFinal" to false))
             }
+        }
+
+        /**
+         * For API 33: Basically same as onResults but doesn't stop
+         */
+        override fun onSegmentResults(segmentResults: Bundle) {
+            val resultsList = mutableListOf<String>()
+            segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
+                resultsList.addAll(matches)
+            }
+            // Ensure we have at least one result
+            if (resultsList.isEmpty()) {
+                resultsList.add("")
+            }
+            sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
+            log("onSegmentResults(), transcriptions: ${resultsList.joinToString(", ")}")
+        }
+
+        override fun onEndOfSegmentedSession() {
+            recognitionState = RecognitionState.INACTIVE
+            log("onEndOfSegmentedSession()")
+            stopRecording()
+            speech?.destroy()
+            sendEvent("end", null)
         }
 
         override fun onEvent(

@@ -315,3 +315,72 @@ import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recogn
 const values = getAudioSessionCategoryAndOptionsIOS();
 console.log(values); // { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
 ```
+
+## Persisting Audio Recordings
+
+If you would like to persist the recognized audio for later use, you can enable the `audioSource.persistRecording` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
+
+> **Important notes before using this feature:**
+>
+> - On Android, this is only supported on Android 13 and above.
+> - On Android, this feature requires the `android.permission.WRITE_EXTERNAL_STORAGE` and `android.permission.READ_EXTERNAL_STORAGE` permissions. You can add these permissions to your app.json under the `permissions` key.
+> - Because this feature doesn't comply with the Web Speech API, you'll need to use `ExpoSpeechRecognitionModuleEmitter` to listen for the `recording` event.
+
+Example:
+
+```tsx
+import { Button, View } from "react-native";
+import {
+  ExpoSpeechRecognitionModule,
+  ExpoSpeechRecognitionModuleEmitter,
+} from "@jamsch/expo-speech-recognition";
+
+function RecordAudio() {
+  const [recording, setRecording] = useState(false);
+  const [recordingPath, setRecordingPath] = useState(null);
+
+  const handleStart = () => {
+    setRecording(true);
+    // Start recording
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      audioSource: {
+        type: "microphone",
+        persistRecording: true,
+        // Optional: Specify the output file path to save the recording to
+        outputFilePath: "/path/to/save/recording.wav",
+      },
+    });
+  };
+
+  useEffect(() => {
+    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
+      "recording",
+      (event) => {
+        console.log("Local file path:", event.filePath);
+
+        // Android: Will be saved as a .wav file
+        // e.g. "/storage/emulated/0/Android/data/com.jamsch.expo.speechrecognition.example/files/recording.wav"
+        setRecordingPath(event.filePath);
+      },
+    );
+    return listener.remove;
+  });
+
+  return (
+    <View>
+      <Button title="Start" onPress={handleStart} disabled={recording} />
+      {recordingPath && <AudioPlayer source={recordingPath} />}
+    </View>
+  );
+}
+
+// AudioPlayer.tsx
+import { Button } from "react-native";
+import { useAudioPlayer } from "expo-audio";
+
+function AudioPlayer(props: { source: string }) {
+  const player = useAudioPlayer(props.source, 500);
+  return <Button title="Play" onPress={player.play} />;
+}
+```

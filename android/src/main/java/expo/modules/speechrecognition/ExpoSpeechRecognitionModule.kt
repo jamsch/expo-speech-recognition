@@ -50,6 +50,35 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val androidRecognitionServicePackage: String? = null
+
+    /**
+     * Provide an audio source (e.g. microphone or file) to use for speech recognition.
+     */
+    @Field
+    val audioSource: AudioSourceOptions? = null
+}
+
+class AudioSourceOptions : Record {
+    @Field
+    val type: String? = "microphone"
+
+    @Field
+    val sourceUri: String? = null
+
+    @Field
+    val persistRecording: Boolean = false
+
+    @Field
+    val outputFilePath: String? = null
+
+    @Field
+    val outputFormat: String? = null
+
+    @Field
+    val audioEncoder: String? = null
+
+    @Field
+    val audioChannels: Int? = null
 }
 
 class GetSupportedLocaleOptions : Record {
@@ -114,6 +143,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 // Custom events
                 // Called when the endpointer is ready for the user to start speaking.
                 "_speechready",
+                // Audio recording file
+                "recording",
             )
 
             Function("getSpeechRecognitionServices") {
@@ -125,7 +156,10 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
 
                 val services =
-                    packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
+                    packageManager.queryIntentServices(
+                        Intent(RecognitionService.SERVICE_INTERFACE),
+                        0,
+                    )
 
                 for (service in services) {
                     serviceNames.add(service.serviceInfo.packageName)
@@ -135,7 +169,11 @@ class ExpoSpeechRecognitionModule : Module() {
             }
 
             AsyncFunction("requestPermissionsAsync") { promise: Promise ->
-                askForPermissionsWithPermissionsManager(appContext.permissions, promise, RECORD_AUDIO)
+                askForPermissionsWithPermissionsManager(
+                    appContext.permissions,
+                    promise,
+                    RECORD_AUDIO,
+                )
             }
 
             /** Start recognition with args: lang, interimResults, maxAlternatives */
@@ -172,16 +210,38 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
             }
 
+            // Not necessary for Android
+            Function("setCategoryIOS") { _: Any ->
+                // Do nothing
+            }
+
+            Function("getAudioSessionCategoryAndOptionsIOS") {
+                // Just return dummy data, not necessary for Android
+                return@Function mapOf(
+                    "category" to "playAndRecord",
+                    "categoryOptions" to listOf("defaultToSpeaker", "allowBluetooth"),
+                    "mode" to "measurement",
+                )
+            }
+
             var isDownloadingModel = false
 
             AsyncFunction("androidTriggerOfflineModelDownload") { options: TriggerOfflineModelDownloadOptions, promise: Promise ->
                 if (isDownloadingModel) {
-                    promise.reject("download_in_progress", "An offline model download is already in progress.", Throwable())
+                    promise.reject(
+                        "download_in_progress",
+                        "An offline model download is already in progress.",
+                        Throwable(),
+                    )
                     return@AsyncFunction
                 }
 
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    promise.reject("not_supported", "Android version is too old to trigger offline model download.", Throwable())
+                    promise.reject(
+                        "not_supported",
+                        "Android version is too old to trigger offline model download.",
+                        Throwable(),
+                    )
                     return@AsyncFunction
                 }
                 isDownloadingModel = true

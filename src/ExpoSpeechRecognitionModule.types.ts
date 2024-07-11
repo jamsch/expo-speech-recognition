@@ -24,6 +24,55 @@ export type ExpoSpeechRecognitionOptions = {
    * For a full list of options, see https://developer.android.com/reference/android/speech/RecognizerIntent
    */
   androidIntentOptions?: Partial<AndroidIntentOptions>;
+  /**
+   * Audio source options to pass to the recognizer.
+   *
+   * This option can be used to persist the recognized audio to a local file path, or to recognize audio from a file.
+   */
+  audioSource?: AudioSourceOptions;
+};
+
+export type AudioSourceOptions = {
+  /**
+   * The source type of the audio.
+   * If set to "microphone", the audio will be streamed from the microphone.
+   *
+   * Default: "microphone"
+   */
+  type?: "microphone" | "file";
+  /**
+   * If type is "microphone", persists the recording to a local file path.
+   */
+  persistRecording?: boolean;
+  /**
+   * [NOT IMPLEMENTED] For type "file", this is the source uri of the audio file to read from.
+   *
+   * e.g.
+   *
+   * - `"file:///storage/emulated/0/Download/audio.wav"`
+   * - `"https://example.com/audio.wav"`
+   */
+  sourceUri?: string;
+  /**
+   * [NOT IMPLEMENTED] For type "microphone", this changes the default storage location for the audio file.
+   */
+  outputFilePath?: string;
+  /**
+   * [NOT IMPLEMENTED] For type "microphone", this changes the default output format.
+   */
+  outputFormat?: "wav";
+  /**
+   * The number of channels in the source audio.
+   *
+   * Default: 1
+   */
+  audioChannels?: number;
+  /**
+   * [NOT IMPLEMENTED] The source audio encoding.
+   *
+   * For Android, this is set to AudioFormat.ENCODING_PCM_16BIT.
+   */
+  audioEncoder?: number;
 };
 
 export type AndroidIntentOptions = {

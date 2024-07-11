@@ -14,6 +14,7 @@ import {
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
+  ExpoSpeechRecognitionModuleEmitter,
   type ExpoSpeechRecognitionOptions,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
@@ -44,6 +45,18 @@ export default function App() {
     "idle",
   );
 
+  useEffect(() => {
+    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
+      "recording",
+      (event) => {
+        console.log("recording:", event);
+      },
+    );
+    return () => {
+      listener.remove();
+    };
+  }, []);
+
   const [settings, setSettings] = useState<ExpoSpeechRecognitionOptions>({
     lang: "en-US",
     interimResults: true,
@@ -52,6 +65,10 @@ export default function App() {
     requiresOnDeviceRecognition: false,
     addsPunctuation: true,
     contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
+    audioSource: {
+      type: "microphone",
+      persistRecording: true,
+    },
   });
 
   recognizer.useEvent("result", (ev) => {
