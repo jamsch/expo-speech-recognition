@@ -323,7 +323,6 @@ If you would like to persist the recognized audio for later use, you can enable 
 > **Important notes before using this feature:**
 >
 > - On Android, this is only supported on Android 13 and above.
-> - On Android, this feature requires the `android.permission.WRITE_EXTERNAL_STORAGE` and `android.permission.READ_EXTERNAL_STORAGE` permissions. You can add these permissions to your app.json under the `permissions` key.
 > - Because this feature doesn't comply with the Web Speech API, you'll need to use `ExpoSpeechRecognitionModuleEmitter` to listen for the `recording` event.
 
 Example:
