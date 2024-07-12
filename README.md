@@ -296,12 +296,17 @@ This function is an implementation of [AVAudioSession.setCategory](https://devel
 > Note: when starting speech recognition, audio session category is changed to `playAndRecord` with option `defaultToSpeaker` amd `allowBluetooth` and mode `measurement`.
 
 ```ts
-import { setCategoryIOS } from "@jamsch/expo-speech-recognition";
+import {
+  setCategoryIOS,
+  AVAudioSessionCategory,
+  AVAudioSessionCategoryOptions,
+  AVAudioSessionMode,
+} from "@jamsch/expo-speech-recognition";
 
 setCategoryIOS({
-  category: "playAndRecord",
-  categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
-  mode: "measurement",
+  category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
+  categoryOptions: [AVAudioSessionCategoryOptions.defaultToSpeaker],
+  mode: AVAudioSessionMode.measurement,
 });
 ```
 
@@ -313,5 +318,6 @@ Returns the current audio session category and options. For advanced use cases, 
 import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recognition";
 
 const values = getAudioSessionCategoryAndOptionsIOS();
-console.log(values); // { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
+console.log(values);
+// { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
 ```
