@@ -60,6 +60,9 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val recordingOptions: RecordingOptions? = null
+
+    @Field
+    val androidIntent: String? = RecognizerIntent.ACTION_RECOGNIZE_SPEECH
 }
 
 class RecordingOptions : Record {

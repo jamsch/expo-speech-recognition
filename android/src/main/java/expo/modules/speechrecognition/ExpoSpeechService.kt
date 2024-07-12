@@ -180,7 +180,7 @@ class ExpoSpeechService
         }
 
         private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            val intent = Intent(options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
 
             // Optional boolean to indicate whether partial results should be returned by
             // the recognizer as the user speaks (default is false).

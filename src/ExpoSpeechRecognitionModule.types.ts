@@ -4,6 +4,8 @@ import {
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
+  RecognizerIntentEnableLanguageSwitch,
+  RecognizerIntentExtraLanguageModel,
 } from "./constants";
 
 export type AVAudioSessionCategoryValue =
@@ -46,6 +48,21 @@ export type ExpoSpeechRecognitionOptions = {
    * Audio recording options for persisting the audio to a local file path.
    */
   recordingOptions?: RecordingOptions;
+  /**
+   * Default: `"android.speech.action.RECOGNIZE_SPEECH"`
+   *
+   * The kind of intent action
+   *
+   * Intents:
+   *
+   * - [`android.speech.action.RECOGNIZE_SPEECH`](https://developer.android.com/reference/android/speech/RecognizerIntent#ACTION_RECOGNIZE_SPEECH) which performs speech recognition (default)
+   * - [`android.speech.action.VOICE_SEARCH_HANDS_FREE`](https://developer.android.com/reference/android/speech/RecognizerIntent#ACTION_VOICE_SEARCH_HANDS_FREE) - prompts the user for speech without requiring the user's visual attention or touch input
+   * - [`android.speech.action.WEB_SEARCH`](https://developer.android.com/reference/android/speech/RecognizerIntent#ACTION_WEB_SEARCH) - displays a web search result or trigger another type of action based on the user's speech.
+   */
+  androidIntent?:
+    | "android.speech.action.RECOGNIZE_SPEECH"
+    | "android.speech.action.VOICE_SEARCH_HANDS_FREE"
+    | "android.speech.action.WEB_SEARCH";
 };
 
 export type RecordingOptions = {
@@ -129,20 +146,17 @@ export type AndroidIntentOptions = {
    *
    * Depending on the recognizer implementation, this value may have no effect.
    */
-  EXTRA_ENABLE_LANGUAGE_SWITCH:
-    | "balanced"
-    | "high_precision"
-    | "quick_response";
+  EXTRA_ENABLE_LANGUAGE_SWITCH: (typeof RecognizerIntentEnableLanguageSwitch)[keyof typeof RecognizerIntentEnableLanguageSwitch];
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION
    *
-   * Optional boolean, to be used with EXTRA_ENABLE_FORMATTING, to prevent the recognizer adding punctuation after the last word of the partial results. The default is false.
+   * [API level 33] Optional boolean, to be used with EXTRA_ENABLE_FORMATTING, to prevent the recognizer adding punctuation after the last word of the partial results. The default is false.
    */
   EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION: boolean;
   /**
    * Optional list of IETF language tags (as defined by BCP 47, e.g. "en-US", "de-DE").
    *
-   * This extra is to be used with EXTRA_ENABLE_LANGUAGE_DETECTION. If set, the recognizer will constrain the language detection output to this list of languages, potentially improving detection accuracy.
+   * [API level 34] This extra is to be used with EXTRA_ENABLE_LANGUAGE_DETECTION. If set, the recognizer will constrain the language detection output to this list of languages, potentially improving detection accuracy.
    */
   EXTRA_LANGUAGE_DETECTION_ALLOWED_LANGUAGES: string[];
   /**
@@ -154,17 +168,12 @@ export type AndroidIntentOptions = {
    * The recognizer uses this information to fine tune the results.
    * This extra is required. Activities implementing ACTION_RECOGNIZE_SPEECH may interpret the values as they see fit.
    */
-  EXTRA_LANGUAGE_MODEL:
-    | "free_form"
-    | "web_search"
-    | "balanced"
-    | "quick_response"
-    | "high_precision";
+  EXTRA_LANGUAGE_MODEL: (typeof RecognizerIntentExtraLanguageModel)[keyof typeof RecognizerIntentExtraLanguageModel];
 
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_LANGUAGE_SWITCH_ALLOWED_LANGUAGES
    *
-   * Optional list of IETF language tags (as defined by BCP 47, e.g. "en-US", "de-DE").
+   * [API level 34] Optional list of IETF language tags (as defined by BCP 47, e.g. "en-US", "de-DE").
    * This extra is to be used with EXTRA_ENABLE_LANGUAGE_SWITCH. If set, the recognizer will apply the auto switch only to these languages, even if the speech models of other languages also exist.
    * The corresponding language models must be downloaded to support the switch. Otherwise, the recognizer will report an error on a switch failure.
    */
@@ -172,13 +181,13 @@ export type AndroidIntentOptions = {
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_LANGUAGE_SWITCH_INITIAL_ACTIVE_DURATION_TIME_MILLIS
    *
-   * Optional integer to use for EXTRA_ENABLE_LANGUAGE_SWITCH. If set, the language switch will only be activated for this value of ms of audio since the START_OF_SPEECH. This could provide a more stable recognition result when the language switch is only required in the beginning of the session.
+   * [API level 35] Optional integer to use for EXTRA_ENABLE_LANGUAGE_SWITCH. If set, the language switch will only be activated for this value of ms of audio since the START_OF_SPEECH. This could provide a more stable recognition result when the language switch is only required in the beginning of the session.
    */
   EXTRA_LANGUAGE_SWITCH_INITIAL_ACTIVE_DURATION_TIME_MILLIS: number;
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_LANGUAGE_SWITCH_MAX_SWITCHES
    *
-   * Optional integer to use for EXTRA_ENABLE_LANGUAGE_SWITCH. If set, the language switch will be deactivated when LANGUAGE_SWITCH_MAX_SWITCHES reached.
+   * [API level 35] Optional integer to use for EXTRA_ENABLE_LANGUAGE_SWITCH. If set, the language switch will be deactivated when LANGUAGE_SWITCH_MAX_SWITCHES reached.
    *
    * Depending on the recognizer implementation, this flag may have no effect.
    */
@@ -186,7 +195,7 @@ export type AndroidIntentOptions = {
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_MASK_OFFENSIVE_WORDS
    *
-   * Optional boolean indicating whether the recognizer should mask the offensive words in recognition results. The Default is true.
+   * [API level 33] Optional boolean indicating whether the recognizer should mask the offensive words in recognition results. The Default is true.
    *
    * Constant Value: "android.speech.extra.MASK_OFFENSIVE_WORDS"
    */
@@ -214,13 +223,13 @@ export type AndroidIntentOptions = {
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_REQUEST_WORD_CONFIDENCE
    *
-   * Optional boolean indicating whether the recognizer should return the confidence level of each word in the final recognition results.
+   * [API level 34] Optional boolean indicating whether the recognizer should return the confidence level of each word in the final recognition results.
    */
   EXTRA_REQUEST_WORD_CONFIDENCE: boolean;
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_REQUEST_WORD_TIMING
    *
-   * Optional boolean indicating whether the recognizer should return the timestamp of each word in the final recognition results.
+   * [API level 34] Optional boolean indicating whether the recognizer should return the timestamp of each word in the final recognition results.
    */
   EXTRA_REQUEST_WORD_TIMING: boolean;
   /**
@@ -229,6 +238,21 @@ export type AndroidIntentOptions = {
    * Optional boolean to indicate that a "hands free" voice search was performed while the device was in a secure mode. An example of secure mode is when the device's screen lock is active, and it requires some form of authentication to be unlocked. When the device is securely locked, the voice search activity should either restrict the set of voice actions that are permitted, or require some form of secure authentication before proceeding.
    */
   EXTRA_SECURE: boolean;
+  /**
+   * Optional string to enable segmented session mode of the specified type,
+   * which can be `EXTRA_AUDIO_SOURCE`, `EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS` or `EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS`.
+   * When segmented session mode is supported by the recognizer implementation and this extra is set,
+   * it will return the recognition results in segments via [RecognitionListener#onSegmentResults(Bundle)](https://developer.android.com/reference/android/speech/RecognitionListener#onSegmentResults(android.os.Bundle))
+   * and terminate the session with [RecognitionListener#onEndOfSegmentedSession()](https://developer.android.com/reference/android/speech/RecognitionListener#onEndOfSegmentedSession()).
+   *
+   * When setting this extra, make sure the extra used as the string value here is also set in the same intent with proper value.
+   *
+   * Depending on the recognizer implementation, this value may have no effect.
+   */
+  EXTRA_SEGMENTED_SESSION:
+    | "android.speech.extra.AUDIO_SOURCE"
+    | "android.speech.extras.SPEECH_INPUT_MINIMUM_LENGTH_MILLIS"
+    | "android.speech.extras.SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS";
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
    *

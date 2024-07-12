@@ -24,6 +24,8 @@ export {
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
+  RecognizerIntentExtraLanguageModel,
+  RecognizerIntentEnableLanguageSwitch,
 } from "./constants";
 
 export const getSupportedLocales = (options?: {

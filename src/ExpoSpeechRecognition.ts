@@ -167,6 +167,8 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   audioSource?: ExpoSpeechRecognitionOptions["audioSource"];
   /** [EXTENDED, default: undefined] Audio recording options to pass to the recognizer. */
   recordingOptions?: ExpoSpeechRecognitionOptions["recordingOptions"];
+  /** [EXTENDED, default: "android.speech.action.RECOGNIZE_SPEECH"] The kind of intent action */
+  androidIntent?: string = undefined;
   /**
    * [EXTENDED, default: undefined]
    *

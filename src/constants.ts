@@ -215,3 +215,51 @@ export const AVAudioSessionMode = {
    */
   voicePrompt: "voicePrompt",
 } as const;
+
+/**
+ * Options for the `EXTRA_LANGUAGE_MODEL` extra.
+ *
+ * Docs: https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_LANGUAGE_MODEL
+ */
+export const RecognizerIntentExtraLanguageModel = {
+  /**
+   * https://developer.android.com/reference/android/speech/RecognizerIntent#LANGUAGE_MODEL_FREE_FORM
+   *
+   * Use a language model based on free-form speech recognition. This is a value to use for EXTRA_LANGUAGE_MODEL.
+   */
+  LANGUAGE_MODEL_FREE_FORM: "free_form",
+  /**
+   * https://developer.android.com/reference/android/speech/RecognizerIntent#LANGUAGE_MODEL_WEB_SEARCH
+   *
+   * Use a language model based on web search terms. This is a value to use for EXTRA_LANGUAGE_MODEL.
+   */
+  LANGUAGE_MODEL_WEB_SEARCH: "web_search",
+} as const;
+
+/**
+ * Options for the `EXTRA_ENABLE_LANGUAGE_SWITCH` extra.
+ *
+ * Docs: https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_LANGUAGE_SWITCH_MODEL
+ */
+export const RecognizerIntentEnableLanguageSwitch = {
+  /**
+   * A value to use for `EXTRA_ENABLE_LANGUAGE_SWITCH`.
+   *
+   * Enables language switch only when a new language is detected as at least [SpeechRecognizer#LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT](https://developer.android.com/reference/android/speech/SpeechRecognizer#LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT), which means the service is balancing between detecting a new language confidently and switching early.
+   */
+  LANGUAGE_SWITCH_BALANCED: "balanced",
+  /**
+   * A value to use for `EXTRA_ENABLE_LANGUAGE_SWITCH`.
+   *
+   * Enables language switch only when a new language is detected as [SpeechRecognizer#LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT](https://developer.android.com/reference/android/speech/SpeechRecognizer#LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT), which means the service may wait for longer before switching.
+   */
+  LANGUAGE_SWITCH_HIGH_PRECISION: "high_precision",
+  /**
+   * https://developer.android.com/reference/android/speech/RecognizerIntent#LANGUAGE_SWITCH_QUICK_RESPONSE
+   *
+   * A value to use for `EXTRA_ENABLE_LANGUAGE_SWITCH`.
+   *
+   * Enables language switch only when a new language is detected as at least [SpeechRecognizer#LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT](https://developer.android.com/reference/android/speech/SpeechRecognizer#LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT), which means the service should switch at the earliest moment possible.
+   */
+  LANGUAGE_SWITCH_QUICK_RESPONSE: "quick_response",
+} as const;
