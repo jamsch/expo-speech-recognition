@@ -163,6 +163,8 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   addsPunctuation = false;
   /** [EXTENDED, default: undefined] Android-specific options to pass to the recognizer. */
   androidIntentOptions: ExpoSpeechRecognitionOptions["androidIntentOptions"];
+  /** [EXTENDED, default: "android.speech.action.RECOGNIZE_SPEECH"] The kind of intent action */
+  androidIntent?: string = undefined;
   /**
    * [EXTENDED, default: undefined]
    *

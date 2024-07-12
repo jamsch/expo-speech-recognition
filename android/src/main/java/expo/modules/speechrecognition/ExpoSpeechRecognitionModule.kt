@@ -50,6 +50,9 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val androidRecognitionServicePackage: String? = null
+
+    @Field
+    val androidIntent: String? = RecognizerIntent.ACTION_RECOGNIZE_SPEECH
 }
 
 class GetSupportedLocaleOptions : Record {

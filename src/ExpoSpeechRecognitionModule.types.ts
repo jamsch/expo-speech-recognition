@@ -34,6 +34,21 @@ export type ExpoSpeechRecognitionOptions = {
    * For a full list of options, see https://developer.android.com/reference/android/speech/RecognizerIntent
    */
   androidIntentOptions?: Partial<AndroidIntentOptions>;
+  /**
+   * Default: `"android.speech.action.RECOGNIZE_SPEECH"`
+   *
+   * The kind of intent action
+   *
+   * Intents:
+   *
+   * - [`android.speech.action.RECOGNIZE_SPEECH`](https://developer.android.com/reference/android/speech/RecognizerIntent#ACTION_RECOGNIZE_SPEECH) which performs speech recognition (default)
+   * - [`android.speech.action.VOICE_SEARCH_HANDS_FREE`](https://developer.android.com/reference/android/speech/RecognizerIntent#ACTION_VOICE_SEARCH_HANDS_FREE) - prompts the user for speech without requiring the user's visual attention or touch input
+   * - [`android.speech.action.WEB_SEARCH`](https://developer.android.com/reference/android/speech/RecognizerIntent#ACTION_WEB_SEARCH) - displays a web search result or trigger another type of action based on the user's speech.
+   */
+  androidIntent?:
+    | "android.speech.action.RECOGNIZE_SPEECH"
+    | "android.speech.action.VOICE_SEARCH_HANDS_FREE"
+    | "android.speech.action.WEB_SEARCH";
 };
 
 export type AndroidIntentOptions = {
