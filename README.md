@@ -264,7 +264,7 @@ console.log("OnDevice recognition available:", available);
 
 ### API: `androidTriggerOfflineModelDownload` (Android only)
 
-Users on Android devices will first need to download the offline model for the locale they want to use in order to use the on-device speech recognition.
+Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
 You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
 

@@ -1,7 +1,7 @@
 /**
  * [iOS] Audio category used for defining the audio behavior
  *
- * See: [AVAudioSession.Category](https://developer.apple.com/documentation/avfaudio/avaudiosession/category)
+ * Docs: [AVAudioSession.Category](https://developer.apple.com/documentation/avfaudio/avaudiosession/category)
  */
 export const AVAudioSessionCategory = {
   /**
@@ -11,7 +11,7 @@ export const AVAudioSessionCategory = {
    * When you use this category, audio from other apps mixes with your audio.
    * Screen locking and the Silent switch (on iPhone, the Ring/Silent switch) silence your audio.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616560-ambient
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616560-ambient
    */
   ambient: "ambient",
   /**
@@ -21,7 +21,7 @@ export const AVAudioSessionCategory = {
    *
    * By default, using this category implies that your app’s audio is nonmixable—activating your session will interrupt any other audio sessions which are also nonmixable. To allow mixing, use the ambient category instead.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616488-soloambient
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616488-soloambient
    */
   soloAmbient: "soloAmbient",
   /**
@@ -31,7 +31,7 @@ export const AVAudioSessionCategory = {
    *
    * By default, using this category implies that your app’s audio is nonmixable—activating your session will interrupt any other audio sessions which are also nonmixable. To allow mixing for this category, use the mixWithOthers option.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616509-playback
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616509-playback
    */
   playback: "playback",
   /**
@@ -43,7 +43,7 @@ export const AVAudioSessionCategory = {
    *
    * The user must grant permission for audio recording.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616451-record
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616451-record
    */
   record: "record",
   /**
@@ -59,7 +59,7 @@ export const AVAudioSessionCategory = {
    *
    * This category supports the mirrored version of AirPlay. However, AirPlay mirroring will be disabled if the AVAudioSessionModeVoiceChat mode is used with this category.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616568-playandrecord
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616568-playandrecord
    */
   playAndRecord: "playAndRecord",
   /**
@@ -69,7 +69,7 @@ export const AVAudioSessionCategory = {
    * both a USB device and a set of headphones. Use of this category requires a more detailed knowledge of,
    * and interaction with, the capabilities of the available audio routes.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616484-multiroute
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category/1616484-multiroute
    */
   multiRoute: "multiRoute",
 } as const;
@@ -77,55 +77,55 @@ export const AVAudioSessionCategory = {
 /**
  * Constants that specify optional audio behaviors.
  *
- * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions
+ * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions
  */
 export const AVAudioSessionCategoryOptions = {
   /**
    * An option that indicates whether audio from this session mixes with audio from active sessions in other audio apps.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616611-mixwithothers
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616611-mixwithothers
    */
   mixWithOthers: "mixWithOthers",
   /**
    * An option that reduces the volume of other audio sessions while audio from this session plays.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616618-duckothers
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616618-duckothers
    */
   duckOthers: "duckOthers",
   /**
    * An option that determines whether to pause spoken audio content from other sessions when your app plays its audio.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616534-interruptspokenaudioandmixwithot
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616534-interruptspokenaudioandmixwithot
    */
   interruptSpokenAudioAndMixWithOthers: "interruptSpokenAudioAndMixWithOthers",
   /**
    * An option that determines whether Bluetooth hands-free devices appear as available input routes.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616518-allowbluetooth
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616518-allowbluetooth
    */
   allowBluetooth: "allowBluetooth",
   /**
    * An option that determines whether you can stream audio from this session to Bluetooth devices that support the Advanced Audio Distribution Profile (A2DP).
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1771735-allowbluetootha2dp
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1771735-allowbluetootha2dp
    */
   allowBluetoothA2DP: "allowBluetoothA2DP",
   /**
    * An option that determines whether you can stream audio from this session to AirPlay devices.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1771736-allowairplay
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1771736-allowairplay
    */
   allowAirPlay: "allowAirPlay",
   /**
    * An option that determines whether audio from the session defaults to the built-in speaker instead of the receiver.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/3727255-overridemutedmicrophoneinterrupt
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/3727255-overridemutedmicrophoneinterrupt
    */
   defaultToSpeaker: "defaultToSpeaker",
   /**
    * An option that indicates whether the system interrupts the audio session when it mutes the built-in microphone.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/3727255-overridemutedmicrophoneinterrupt
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/3727255-overridemutedmicrophoneinterrupt
    */
   overrideMutedMicrophoneInterruption: "overrideMutedMicrophoneInterruption",
 } as const;
@@ -133,13 +133,13 @@ export const AVAudioSessionCategoryOptions = {
 /**
  * The audio session mode, together with the audio session category, indicates to the system how you intend to use audio in your app. You can use a mode to configure the audio system for specific use cases such as video recording, voice or video chat, or audio analysis.
  *
- * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/1616508-mode
+ * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/1616508-mode
  */
 export const AVAudioSessionMode = {
   /**
    * The default audio session mode. You can use this mode with every audio session category.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616579-default
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616579-default
    */
   default: "default",
   /**
@@ -147,7 +147,7 @@ export const AVAudioSessionMode = {
    *
    * Don’t set this mode directly. If you need similar behavior and aren’t using a GKVoiceChat object, use voiceChat or videoChat instead.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616511-gamechat
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616511-gamechat
    */
   gameChat: "gameChat",
   /**
@@ -157,7 +157,7 @@ export const AVAudioSessionMode = {
    *
    * Important: This mode disables some dynamics processing on input and output signals, resulting in a lower-output playback level.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616608-measurement
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616608-measurement
    */
   measurement: "measurement",
   /**
@@ -165,7 +165,7 @@ export const AVAudioSessionMode = {
    *
    * When you set this mode, the audio session uses signal processing to enhance movie playback for certain audio routes such as built-in speaker or headphones. You may only use this mode with the `playback` audio session category.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616623-movieplayback
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616623-movieplayback
    */
   moviePlayback: "moviePlayback",
   /**
@@ -173,7 +173,7 @@ export const AVAudioSessionMode = {
    *
    * This mode is appropriate for apps that play continuous spoken audio, such as podcasts or audio books. Setting this mode indicates that your app should pause, rather than duck, its audio if another app plays a spoken audio prompt. After the interrupting app’s audio ends, you can resume your app’s audio playback.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616510-spokenaudio
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616510-spokenaudio
    */
   spokenAudio: "spokenAudio",
   /**
@@ -183,7 +183,7 @@ export const AVAudioSessionMode = {
    *
    * Using this mode has the side effect of enabling the `allowBluetooth` category option.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616590-videochat
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616590-videochat
    */
   videoChat: "videoChat",
   /**
@@ -191,7 +191,7 @@ export const AVAudioSessionMode = {
    *
    * This mode is valid only with the `record` and `playAndRecord` audio session categories. On devices with more than one built-in microphone, the audio session uses the microphone closest to the video camera.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616535-videorecording
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616535-videorecording
    */
   videoRecording: "videoRecording",
   /**
@@ -201,7 +201,7 @@ export const AVAudioSessionMode = {
    *
    * Using this mode has the side effect of enabling the `allowBluetooth` category option.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616455-voicechat
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/1616455-voicechat
    */
   voiceChat: "voiceChat",
   /**
@@ -211,7 +211,7 @@ export const AVAudioSessionMode = {
    *
    * Typically, apps of the same type also configure their sessions to use the duckOthers and interruptSpokenAudioAndMixWithOthers options.
    *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/2962803-voiceprompt
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/mode/2962803-voiceprompt
    */
   voicePrompt: "voicePrompt",
 } as const;
