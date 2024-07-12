@@ -1,5 +1,13 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
+import {
+  AVAudioSessionCategory,
+  AVAudioSessionCategoryOptions,
+  AVAudioSessionMode,
+} from "./constants";
+
+export type AVAudioSessionCategoryValue =
+  (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
 
 export type ExpoSpeechRecognitionEventMap = {
   recording: { filePath: string };
@@ -301,9 +309,9 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory
    */
   setCategoryIOS(options: {
-    category: AVAudioSessionCategory;
-    categoryOptions: AVAudioSessionCategoryOptions[];
-    mode?: AVAudioSessionMode;
+    category: AVAudioSessionCategoryValue;
+    categoryOptions: AVAudioSessionCategoryOptionsValue[];
+    mode?: AVAudioSessionModeValue;
   }): void;
   /**
    * [iOS only] Returns the current audio session category and options.
@@ -314,37 +322,14 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * - [AVAudioSession.Mode](https://developer.apple.com/documentation/avfaudio/avaudiosession/mode)
    */
   getAudioSessionCategoryAndOptionsIOS(): {
-    category: AVAudioSessionCategory;
-    categoryOptions: AVAudioSessionCategoryOptions[];
-    mode: AVAudioSessionMode;
+    category: AVAudioSessionCategoryValue;
+    categoryOptions: AVAudioSessionCategoryOptionsValue[];
+    mode: AVAudioSessionModeValue;
   };
 }
 
-export type AVAudioSessionCategory =
-  | "ambient"
-  | "soloAmbient"
-  | "playback"
-  | "record"
-  | "playAndRecord"
-  | "multiRoute";
+export type AVAudioSessionCategoryOptionsValue =
+  (typeof AVAudioSessionCategoryOptions)[keyof typeof AVAudioSessionCategoryOptions];
 
-export type AVAudioSessionCategoryOptions =
-  | "mixWithOthers"
-  | "duckOthers"
-  | "interruptSpokenAudioAndMixWithOthers"
-  | "allowBluetooth"
-  | "allowBluetoothA2DP"
-  | "allowAirPlay"
-  | "defaultToSpeaker"
-  | "overrideMutedMicrophoneInterruption";
-
-export type AVAudioSessionMode =
-  | "default"
-  | "gameChat"
-  | "measurement"
-  | "moviePlayback"
-  | "spokenAudio"
-  | "videoChat"
-  | "videoRecording"
-  | "voiceChat"
-  | "voicePrompt";
+export type AVAudioSessionModeValue =
+  (typeof AVAudioSessionMode)[keyof typeof AVAudioSessionMode];

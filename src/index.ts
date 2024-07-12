@@ -13,10 +13,18 @@ export {
   useSpeechRecognitionEvent,
 } from "./createSpeechRecognizer";
 
+// Native module
 export {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionModuleEmitter,
 } from "./ExpoSpeechRecognitionModule";
+
+// Constants
+export {
+  AVAudioSessionCategory,
+  AVAudioSessionCategoryOptions,
+  AVAudioSessionMode,
+} from "./constants";
 
 export const getSupportedLocales = (options?: {
   androidRecognitionServicePackage?: string;
@@ -31,6 +39,11 @@ export const requestPermissionsAsync =
 
 export const isOnDeviceRecognitionAvailable =
   ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable;
+
+export const setCategoryIOS = ExpoSpeechRecognitionModule.setCategoryIOS;
+
+export const getAudioSessionCategoryAndOptionsIOS =
+  ExpoSpeechRecognitionModule.getAudioSessionCategoryAndOptionsIOS;
 
 export {
   type ExpoSpeechRecognitionOptions,
