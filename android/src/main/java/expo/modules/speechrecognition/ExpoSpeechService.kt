@@ -258,6 +258,10 @@ class ExpoSpeechService
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
                     options.audioSource.sampleRate ?: 16000,
                 )
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
+                    options.audioSource.audioChannels ?: 1,
+                )
             }
 
             val contextualStrings = options.contextualStrings
