@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
+import android.speech.RecognitionPart
 import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -391,35 +392,79 @@ class ExpoSpeechService
             log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
         }
 
-        override fun onResults(results: Bundle?) {
-            val resultsList = mutableListOf<String>()
+        private fun getResults(results: Bundle?): List<Map<String, Any>> {
+            val resultsList = mutableListOf<Map<String, Any>>()
+            val confidences = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
-                resultsList.addAll(matches)
+                resultsList.addAll(
+                    matches.mapIndexed { index, transcript ->
+                        val confidence = confidences?.getOrNull(index) ?: 0f
+                        mapOf(
+                            "transcript" to transcript,
+                            "confidence" to confidence,
+                        )
+                    },
+                )
             }
-            // Ensure we have at least one result
+
+            return resultsList
+        }
+
+        private fun getWordConfidences(results: Bundle?): List<Map<String, Any>>? {
+            if (results == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                return null
+            }
+
+            val recognitionParts = results.getParcelableArrayList(SpeechRecognizer.RESULTS_RECOGNITION, RecognitionPart::class.java)
+
+            return recognitionParts
+                ?.mapIndexed { index, it ->
+                    // Just set the endTime as the next word minus a millisecond
+                    val nextPart = recognitionParts.getOrNull(index + 1)
+                    val endTime = if (nextPart != null) {
+                        nextPart.timestampMillis - 1
+                    } else {
+                        it.timestampMillis
+                    }
+                    mapOf(
+                        "startTime" to it.timestampMillis,
+                        // get index of next part
+                        "endTime" to endTime,
+                        "word" to if (it.formattedText.isNullOrEmpty()) it.rawText else it.formattedText!!,
+                        "confidence" to it.confidenceLevel,
+                    )
+                }
+        }
+
+        override fun onResults(results: Bundle?) {
+            val resultsList = getResults(results)
+
             if (resultsList.isEmpty()) {
-                resultsList.add("")
+                sendEvent("nomatch", null)
+            } else {
+                sendEvent(
+                    "result",
+                    mapOf(
+                        "results" to resultsList,
+                        "words" to getWordConfidences(results),
+                        "isFinal" to true,
+                    ),
+                )
             }
-            sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
-            log("onResults(), transcriptions: ${resultsList.joinToString(", ")}")
+            log("onResults(), results: $resultsList")
 
             teardownAndEnd()
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
-            val partialResultsList = mutableListOf<String>()
-            partialResults
-                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                ?.let { matches ->
-                    partialResultsList.addAll(matches)
-                }
-
+            val partialResultsList = getResults(partialResults)
             // Avoid sending result event if there was an empty result, or the first result is an empty string
-            val nonEmptyStrings = partialResultsList.filter { it.isNotEmpty() }
+            val nonEmptyStrings = partialResultsList.filter { it["transcript"]?.toString()?.isNotEmpty() ?: false }
 
-            log("onPartialResults(), transcriptions: ${nonEmptyStrings.joinToString(", ")}")
+            log("onPartialResults(), results: $nonEmptyStrings")
             if (nonEmptyStrings.isNotEmpty()) {
-                sendEvent("result", mapOf("transcriptions" to nonEmptyStrings, "isFinal" to false))
+                sendEvent("result", mapOf("results" to nonEmptyStrings, "isFinal" to false))
             }
         }
 
@@ -427,16 +472,20 @@ class ExpoSpeechService
          * For API 33: Basically same as onResults but doesn't stop
          */
         override fun onSegmentResults(segmentResults: Bundle) {
-            val resultsList = mutableListOf<String>()
-            segmentResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
-                resultsList.addAll(matches)
-            }
-            // Ensure we have at least one result
+            val resultsList = getResults(segmentResults)
             if (resultsList.isEmpty()) {
-                resultsList.add("")
+                sendEvent("nomatch", null)
+            } else {
+                sendEvent(
+                    "result",
+                    mapOf(
+                        "results" to resultsList,
+                        "words" to getWordConfidences(segmentResults),
+                        "isFinal" to true,
+                    ),
+                )
             }
-            sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
-            log("onSegmentResults(), transcriptions: ${resultsList.joinToString(", ")}")
+            log("onSegmentResults(), transcriptions: $resultsList")
         }
 
         override fun onEndOfSegmentedSession() {
