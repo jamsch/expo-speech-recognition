@@ -264,7 +264,7 @@ console.log("OnDevice recognition available:", available);
 
 ### API: `androidTriggerOfflineModelDownload` (Android only)
 
-Users on Android devices will first need to download the offline model for the locale they want to use in order to use the on-device speech recognition.
+Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
 You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
 
@@ -320,4 +320,109 @@ import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recogn
 const values = getAudioSessionCategoryAndOptionsIOS();
 console.log(values);
 // { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
+```
+
+## Persisting Audio Recordings
+
+If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
+
+> **Important notes before using this feature:**
+>
+> - On Android, this is only supported on Android 13 and above.
+> - Because this feature doesn't comply with the Web Speech API, you'll need to use `ExpoSpeechRecognitionModuleEmitter` to listen for the `recording` event.
+
+Example:
+
+```tsx
+import { Button, View } from "react-native";
+import {
+  ExpoSpeechRecognitionModule,
+  ExpoSpeechRecognitionModuleEmitter,
+} from "@jamsch/expo-speech-recognition";
+
+function RecordAudio() {
+  const [recording, setRecording] = useState(false);
+  const [recordingPath, setRecordingPath] = useState<string | null>(null);
+
+  const handleStart = () => {
+    setRecording(true);
+    // Start recording
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      recordingOptions: {
+        persist: true,
+        // Optional: Specify the output file path to save the recording to
+        outputFilePath: "/path/to/save/recording.wav",
+      },
+    });
+  };
+
+  useEffect(() => {
+    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
+      "recording",
+      (event) => {
+        console.log("Local file path:", event.filePath);
+
+        // Android: Will be saved as a .wav file
+        // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
+        setRecordingPath(event.filePath);
+        setRecording(false);
+      },
+    );
+    return listener.remove;
+  }, []);
+
+  return (
+    <View>
+      <Button title="Start" onPress={handleStart} disabled={recording} />
+      {recordingPath && <AudioPlayer source={recordingPath} />}
+    </View>
+  );
+}
+
+// AudioPlayer.tsx
+import { Button } from "react-native";
+import { useAudioPlayer } from "expo-audio";
+
+function AudioPlayer(props: { source: string }) {
+  const player = useAudioPlayer(props.source);
+  return <Button title="Play" onPress={player.play} />;
+}
+```
+
+## Transcribing audio files
+
+You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
+
+```tsx
+import { Button, View } from "react-native";
+import { createSpeechRecognizer } from "@jamsch/expo-speech-recognition";
+
+const recognizer = createSpeechRecognizer();
+
+function TranscribeAudio() {
+  const [transcription, setTranscription] = useState("");
+
+  const handleStart = () => {
+    recognizer.start({
+      lang: "en-US",
+      interimResults: true,
+      audioSource: {
+        type: "file",
+        sourceUri: "/path/to/audio.wav", // or remote URL e.g. "https://example.com/audio.wav"
+      },
+    });
+  };
+
+  recognizer.useEvent("result", (ev) => {
+    setTranscription(ev.results[ev.resultIndex][0].transcript);
+  });
+
+  return (
+    <View>
+      <Button title="Start" onPress={handleStart} />
+      <Text>{transcription}</Text>
+    </View>
+  );
+}
 ```

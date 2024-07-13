@@ -163,6 +163,10 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
   addsPunctuation = false;
   /** [EXTENDED, default: undefined] Android-specific options to pass to the recognizer. */
   androidIntentOptions: ExpoSpeechRecognitionOptions["androidIntentOptions"];
+  /** [EXTENDED, default: undefined] Audio source options to pass to the recognizer. */
+  audioSource?: ExpoSpeechRecognitionOptions["audioSource"];
+  /** [EXTENDED, default: undefined] Audio recording options to pass to the recognizer. */
+  recordingOptions?: ExpoSpeechRecognitionOptions["recordingOptions"];
   /** [EXTENDED, default: "android.speech.action.RECOGNIZE_SPEECH"] The kind of intent action */
   androidIntent?: string = undefined;
   /**
@@ -191,11 +195,11 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
       continuous: this.continuous,
       androidIntentOptions: this.androidIntentOptions,
       androidRecognitionServicePackage: this.androidRecognitionServicePackage,
+      audioSource: this.audioSource,
     });
   }
   stop = ExpoSpeechRecognitionModule.stop;
   abort = ExpoSpeechRecognitionModule.stop;
-  requestPermissionAsync = ExpoSpeechRecognitionModule.requestPermissionAsync;
 
   #onstart: SpeechListener<"start"> | null = null;
   set onstart(listener: SpeechListener<"start"> | null) {

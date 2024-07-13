@@ -29,9 +29,9 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     _speechRecognitionRef.start();
   },
   stop: () => _speechRecognitionRef?.stop(),
-  requestPermissionAsync: () => {
+  requestPermissionsAsync: () => {
     console.warn(
-      "requestPermissionAsync is not supported on the web. Returning a granted permission response.",
+      "requestPermissionsAsync is not supported on the web. Returning a granted permission response.",
     );
     return Promise.resolve({
       granted: true,

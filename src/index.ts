@@ -36,8 +36,8 @@ export const getSupportedLocales = (options?: {
 export const getSpeechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices;
 
-export const requestPermissionAsync =
-  ExpoSpeechRecognitionModule.requestPermissionAsync;
+export const requestPermissionsAsync =
+  ExpoSpeechRecognitionModule.requestPermissionsAsync;
 
 export const isOnDeviceRecognitionAvailable =
   ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable;
@@ -50,4 +50,5 @@ export const getAudioSessionCategoryAndOptionsIOS =
 export {
   type ExpoSpeechRecognitionOptions,
   type AndroidIntentOptions,
+  type ExpoSpeechRecognitionEventMap,
 } from "./ExpoSpeechRecognitionModule.types";

@@ -21,6 +21,34 @@ struct SpeechRecognitionOptions: Record {
 
   @Field
   var addsPunctuation: Bool = false
+
+  @Field
+  var recordingOptions: RecordingOptions? = nil
+
+  @Field
+  var audioSource: AudioSourceOptions? = nil
+}
+
+struct RecordingOptions: Record {
+  @Field
+  var persist: Bool = false
+
+  @Field
+  var outputFilePath: String? = nil
+}
+
+struct AudioSourceOptions: Record {
+  @Field
+  var uri: String = ""
+
+  @Field
+  var audioEncoding: String? = nil
+
+  @Field
+  var sampleRate: Int? = 16000
+
+  @Field
+  var audioChannels: Int? = 1
 }
 
 struct GetSupportedLocaleOptions: Record {

@@ -50,6 +50,8 @@ export const createSpeechRecognizer = (
     recognition.androidIntentOptions = newOptions.androidIntentOptions;
     recognition.androidRecognitionServicePackage =
       newOptions.androidRecognitionServicePackage;
+    recognition.audioSource = newOptions.audioSource;
+    recognition.recordingOptions = newOptions.recordingOptions;
     recognition.androidIntent = newOptions.androidIntent;
     optionsStore.setState(newOptions);
   };

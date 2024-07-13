@@ -11,6 +11,10 @@ import {
 export type AVAudioSessionCategoryValue =
   (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
 
+export type ExpoSpeechRecognitionEventMap = {
+  recording: { filePath: string };
+};
+
 export type ExpoSpeechRecognitionOptions = {
   lang: string;
   interimResults: boolean;
@@ -35,6 +39,16 @@ export type ExpoSpeechRecognitionOptions = {
    */
   androidIntentOptions?: Partial<AndroidIntentOptions>;
   /**
+   * Audio source options to pass to the recognizer.
+   *
+   * This option can be used to recognize audio from a local or remote file path.
+   */
+  audioSource?: AudioSourceOptions;
+  /**
+   * Audio recording options for persisting the audio to a local file path.
+   */
+  recordingOptions?: RecordingOptions;
+  /**
    * Default: `"android.speech.action.RECOGNIZE_SPEECH"`
    *
    * The kind of intent action
@@ -50,6 +64,57 @@ export type ExpoSpeechRecognitionOptions = {
     | "android.speech.action.VOICE_SEARCH_HANDS_FREE"
     | "android.speech.action.WEB_SEARCH";
 };
+
+export type RecordingOptions = {
+  /**
+   * Whether to persist the audio to a local file path.
+   *
+   * Default: false
+   */
+  persist: boolean;
+  /**
+   * This changes the default storage location for the audio file.
+   */
+  outputFilePath?: string;
+};
+
+export type AudioSourceOptions = {
+  /**
+   * Local or remote audio source URI.
+   *
+   * e.g.
+   *
+   * - `"file:///storage/emulated/0/Download/audio.wav"`
+   * - `"https://example.com/audio.wav"`
+   */
+  uri: string;
+  /**
+   * [Android only] The number of channels in the source audio.
+   *
+   * Default: 1
+   */
+  audioChannels?: number;
+  /**
+   * [Android only] An enum from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android.
+   */
+  audioEncoding?: AudioEncodingAndroid;
+};
+
+/**
+ * See: [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat)
+ */
+type AudioEncodingAndroid =
+  | "ENCODING_MP3"
+  | "ENCODING_MPEGH_BL_L3"
+  | "ENCODING_MPEGH_BL_L4"
+  | "ENCODING_MPEGH_LC_L3"
+  | "ENCODING_MPEGH_LC_L4"
+  | "ENCODING_OPUS"
+  | "ENCODING_PCM_16BIT"
+  | "ENCODING_PCM_24BIT_PACKED"
+  | "ENCODING_PCM_32BIT"
+  | "ENCODING_PCM_8BIT"
+  | "ENCODING_PCM_FLOAT";
 
 export type AndroidIntentOptions = {
   /**
@@ -226,7 +291,7 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   start(options: ExpoSpeechRecognitionOptions): void;
   stop(): void;
   /** Requests speech recognition and recording permissions prior to starting speech recognition. */
-  requestPermissionAsync(): Promise<PermissionResponse>;
+  requestPermissionsAsync(): Promise<PermissionResponse>;
   /** Returns an array of locales supported by the speech recognizer. */
   getSupportedLocales(options: {
     /** The package name of the speech recognition service to use. */

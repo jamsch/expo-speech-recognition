@@ -1,5 +1,6 @@
 import {
   Alert,
+  Button,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -14,7 +15,10 @@ import {
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
+  ExpoSpeechRecognitionModuleEmitter,
   type ExpoSpeechRecognitionOptions,
+  type ExpoSpeechRecognitionEventMap,
+  requestPermissionsAsync,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
 import {
@@ -25,6 +29,7 @@ import {
 } from "./components/Buttons";
 import { StatusBar } from "expo-status-bar";
 import type { AndroidIntentOptions } from "expo-speech-recognition/ExpoSpeechRecognitionModule.types";
+import { Audio } from "expo-av";
 
 const recognizer = createSpeechRecognizer();
 
@@ -43,6 +48,18 @@ export default function App() {
   const [status, setStatus] = useState<"idle" | "starting" | "recognizing">(
     "idle",
   );
+
+  useEffect(() => {
+    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
+      "recording",
+      (event) => {
+        console.log("recording:", event);
+      },
+    );
+    return () => {
+      listener.remove();
+    };
+  }, []);
 
   const [settings, setSettings] = useState<ExpoSpeechRecognitionOptions>({
     lang: "en-US",
@@ -98,7 +115,13 @@ export default function App() {
     setTranscription(null);
     setError(null);
     setStatus("starting");
-    recognizer.start(settings);
+    requestPermissionsAsync().then((result) => {
+      if (!result.granted) {
+        console.log("Permissions not granted", result);
+        return;
+      }
+      recognizer.start(settings);
+    });
   };
 
   const stopListening = () => {
@@ -210,7 +233,9 @@ function Settings(props: {
 }) {
   const { value: settings, onChange } = props;
 
-  const [tab, setTab] = useState<"general" | "android" | "ios">("general");
+  const [tab, setTab] = useState<"general" | "android" | "ios" | "other">(
+    "general",
+  );
 
   const handleChange = <T extends keyof ExpoSpeechRecognitionOptions>(
     key: T,
@@ -230,17 +255,24 @@ function Settings(props: {
           }}
         />
         <TabButton
-          title="Android-specific"
+          title="Android"
           active={tab === "android"}
           onPress={() => {
             setTab("android");
           }}
         />
         <TabButton
-          title="iOS-specific"
+          title="iOS"
           active={tab === "ios"}
           onPress={() => {
             setTab("ios");
+          }}
+        />
+        <TabButton
+          title="Other"
+          active={tab === "other"}
+          onPress={() => {
+            setTab("other");
           }}
         />
       </View>
@@ -252,6 +284,9 @@ function Settings(props: {
       )}
       {tab === "ios" && (
         <IOSSettings value={settings} onChange={handleChange} />
+      )}
+      {tab === "other" && (
+        <OtherSettings value={settings} onChange={handleChange} />
       )}
     </View>
   );
@@ -500,6 +535,79 @@ function IOSSettings(props: {
       />
     </View>
   );
+}
+
+function OtherSettings(props: {
+  value: ExpoSpeechRecognitionOptions;
+  onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
+    key: T,
+    value: ExpoSpeechRecognitionOptions[T],
+  ) => void;
+}) {
+  const { value: settings, onChange: handleChange } = props;
+
+  const [recordingPath, setRecordingPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
+      "recording",
+      (event: ExpoSpeechRecognitionEventMap["recording"]) => {
+        console.log("Local file path:", event.filePath);
+        // Android: Will be saved as a .wav file
+        // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
+        setRecordingPath(event.filePath);
+      },
+    );
+    return listener.remove;
+  }, []);
+
+  // Enable audio recording
+  return (
+    <View>
+      <CheckboxButton
+        title="Persist audio recording to filesystem"
+        checked={Boolean(settings.recordingOptions?.persist)}
+        onPress={() =>
+          handleChange("recordingOptions", {
+            ...(settings.recordingOptions ?? {}),
+            persist: !settings.recordingOptions?.persist,
+          })
+        }
+      />
+      {settings.recordingOptions?.persist ? (
+        <View
+          style={{
+            borderStyle: "dashed",
+            borderWidth: 2,
+            padding: 10,
+            height: 100,
+            flex: 1,
+          }}
+        >
+          {recordingPath ? (
+            <View>
+              <Text style={styles.text}>
+                Audio recording saved to {recordingPath}
+              </Text>
+              <AudioPlayer source={recordingPath} />
+            </View>
+          ) : (
+            <Text style={styles.text}>
+              Waiting for speech recognition to end...
+            </Text>
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function AudioPlayer(props: { source: string }) {
+  const handlePlay = () => {
+    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true });
+  };
+
+  return <Button title="Play back recording" onPress={handlePlay} />;
 }
 
 const styles = StyleSheet.create({
