@@ -181,7 +181,8 @@ class ExpoSpeechService
         }
 
         private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
-            val intent = Intent(options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            val action = options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            val intent = Intent(action)
 
             // Optional boolean to indicate whether partial results should be returned by
             // the recognizer as the user speaks (default is false).
@@ -194,6 +195,14 @@ class ExpoSpeechService
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
                 )
+            }
+
+            // Feature: Confidence levels on transcript words (i.e. `results[x].segments` on the "result" event)
+            if (action == RecognizerIntent.ACTION_RECOGNIZE_SPEECH &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            ) {
+                intent.putExtra(RecognizerIntent.EXTRA_REQUEST_WORD_CONFIDENCE, true)
+                intent.putExtra(RecognizerIntent.EXTRA_REQUEST_WORD_TIMING, true)
             }
 
             // Feature: Stream microphone input to SpeechRecognition so the user can access the audio blob

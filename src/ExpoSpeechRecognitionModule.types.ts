@@ -21,8 +21,7 @@ export type ExpoSpeechRecognitionNativeEventMap = {
     results: {
       transcript: string;
       /**
-       * Number between 0-1 indicating transcript confidence.
-       *
+       * Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating transcript confidence.
        */
       confidence: number;
       /**
@@ -35,13 +34,13 @@ export type ExpoSpeechRecognitionNativeEventMap = {
        * - The segments are only available for the first transcript
        */
       segements: {
-        /** The start timestamp of the utterance */
+        /** The start timestamp of the utterance, e.g. 1000 */
         startTimeMillis: number;
-        /** The end timestamp of the utterance */
+        /** The end timestamp of the utterance, e.g. 1500 */
         endTimeMillis: number;
-        /** The portion of the transcript */
+        /** The text portion of the transcript, e.g. "Hello world" */
         segment: string;
-        /** Number between 0-1 indicating the confidence of the specific segement */
+        /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segement */
         confidence: number;
       }[];
     }[];
