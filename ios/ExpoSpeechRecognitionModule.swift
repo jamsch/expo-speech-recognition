@@ -2,6 +2,19 @@ import AVFoundation
 import ExpoModulesCore
 import Speech
 
+struct Segment {
+  let startTimeMillis: Double
+  let endTimeMillis: Double
+  let segment: String
+  let confidence: Float
+}
+
+struct TranscriptionResult {
+  let transcript: String
+  let confidence: Float
+  let segments: [Segment]
+}
+
 public class ExpoSpeechRecognitionModule: Module {
 
   var speechRecognizer: ExpoSpeechRecognizer?
@@ -216,15 +229,37 @@ public class ExpoSpeechRecognitionModule: Module {
   }
 
   func handleRecognitionResult(_ result: SFSpeechRecognitionResult) {
-    let transcriptions = result.transcriptions.map { $0.formattedString }.filter { !$0.isEmpty }
+    var results: [TranscriptionResult] = []
 
-    if transcriptions.count == 0 {
+    for transcription in result.transcriptions {
+      let segments = transcription.segments.map { segment in
+        return Segment(
+          startTimeMillis: segment.timestamp * 1000,
+          endTimeMillis: (segment.timestamp * 1000) + segment.duration * 1000,
+          segment: segment.substring,
+          confidence: segment.confidence
+        )
+      }
+
+      let confidence =
+        transcription.segments.map { $0.confidence }.reduce(0, +)
+        / Float(transcription.segments.count)
+
+      let item = TranscriptionResult(
+        transcript: transcription.formattedString,
+        confidence: confidence,
+        segments: segments
+      )
+
+      if !transcription.formattedString.isEmpty {
+        results.append(item)
+      }
+    }
+    if result.isFinal && results.count == 0 {
       // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
       // The nomatch event of the Web Speech API is fired
       // when the speech recognition service returns a final result with no significant recognition.
-      if result.isFinal {
-        sendEvent("nomatch")
-      }
+      sendEvent("nomatch")
       return
     }
 
@@ -232,7 +267,7 @@ public class ExpoSpeechRecognitionModule: Module {
       "result",
       [
         "isFinal": result.isFinal,
-        "transcriptions": transcriptions,
+        "results": results,
       ]
     )
   }

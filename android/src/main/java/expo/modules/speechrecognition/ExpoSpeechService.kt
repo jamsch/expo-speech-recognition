@@ -403,6 +403,7 @@ class ExpoSpeechService
                         mapOf(
                             "transcript" to transcript,
                             "confidence" to confidence,
+                            "segments" to if (index == 0) getSegmentConfidences(results) else listOf(),
                         )
                     },
                 )
@@ -411,27 +412,30 @@ class ExpoSpeechService
             return resultsList
         }
 
-        private fun getWordConfidences(results: Bundle?): List<Map<String, Any>>? {
+        private fun getSegmentConfidences(results: Bundle?): List<Map<String, Any>> {
             if (results == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                return null
+                return listOf()
             }
 
-            val recognitionParts = results.getParcelableArrayList(SpeechRecognizer.RESULTS_RECOGNITION, RecognitionPart::class.java)
+            val recognitionParts =
+                results.getParcelableArrayList(SpeechRecognizer.RECOGNITION_PARTS, RecognitionPart::class.java)
+                    ?: return listOf()
 
             return recognitionParts
-                ?.mapIndexed { index, it ->
+                .mapIndexed { index, it ->
                     // Just set the endTime as the next word minus a millisecond
                     val nextPart = recognitionParts.getOrNull(index + 1)
-                    val endTime = if (nextPart != null) {
-                        nextPart.timestampMillis - 1
-                    } else {
-                        it.timestampMillis
-                    }
+                    val endTime =
+                        if (nextPart != null) {
+                            nextPart.timestampMillis - 1
+                        } else {
+                            it.timestampMillis
+                        }
                     mapOf(
-                        "startTime" to it.timestampMillis,
+                        "startTimeMillis" to it.timestampMillis,
                         // get index of next part
-                        "endTime" to endTime,
-                        "word" to if (it.formattedText.isNullOrEmpty()) it.rawText else it.formattedText!!,
+                        "endTimeMillis" to endTime,
+                        "segment" to if (it.formattedText.isNullOrEmpty()) it.rawText else it.formattedText!!,
                         "confidence" to it.confidenceLevel,
                     )
                 }
@@ -441,13 +445,15 @@ class ExpoSpeechService
             val resultsList = getResults(results)
 
             if (resultsList.isEmpty()) {
+                // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
+                // The nomatch event of the Web Speech API is fired
+                // when the speech recognition service returns a final result with no significant recognition.
                 sendEvent("nomatch", null)
             } else {
                 sendEvent(
                     "result",
                     mapOf(
                         "results" to resultsList,
-                        "words" to getWordConfidences(results),
                         "isFinal" to true,
                     ),
                 )
@@ -480,7 +486,6 @@ class ExpoSpeechService
                     "result",
                     mapOf(
                         "results" to resultsList,
-                        "words" to getWordConfidences(segmentResults),
                         "isFinal" to true,
                     ),
                 )
