@@ -11,8 +11,54 @@ import {
 export type AVAudioSessionCategoryValue =
   (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
 
-export type ExpoSpeechRecognitionEventMap = {
+/**
+ * Events that are dispatched from the native side
+ */
+export type ExpoSpeechRecognitionNativeEventMap = {
+  /** Fired when there's a speech result. The result may be partial or final */
+  result: {
+    isFinal: boolean;
+    results: {
+      transcript: string;
+      /**
+       * Number between 0-1 indicating transcript confidence.
+       *
+       */
+      confidence: number;
+      /**
+       * An array of transcription segments that represent the parts of the transcription, as identified by the speech recognizer.
+       *
+       * Notes for Android:
+       *
+       * - This is only available for SDK 34+ (Android 14+)
+       * - The segment parts are split up by words.
+       * - The segments are only available for the first transcript
+       */
+      segements: {
+        /** The start timestamp of the utterance */
+        startTimeMillis: number;
+        /** The end timestamp of the utterance */
+        endTimeMillis: number;
+        /** The portion of the transcript */
+        segment: string;
+        /** Number between 0-1 indicating the confidence of the specific segement */
+        confidence: number;
+      }[];
+    }[];
+  };
+  /**
+   * Fired when the recording has completed, nonstandard to web API.
+   * This event will only fire if `recordingOptions.persist` is enabled
+   * when starting speech recognition
+   */
   recording: { filePath: string };
+  error: { code: string; message: string };
+  start: null;
+  speechstart: null;
+  speechend: null;
+  soundstart: null;
+  /** A final result is returned with no significant recognition */
+  nomatch: null;
 };
 
 export type ExpoSpeechRecognitionOptions = {
