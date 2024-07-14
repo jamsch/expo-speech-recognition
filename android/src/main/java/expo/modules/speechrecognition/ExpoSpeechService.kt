@@ -436,10 +436,21 @@ class ExpoSpeechService
                         // get index of next part
                         "endTimeMillis" to endTime,
                         "segment" to if (it.formattedText.isNullOrEmpty()) it.rawText else it.formattedText!!,
-                        "confidence" to it.confidenceLevel,
+                        "confidence" to confidenceLevelToFloat(it.confidenceLevel),
                     )
                 }
         }
+
+        private fun confidenceLevelToFloat(confidenceLevel: Int): Float =
+            when (confidenceLevel) {
+                RecognitionPart.CONFIDENCE_LEVEL_HIGH -> 1.0f
+                RecognitionPart.CONFIDENCE_LEVEL_MEDIUM_HIGH -> 0.8f
+                RecognitionPart.CONFIDENCE_LEVEL_MEDIUM -> 0.6f
+                RecognitionPart.CONFIDENCE_LEVEL_MEDIUM_LOW -> 0.4f
+                RecognitionPart.CONFIDENCE_LEVEL_LOW -> 0.2f
+                RecognitionPart.CONFIDENCE_LEVEL_UNKNOWN -> -1.0f
+                else -> 0.0f
+            }
 
         override fun onResults(results: Bundle?) {
             val resultsList = getResults(results)
