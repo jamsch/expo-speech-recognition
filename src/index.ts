@@ -50,7 +50,7 @@ export const getAudioSessionCategoryAndOptionsIOS =
 export {
   type ExpoSpeechRecognitionOptions,
   type AndroidIntentOptions,
-  type ExpoSpeechRecognitionEventMap,
+  type ExpoSpeechRecognitionNativeEventMap,
   type AVAudioSessionCategoryOptionsValue,
   type AVAudioSessionModeValue,
   type AVAudioSessionCategoryValue,
