@@ -12,8 +12,61 @@ import {
 export type AVAudioSessionCategoryValue =
   (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
 
-export type ExpoSpeechRecognitionEventMap = {
+/**
+ * Events that are dispatched from the native side
+ */
+export type ExpoSpeechRecognitionNativeEventMap = {
+  /** Fired when there's a speech result. The result may be partial or final */
+  result: {
+    isFinal: boolean;
+    results: {
+      transcript: string;
+      /**
+       * Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating transcript confidence.
+       */
+      confidence: number;
+      /**
+       * An array of transcription segments that represent the parts of the transcription, as identified by the speech recognizer.
+       *
+       * Notes for Android:
+       *
+       * - This is only available for SDK 34+ (Android 14+)
+       * - The segment parts are split up by words.
+       * - The segments are only available for the first transcript
+       */
+      segements: {
+        /** The start timestamp of the utterance, e.g. 1000 */
+        startTimeMillis: number;
+        /** The end timestamp of the utterance, e.g. 1500 */
+        endTimeMillis: number;
+        /** The text portion of the transcript, e.g. "Hello world" */
+        segment: string;
+        /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segement */
+        confidence: number;
+      }[];
+    }[];
+  };
+  /**
+   * Fired when the recording has completed, nonstandard to web API.
+   * This event will only fire if `recordingOptions.persist` is enabled
+   * when starting speech recognition
+   */
   recording: { filePath: string };
+  error: {
+    // `ios_${number}` refers to custom iOS error codes (e.g. 201 = kLSRErrorDomain, "Siri or Dictation is disabled".)
+    code: SpeechRecognitionErrorCode | `ios_${number}`;
+    message: string;
+  };
+  start: null;
+  speechstart: null;
+  speechend: null;
+  /** A final result is returned with no significant recognition */
+  nomatch: null;
+  audioend: null;
+  audiostart: null;
+  end: null;
+  soundstart: null;
+  soundend: null;
 };
 
 export type ExpoSpeechRecognitionOptions = {

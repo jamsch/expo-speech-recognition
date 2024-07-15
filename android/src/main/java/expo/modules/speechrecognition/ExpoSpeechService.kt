@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
+import android.speech.RecognitionPart
 import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -34,6 +35,15 @@ enum class RecognitionState {
     // Add more states as needed
 }
 
+/**
+* Represents the state of the sound for tracking sound events (soundstart, soundend)
+*/
+enum class SoundState {
+    INACTIVE,
+    ACTIVE,
+    SILENT,
+}
+
 class ExpoSpeechService
     private constructor(
         private val reactContext: Context,
@@ -41,9 +51,10 @@ class ExpoSpeechService
     ) : RecognitionListener {
         private var speech: SpeechRecognizer? = null
         private var recognitionState = RecognitionState.INACTIVE
-        private var soundStartEventCalled = false
         private val mainHandler = Handler(Looper.getMainLooper())
         private var audioRecorder: ExpoAudioRecorder? = null
+        private var soundState = SoundState.INACTIVE
+        private var lastTimeSoundDetected = 0L
 
         /**
          * Reference for a remote file, for file-based recognition
@@ -117,7 +128,7 @@ class ExpoSpeechService
                 audioRecorder?.stop()
                 audioRecorder = null
                 recognitionState = RecognitionState.ACTIVE
-                soundStartEventCalled = false
+                soundState = SoundState.INACTIVE
 
                 try {
                     val intent = createSpeechIntent(options)
@@ -128,6 +139,7 @@ class ExpoSpeechService
                     // Start listening
                     speech?.setRecognitionListener(this)
                     speech?.startListening(intent)
+                    sendEvent("audiostart", null)
                 } catch (e: Exception) {
                     log("Failed to create Speech Recognizer")
                     sendEvent("error", mapOf("code" to "audio-capture", "message" to e.localizedMessage))
@@ -168,8 +180,11 @@ class ExpoSpeechService
                 }
                 speech?.destroy()
                 stopRecording()
-                // sendEvent("audioend", null)
+                soundState = SoundState.INACTIVE
+                sendEvent("audioend", null)
                 sendEvent("end", null)
+
+                // If the source was a remote file, delete it
                 try {
                     downloadedFileHandle?.delete()
                 } catch (e: Exception) {
@@ -180,7 +195,8 @@ class ExpoSpeechService
         }
 
         private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
-            val intent = Intent(options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            val action = options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            val intent = Intent(action)
 
             // Optional boolean to indicate whether partial results should be returned by
             // the recognizer as the user speaks (default is false).
@@ -193,6 +209,14 @@ class ExpoSpeechService
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
                 )
+            }
+
+            // Feature: Confidence levels on transcript words (i.e. `results[x].segments` on the "result" event)
+            if (action == RecognizerIntent.ACTION_RECOGNIZE_SPEECH &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            ) {
+                intent.putExtra(RecognizerIntent.EXTRA_REQUEST_WORD_CONFIDENCE, true)
+                intent.putExtra(RecognizerIntent.EXTRA_REQUEST_WORD_TIMING, true)
             }
 
             // Feature: Stream microphone input to SpeechRecognition so the user can access the audio blob
@@ -360,12 +384,26 @@ class ExpoSpeechService
         }
 
         override fun onRmsChanged(rmsdB: Float) {
-            // Call "soundstart" event if not already called
-            if (!soundStartEventCalled) {
-                sendEvent("soundstart", null)
-                soundStartEventCalled = true
+            val isSilent = rmsdB <= 0
+
+            if (!isSilent) {
+                lastTimeSoundDetected = System.currentTimeMillis()
             }
-            // sendEvent("volumechange", mapOf("volume" to rmsdB))
+
+            // Call "soundstart" event if not already called
+            if (!isSilent && soundState != SoundState.ACTIVE) {
+                sendEvent("soundstart", null)
+                soundState = SoundState.ACTIVE
+                log("Changed sound state to ACTIVE")
+                return
+            }
+
+            // If the sound is silent for more than 150ms, send "soundend" event
+            if (isSilent && soundState == SoundState.ACTIVE && (System.currentTimeMillis() - lastTimeSoundDetected) > 150) {
+                sendEvent("soundend", null)
+                soundState = SoundState.SILENT
+                log("Changed sound state to SILENT")
+            }
         }
 
         override fun onBufferReceived(buffer: ByteArray?) {
@@ -391,35 +429,100 @@ class ExpoSpeechService
             log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
         }
 
-        override fun onResults(results: Bundle?) {
-            val resultsList = mutableListOf<String>()
+        private fun getResults(results: Bundle?): List<Map<String, Any>> {
+            val resultsList = mutableListOf<Map<String, Any>>()
+            val confidences = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
-                resultsList.addAll(matches)
+                resultsList.addAll(
+                    matches.mapIndexed { index, transcript ->
+                        val confidence = confidences?.getOrNull(index) ?: 0f
+                        mapOf(
+                            "transcript" to transcript,
+                            "confidence" to confidence,
+                            "segments" to if (index == 0) getSegmentConfidences(results) else listOf(),
+                        )
+                    },
+                )
             }
-            // Ensure we have at least one result
+
+            return resultsList
+        }
+
+        private fun getSegmentConfidences(results: Bundle?): List<Map<String, Any>> {
+            if (results == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                return listOf()
+            }
+
+            val recognitionParts =
+                results.getParcelableArrayList(SpeechRecognizer.RECOGNITION_PARTS, RecognitionPart::class.java)
+                    ?: null
+
+            if (recognitionParts == null) {
+                return listOf()
+            }
+
+            return recognitionParts
+                .mapIndexed { index, it ->
+                    // Just set the endTime as the next word minus a millisecond
+                    val nextPart = recognitionParts.getOrNull(index + 1)
+                    val endTime =
+                        if (nextPart != null) {
+                            nextPart.timestampMillis - 1
+                        } else {
+                            it.timestampMillis
+                        }
+                    mapOf(
+                        "startTimeMillis" to it.timestampMillis,
+                        // get index of next part
+                        "endTimeMillis" to endTime,
+                        "segment" to if (it.formattedText.isNullOrEmpty()) it.rawText else it.formattedText!!,
+                        "confidence" to confidenceLevelToFloat(it.confidenceLevel),
+                    )
+                }
+        }
+
+        private fun confidenceLevelToFloat(confidenceLevel: Int): Float =
+            when (confidenceLevel) {
+                RecognitionPart.CONFIDENCE_LEVEL_HIGH -> 1.0f
+                RecognitionPart.CONFIDENCE_LEVEL_MEDIUM_HIGH -> 0.8f
+                RecognitionPart.CONFIDENCE_LEVEL_MEDIUM -> 0.6f
+                RecognitionPart.CONFIDENCE_LEVEL_MEDIUM_LOW -> 0.4f
+                RecognitionPart.CONFIDENCE_LEVEL_LOW -> 0.2f
+                RecognitionPart.CONFIDENCE_LEVEL_UNKNOWN -> -1.0f
+                else -> 0.0f
+            }
+
+        override fun onResults(results: Bundle?) {
+            val resultsList = getResults(results)
+
             if (resultsList.isEmpty()) {
-                resultsList.add("")
+                // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
+                // The nomatch event of the Web Speech API is fired
+                // when the speech recognition service returns a final result with no significant recognition.
+                sendEvent("nomatch", null)
+            } else {
+                sendEvent(
+                    "result",
+                    mapOf(
+                        "results" to resultsList,
+                        "isFinal" to true,
+                    ),
+                )
             }
-            sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
-            log("onResults(), transcriptions: ${resultsList.joinToString(", ")}")
+            log("onResults(), results: $resultsList")
 
             teardownAndEnd()
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
-            val partialResultsList = mutableListOf<String>()
-            partialResults
-                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                ?.let { matches ->
-                    partialResultsList.addAll(matches)
-                }
-
+            val partialResultsList = getResults(partialResults)
             // Avoid sending result event if there was an empty result, or the first result is an empty string
-            val nonEmptyStrings = partialResultsList.filter { it.isNotEmpty() }
+            val nonEmptyStrings = partialResultsList.filter { it["transcript"]?.toString()?.isNotEmpty() ?: false }
 
-            log("onPartialResults(), transcriptions: ${nonEmptyStrings.joinToString(", ")}")
+            log("onPartialResults(), results: $nonEmptyStrings")
             if (nonEmptyStrings.isNotEmpty()) {
-                sendEvent("result", mapOf("transcriptions" to nonEmptyStrings, "isFinal" to false))
+                sendEvent("result", mapOf("results" to nonEmptyStrings, "isFinal" to false))
             }
         }
 
@@ -427,16 +530,19 @@ class ExpoSpeechService
          * For API 33: Basically same as onResults but doesn't stop
          */
         override fun onSegmentResults(segmentResults: Bundle) {
-            val resultsList = mutableListOf<String>()
-            segmentResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
-                resultsList.addAll(matches)
-            }
-            // Ensure we have at least one result
+            val resultsList = getResults(segmentResults)
             if (resultsList.isEmpty()) {
-                resultsList.add("")
+                sendEvent("nomatch", null)
+            } else {
+                sendEvent(
+                    "result",
+                    mapOf(
+                        "results" to resultsList,
+                        "isFinal" to true,
+                    ),
+                )
             }
-            sendEvent("result", mapOf("transcriptions" to resultsList, "isFinal" to true))
-            log("onSegmentResults(), transcriptions: ${resultsList.joinToString(", ")}")
+            log("onSegmentResults(), transcriptions: $resultsList")
         }
 
         override fun onEndOfSegmentedSession() {

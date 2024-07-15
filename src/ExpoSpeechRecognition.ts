@@ -5,7 +5,10 @@ import {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionModuleEmitter,
 } from "./ExpoSpeechRecognitionModule";
-import type { ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
+import type {
+  ExpoSpeechRecognitionNativeEventMap,
+  ExpoSpeechRecognitionOptions,
+} from "./ExpoSpeechRecognitionModule.types";
 
 const noop = () => {};
 
@@ -35,17 +38,21 @@ const createEventData = (target: EventTarget) => ({
   initEvent: noop,
 });
 
-type NativeEventAndListener = {
+type NativeEventAndListener<
+  TEventName extends keyof ExpoSpeechRecognitionNativeEventMap,
+> = {
   /** Event name to listen for on native side */
-  eventName: string;
-  nativeListener: (nativeEvent: any) => void;
+  eventName: TEventName;
+  nativeListener: (
+    nativeEvent: ExpoSpeechRecognitionNativeEventMap[TEventName],
+  ) => void;
 };
 
 function stubEvent<K extends keyof SpeechRecognitionEventMap>(
   eventName: K,
   instance: ExpoSpeechRecognition,
   listener: (this: SpeechRecognition, ev: Event) => unknown,
-): NativeEventAndListener {
+): NativeEventAndListener<K> {
   return {
     eventName,
     nativeListener: (nativeEvent) =>
@@ -63,7 +70,7 @@ const WebListenerTransformers: {
       this: SpeechRecognition,
       ev: SpeechRecognitionEventMap[K],
     ) => unknown,
-  ) => NativeEventAndListener[];
+  ) => NativeEventAndListener<K>[];
 } = {
   nomatch: (instance, listener) => {
     // @ts-ignore
@@ -86,13 +93,13 @@ const WebListenerTransformers: {
     return [
       {
         eventName: "error",
-        nativeListener: (nativeEvent: {
-          message: string;
-          code: SpeechRecognitionErrorCode;
-        }) => {
+        nativeListener: (
+          nativeEvent: ExpoSpeechRecognitionNativeEventMap["error"],
+        ) => {
           const clientEvent: SpeechRecognitionEventMap["error"] = {
             ...createEventData(instance),
-            error: nativeEvent.code,
+            // TODO: handle custom ios error codes
+            error: nativeEvent.code as SpeechRecognitionErrorCode,
             message: nativeEvent.message,
           };
           listener.call(instance, clientEvent);
@@ -104,15 +111,18 @@ const WebListenerTransformers: {
     return [
       {
         eventName: "result",
-        nativeListener: (nativeEvent: {
-          isFinal: boolean;
-          transcriptions: string[];
-        }) => {
+        nativeListener: (
+          nativeEvent: ExpoSpeechRecognitionNativeEventMap["result"],
+        ) => {
           if (!instance.interimResults && !nativeEvent.isFinal) {
             return;
           }
-          const alternatives = nativeEvent.transcriptions.map(
-            (result) => new ExpoSpeechRecognitionAlternative(1, result),
+          const alternatives = nativeEvent.results.map(
+            (result) =>
+              new ExpoSpeechRecognitionAlternative(
+                result.confidence,
+                result.transcript,
+              ),
           );
           const clientEvent: SpeechRecognitionEventMap["result"] = {
             ...createEventData(instance),
@@ -317,9 +327,15 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
     ) => any,
   ): void {
     // Enhance the native listener with any necessary polyfills
-    const enhancedEvents: NativeEventAndListener[] = WebListenerTransformers[
+    const enhancedEvents: NativeEventAndListener<K>[] = WebListenerTransformers[
       type
-    ]?.(this, listener) ?? [{ eventName: type, nativeListener: listener }];
+    ]?.(this, listener) ?? [
+      stubEvent(
+        type,
+        this,
+        listener as (this: SpeechRecognition, ev: Event) => unknown,
+      ),
+    ];
 
     const subscriptions = enhancedEvents.map(
       ({ eventName, nativeListener }) => {
