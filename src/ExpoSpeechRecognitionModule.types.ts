@@ -1,6 +1,7 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
 import {
+  AudioEncodingAndroid,
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
@@ -140,26 +141,15 @@ export type AudioSourceOptions = {
    */
   audioChannels?: number;
   /**
-   * [Android only] An enum from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android.
+   * [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android.
+   *
+   * Use the `AudioEncodingAndroid` enum to get the correct value.
    */
-  audioEncoding?: AudioEncodingAndroid;
+  audioEncoding?: AudioEncodingAndroidValue;
 };
 
-/**
- * See: [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat)
- */
-type AudioEncodingAndroid =
-  | "ENCODING_MP3"
-  | "ENCODING_MPEGH_BL_L3"
-  | "ENCODING_MPEGH_BL_L4"
-  | "ENCODING_MPEGH_LC_L3"
-  | "ENCODING_MPEGH_LC_L4"
-  | "ENCODING_OPUS"
-  | "ENCODING_PCM_16BIT"
-  | "ENCODING_PCM_24BIT_PACKED"
-  | "ENCODING_PCM_32BIT"
-  | "ENCODING_PCM_8BIT"
-  | "ENCODING_PCM_FLOAT";
+export type AudioEncodingAndroidValue =
+  (typeof AudioEncodingAndroid)[keyof typeof AudioEncodingAndroid];
 
 export type AndroidIntentOptions = {
   /**
@@ -397,8 +387,18 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   };
 }
 
+/**
+ * [iOS only] See: [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions)
+ *
+ * Use the `AVAudioSessionCategoryOptions` enum to get the correct value.
+ */
 export type AVAudioSessionCategoryOptionsValue =
   (typeof AVAudioSessionCategoryOptions)[keyof typeof AVAudioSessionCategoryOptions];
 
+/**
+ * [iOS only] See: [AVAudioSession.Mode](https://developer.apple.com/documentation/avfaudio/avaudiosession/mode)
+ *
+ * Use the `AVAudioSessionMode` enum to get the correct value.
+ */
 export type AVAudioSessionModeValue =
   (typeof AVAudioSessionMode)[keyof typeof AVAudioSessionMode];

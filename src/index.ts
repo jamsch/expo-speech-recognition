@@ -51,4 +51,10 @@ export {
   type ExpoSpeechRecognitionOptions,
   type AndroidIntentOptions,
   type ExpoSpeechRecognitionEventMap,
+  type AVAudioSessionCategoryOptionsValue,
+  type AVAudioSessionModeValue,
+  type AVAudioSessionCategoryValue,
+  type AudioEncodingAndroidValue,
+  type AudioSourceOptions,
+  type RecordingOptions,
 } from "./ExpoSpeechRecognitionModule.types";
