@@ -5,7 +5,10 @@ import {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionModuleEmitter,
 } from "./ExpoSpeechRecognitionModule";
-import type { ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
+import type {
+  ExpoSpeechRecognitionNativeEventMap,
+  ExpoSpeechRecognitionOptions,
+} from "./ExpoSpeechRecognitionModule.types";
 
 const noop = () => {};
 
@@ -104,15 +107,18 @@ const WebListenerTransformers: {
     return [
       {
         eventName: "result",
-        nativeListener: (nativeEvent: {
-          isFinal: boolean;
-          transcriptions: string[];
-        }) => {
+        nativeListener: (
+          nativeEvent: ExpoSpeechRecognitionNativeEventMap["result"],
+        ) => {
           if (!instance.interimResults && !nativeEvent.isFinal) {
             return;
           }
-          const alternatives = nativeEvent.transcriptions.map(
-            (result) => new ExpoSpeechRecognitionAlternative(1, result),
+          const alternatives = nativeEvent.results.map(
+            (result) =>
+              new ExpoSpeechRecognitionAlternative(
+                result.confidence,
+                result.transcript,
+              ),
           );
           const clientEvent: SpeechRecognitionEventMap["result"] = {
             ...createEventData(instance),
