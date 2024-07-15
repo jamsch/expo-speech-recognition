@@ -52,13 +52,21 @@ export type ExpoSpeechRecognitionNativeEventMap = {
    * when starting speech recognition
    */
   recording: { filePath: string };
-  error: { code: string; message: string };
+  error: {
+    // `ios_${number}` refers to custom iOS error codes (e.g. 201 = kLSRErrorDomain, "Siri or Dictation is disabled".)
+    code: SpeechRecognitionErrorCode | `ios_${number}`;
+    message: string;
+  };
   start: null;
   speechstart: null;
   speechend: null;
-  soundstart: null;
   /** A final result is returned with no significant recognition */
   nomatch: null;
+  audioend: null;
+  audiostart: null;
+  end: null;
+  soundstart: null;
+  soundend: null;
 };
 
 export type ExpoSpeechRecognitionOptions = {
