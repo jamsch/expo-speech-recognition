@@ -263,3 +263,55 @@ export const RecognizerIntentEnableLanguageSwitch = {
    */
   LANGUAGE_SWITCH_QUICK_RESPONSE: "quick_response",
 } as const;
+
+/**
+ * Android only
+ *
+ * See: [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat)
+ */
+export const AudioEncodingAndroid = {
+  /**
+   * Audio data format: MP3 compressed
+   */
+  ENCODING_MP3: "ENCODING_MP3",
+  /**
+   * Audio data format: MPEG-H baseline profile, level 3
+   */
+  ENCODING_MPEGH_BL_L3: "ENCODING_MPEGH_BL_L3",
+  /**
+   * Audio data format: MPEG-H baseline profile, level 4
+   */
+  ENCODING_MPEGH_BL_L4: "ENCODING_MPEGH_BL_L4",
+  /**
+   * Audio data format: MPEG-H low complexity profile, level 3
+   */
+  ENCODING_MPEGH_LC_L3: "ENCODING_MPEGH_LC_L3",
+  /**
+   * Audio data format: MPEG-H low complexity profile, level 4
+   */
+  ENCODING_MPEGH_LC_L4: "ENCODING_MPEGH_LC_L4",
+  /**
+   * Audio data format: OPUS compressed.
+   */
+  ENCODING_OPUS: "ENCODING_OPUS",
+  /**
+   * Audio data format: PCM 16 bit per sample. Guaranteed to be supported by devices.
+   */
+  ENCODING_PCM_16BIT: "ENCODING_PCM_16BIT",
+  /**
+   * Audio data format: PCM 24 bit per sample packed as 3 bytes. The bytes are in little-endian order, so the least significant byte comes first in the byte array. Not guaranteed to be supported by devices, may be emulated if not supported.
+   */
+  ENCODING_PCM_24BIT_PACKED: "ENCODING_PCM_24BIT_PACKED",
+  /**
+   * Audio data format: PCM 32 bit per sample. Not guaranteed to be supported by devices, may be emulated if not supported.
+   */
+  ENCODING_PCM_32BIT: "ENCODING_PCM_32BIT",
+  /**
+   * Audio data format: PCM 8 bit per sample. Not guaranteed to be supported by devices.
+   */
+  ENCODING_PCM_8BIT: "ENCODING_PCM_8BIT",
+  /**
+   * Audio data format: single-precision floating-point per sample
+   */
+  ENCODING_PCM_FLOAT: "ENCODING_PCM_FLOAT",
+} as const;
