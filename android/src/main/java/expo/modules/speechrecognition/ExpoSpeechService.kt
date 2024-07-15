@@ -35,6 +35,15 @@ enum class RecognitionState {
     // Add more states as needed
 }
 
+/**
+* Represents the state of the sound for tracking sound events (soundstart, soundend)
+*/
+enum class SoundState {
+    INACTIVE,
+    ACTIVE,
+    SILENT,
+}
+
 class ExpoSpeechService
     private constructor(
         private val reactContext: Context,
@@ -42,9 +51,10 @@ class ExpoSpeechService
     ) : RecognitionListener {
         private var speech: SpeechRecognizer? = null
         private var recognitionState = RecognitionState.INACTIVE
-        private var soundStartEventCalled = false
         private val mainHandler = Handler(Looper.getMainLooper())
         private var audioRecorder: ExpoAudioRecorder? = null
+        private var soundState = SoundState.INACTIVE
+        private var lastTimeSoundDetected = 0L
 
         /**
          * Reference for a remote file, for file-based recognition
@@ -118,7 +128,7 @@ class ExpoSpeechService
                 audioRecorder?.stop()
                 audioRecorder = null
                 recognitionState = RecognitionState.ACTIVE
-                soundStartEventCalled = false
+                soundState = SoundState.INACTIVE
 
                 try {
                     val intent = createSpeechIntent(options)
@@ -129,6 +139,7 @@ class ExpoSpeechService
                     // Start listening
                     speech?.setRecognitionListener(this)
                     speech?.startListening(intent)
+                    sendEvent("audiostart", null)
                 } catch (e: Exception) {
                     log("Failed to create Speech Recognizer")
                     sendEvent("error", mapOf("code" to "audio-capture", "message" to e.localizedMessage))
@@ -169,8 +180,11 @@ class ExpoSpeechService
                 }
                 speech?.destroy()
                 stopRecording()
-                // sendEvent("audioend", null)
+                soundState = SoundState.INACTIVE
+                sendEvent("audioend", null)
                 sendEvent("end", null)
+
+                // If the source was a remote file, delete it
                 try {
                     downloadedFileHandle?.delete()
                 } catch (e: Exception) {
@@ -370,12 +384,26 @@ class ExpoSpeechService
         }
 
         override fun onRmsChanged(rmsdB: Float) {
-            // Call "soundstart" event if not already called
-            if (!soundStartEventCalled) {
-                sendEvent("soundstart", null)
-                soundStartEventCalled = true
+            val isSilent = rmsdB <= 0
+
+            if (!isSilent) {
+                lastTimeSoundDetected = System.currentTimeMillis()
             }
-            // sendEvent("volumechange", mapOf("volume" to rmsdB))
+
+            // Call "soundstart" event if not already called
+            if (!isSilent && soundState != SoundState.ACTIVE) {
+                sendEvent("soundstart", null)
+                soundState = SoundState.ACTIVE
+                log("Changed sound state to ACTIVE")
+                return
+            }
+
+            // If the sound is silent for more than 150ms, send "soundend" event
+            if (isSilent && soundState == SoundState.ACTIVE && (System.currentTimeMillis() - lastTimeSoundDetected) > 150) {
+                sendEvent("soundend", null)
+                soundState = SoundState.SILENT
+                log("Changed sound state to SILENT")
+            }
         }
 
         override fun onBufferReceived(buffer: ByteArray?) {
@@ -428,7 +456,11 @@ class ExpoSpeechService
 
             val recognitionParts =
                 results.getParcelableArrayList(SpeechRecognizer.RECOGNITION_PARTS, RecognitionPart::class.java)
-                    ?: return listOf()
+                    ?: null
+
+            if (recognitionParts == null) {
+                return listOf()
+            }
 
             return recognitionParts
                 .mapIndexed { index, it ->
