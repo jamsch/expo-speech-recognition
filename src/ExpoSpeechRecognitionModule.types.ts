@@ -70,14 +70,14 @@ export type ExpoSpeechRecognitionNativeEventMap = {
 };
 
 export type ExpoSpeechRecognitionOptions = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
+  lang?: string;
+  interimResults?: boolean;
+  maxAlternatives?: number;
   /** An array of strings that will be used to provide context to the speech recognition engine. */
   contextualStrings?: string[];
-  continuous: boolean;
-  requiresOnDeviceRecognition: boolean;
-  addsPunctuation: boolean;
+  continuous?: boolean;
+  requiresOnDeviceRecognition?: boolean;
+  addsPunctuation?: boolean;
   /**
    * The package name of the speech recognition service to use.
    * If not provided, the default service will be used.
@@ -331,7 +331,13 @@ export type AndroidIntentOptions = {
 };
 
 export interface ExpoSpeechRecognitionModuleType extends NativeModule {
+  /**
+   * Starts speech recognition.
+   */
   start(options: ExpoSpeechRecognitionOptions): void;
+  /**
+   * Stops speech recognition.
+   */
   stop(): void;
   /** Requests speech recognition and recording permissions prior to starting speech recognition. */
   requestPermissionsAsync(): Promise<PermissionResponse>;

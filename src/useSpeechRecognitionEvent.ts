@@ -10,7 +10,7 @@ import { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitionModu
  * @param eventName The name of the event to listen to
  * @param listener The listener function to call when the event is emitted
  */
-export function useNativeEvent<
+export function useSpeechRecognitionEvent<
   K extends keyof ExpoSpeechRecognitionNativeEventMap,
 >(
   eventName: K,

@@ -26,10 +26,10 @@ function createStoreApi<S>(initialState: S) {
 }
 
 /**
- * This function creates a new `ExpoSpeechRecognizer` instance
+ * This function creates a new `ExpoWebSpeechRecognition` instance
  * and returns a `useEvent` hook that you can use to register event listeners, and start/stop functions.
  */
-export const createSpeechRecognizer = (
+export const createWebSpeechRecognizer = (
   options: Partial<ExpoSpeechRecognitionOptions> = {},
 ) => {
   const recognition = new ExpoWebSpeechRecognition();

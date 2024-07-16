@@ -42,28 +42,29 @@ npm install @jamsch/expo-speech-recognition
 
 ### Using Hooks
 
-Using hooks is the easiest way to get started. The `createSpeechRecognizer` function returns a `useEvent` hook that you can use to register event listeners and start/stop speech recognition.
+Using hooks is the easiest way to get started. The `useSpeechRecognitionEvent` hook allows you to register native event listeners.
 
 ```tsx
-import { createSpeechRecognizer } from "@jamsch/expo-speech-recognition";
-
-const recognizer = createSpeechRecognizer();
+import {
+  startSpeechRecognition,
+  useSpeechRecognitionEvent,
+} from "@jamsch/expo-speech-recognition";
 
 function MyComponent() {
   const [recognizing, setRecognizing] = useState(false);
   const [transcript, setTranscript] = useState("");
 
-  recognizer.useEvent("start", () => setRecognizing(true));
-  recognizer.useEvent("end", () => setRecognizing(false));
-  recognizer.useEvent("result", (ev) => {
-    setTranscript(ev.results[ev.resultIndex][0].transcript);
+  useSpeechRecognitionEvent("start", () => setRecognizing(true));
+  useSpeechRecognitionEvent("end", () => setRecognizing(false));
+  useSpeechRecognitionEvent("result", (ev) => {
+    setTranscript(ev.results[0].transcript);
   });
-  recognizer.useEvent("error", (ev) => {
+  useSpeechRecognitionEvent("error", (ev) => {
     console.log("error code:", ev.error, "error messsage:", ev.message);
   });
 
   const handleStart = () => {
-    recognizer.start({
+    startSpeechRecognition({
       lang: "en-US",
       interimResults: true,
       maxAlternatives: 1,
@@ -157,7 +158,7 @@ recognition.stop();
 
 ### Direct module API
 
-You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly without web-based polyfills. Note that the listener events are not the same as the web API.
+You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly (without web-based polyfills). Note that the listener events are not the same as the web API.
 
 ```ts
 import {
@@ -415,15 +416,16 @@ You can use the `audioSource.sourceUri` option to transcribe audio files instead
 
 ```tsx
 import { Button, View } from "react-native";
-import { createSpeechRecognizer } from "@jamsch/expo-speech-recognition";
-
-const recognizer = createSpeechRecognizer();
+import {
+  startSpeechRecognition,
+  useSpeechRecognitionEvent,
+} from "@jamsch/expo-speech-recognition";
 
 function TranscribeAudio() {
   const [transcription, setTranscription] = useState("");
 
   const handleStart = () => {
-    recognizer.start({
+    startSpeechRecognition({
       lang: "en-US",
       interimResults: true,
       audioSource: {
@@ -433,8 +435,8 @@ function TranscribeAudio() {
     });
   };
 
-  recognizer.useEvent("result", (ev) => {
-    setTranscription(ev.results[ev.resultIndex][0].transcript);
+  useSpeechRecognitionEvent("result", (ev) => {
+    setTranscription(ev.results[0]?.transcript || "");
   });
 
   return (

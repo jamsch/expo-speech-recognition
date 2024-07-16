@@ -9,9 +9,9 @@ export {
 
 // Hooks and helpers
 export {
-  createSpeechRecognizer,
+  createWebSpeechRecognizer,
   useWebSpeechRecognitionEvent,
-} from "./createSpeechRecognizer";
+} from "./createWebSpeechRecognizer";
 
 // Native module
 export {
@@ -20,7 +20,7 @@ export {
 } from "./ExpoSpeechRecognitionModule";
 
 // Hooks
-export { useNativeEvent } from "./useNativeEvent";
+export { useSpeechRecognitionEvent } from "./useSpeechRecognitionEvent";
 
 // Constants
 export {
@@ -30,6 +30,9 @@ export {
   RecognizerIntentExtraLanguageModel,
   RecognizerIntentEnableLanguageSwitch,
 } from "./constants";
+
+export const startRecognition = ExpoSpeechRecognitionModule.start;
+export const stopRecognition = ExpoSpeechRecognitionModule.stop;
 
 export const getSupportedLocales = (options?: {
   androidRecognitionServicePackage?: string;

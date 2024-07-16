@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import {
-  createSpeechRecognizer,
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
@@ -19,6 +18,7 @@ import {
   type ExpoSpeechRecognitionOptions,
   type ExpoSpeechRecognitionNativeEventMap,
   requestPermissionsAsync,
+  useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
 import {
@@ -30,8 +30,6 @@ import {
 import { StatusBar } from "expo-status-bar";
 import type { AndroidIntentOptions } from "expo-speech-recognition/ExpoSpeechRecognitionModule.types";
 import { Audio } from "expo-av";
-
-const recognizer = createSpeechRecognizer();
 
 const speechRecognitionServices = getSpeechRecognitionServices();
 
@@ -71,39 +69,32 @@ export default function App() {
     contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
   });
 
-  recognizer.useEvent("result", (ev) => {
-    const result = ev.results[ev.resultIndex];
-
-    const transcripts: string[] = [];
-    for (let i = 0; i < result.length; i++) {
-      transcripts.push(result[i].transcript);
-    }
-
+  useSpeechRecognitionEvent("result", (ev) => {
     console.log("[event]: result", {
-      isFinal: ev.results[0].isFinal,
-      transcripts,
+      isFinal: ev.isFinal,
+      transcripts: ev.results.map((result) => result.transcript),
     });
 
     setTranscription({
-      isFinal: ev.results[0].isFinal,
-      transcript: ev.results[ev.resultIndex][0].transcript,
+      isFinal: ev.isFinal,
+      transcript: ev.results[0].transcript,
     });
   });
 
-  recognizer.useEvent("start", () => {
+  useSpeechRecognitionEvent("start", () => {
     console.log("[event]: start");
     setStatus("recognizing");
   });
 
-  recognizer.useEvent("end", () => {
+  useSpeechRecognitionEvent("end", () => {
     console.log("[event]: end");
     setStatus("idle");
   });
 
-  recognizer.useEvent("error", (ev) => {
-    console.log("[event]: error", ev.error, ev.message);
+  useSpeechRecognitionEvent("error", (ev) => {
+    console.log("[event]: error", ev.code, ev.message);
     setError({
-      code: ev.error,
+      code: ev.code,
       message: ev.message,
     });
   });
@@ -120,12 +111,12 @@ export default function App() {
         console.log("Permissions not granted", result);
         return;
       }
-      recognizer.start(settings);
+      ExpoSpeechRecognitionModule.start(settings);
     });
   };
 
   const stopListening = () => {
-    recognizer.stop();
+    ExpoSpeechRecognitionModule.stop();
   };
 
   return (
@@ -331,14 +322,14 @@ function GeneralSettings(props: {
         />
         <CheckboxButton
           title="Punctuation"
-          checked={settings.addsPunctuation}
+          checked={Boolean(settings.addsPunctuation)}
           onPress={() =>
             handleChange("addsPunctuation", !settings.addsPunctuation)
           }
         />
         <CheckboxButton
           title="OnDevice Recognition"
-          checked={settings.requiresOnDeviceRecognition}
+          checked={Boolean(settings.requiresOnDeviceRecognition)}
           onPress={() =>
             handleChange(
               "requiresOnDeviceRecognition",
