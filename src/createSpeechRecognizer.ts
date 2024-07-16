@@ -1,5 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { ExpoSpeechRecognition } from "./ExpoSpeechRecognition";
+import { ExpoWebSpeechRecognition } from "./ExpoWebSpeechRecognition";
 import { ExpoSpeechRecognitionOptions } from "./ExpoSpeechRecognitionModule.types";
 
 function createStoreApi<S>(initialState: S) {
@@ -32,7 +32,7 @@ function createStoreApi<S>(initialState: S) {
 export const createSpeechRecognizer = (
   options: Partial<ExpoSpeechRecognitionOptions> = {},
 ) => {
-  const recognition = new ExpoSpeechRecognition();
+  const recognition = new ExpoWebSpeechRecognition();
 
   const optionsStore =
     createStoreApi<Partial<ExpoSpeechRecognitionOptions>>(options);
@@ -95,10 +95,10 @@ export const createSpeechRecognizer = (
   };
 };
 
-export function useSpeechRecognitionEvent<
+export function useWebSpeechRecognitionEvent<
   K extends keyof SpeechRecognitionEventMap,
 >(
-  recognizer: ExpoSpeechRecognition,
+  recognizer: ExpoWebSpeechRecognition,
   eventName: K,
   listener: (this: SpeechRecognition, ev: SpeechRecognitionEventMap[K]) => any,
 ) {

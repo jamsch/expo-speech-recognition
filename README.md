@@ -91,9 +91,9 @@ function MyComponent() {
 Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars`) on some OSes aren't yet supported.
 
 ```ts
-import { ExpoSpeechRecognition } from "@jamsch/expo-speech-recognition";
+import { ExpoWebSpeechRecognition } from "@jamsch/expo-speech-recognition";
 
-const recognition = new ExpoSpeechRecognition();
+const recognition = new ExpoWebSpeechRecognition();
 
 recognition.lang = "en-US";
 // [Default: false] Note for iOS: final results are only available after speech recognition has stopped
@@ -157,7 +157,7 @@ recognition.stop();
 
 ### Direct module API
 
-You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly without web-based polyfills.
+You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly without web-based polyfills. Note that the listener events are not the same as the web API.
 
 ```ts
 import {
@@ -166,11 +166,11 @@ import {
 } from "@jamsch/expo-speech-recognition";
 
 // Register event listeners
-
 const startListener = ExpoSpeechRecognitionModuleEmitter.addListener(
   "start",
   () => console.log("Speech recognition started"),
 );
+
 // and remove the listener when you're done:
 startListener.remove();
 
@@ -185,7 +185,8 @@ const resultListener = ExpoSpeechRecognitionModuleEmitter.addListener(
   "result",
   (event) => {
     // Note: this is not the same as the `result` event listener on the web speech API
-    console.log("result:", result.transcriptions, "final:", result.isFinal);
+    // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
+    console.log("results:", event.results, "final:", event.isFinal);
   },
 );
 
@@ -211,6 +212,24 @@ ExpoSpeechRecognitionModule.start({
 
 // Stop speech recognition
 ExpoSpeechRecognitionModule.stop();
+```
+
+### API: `useNativeEvent`
+
+This hook allows you to listen to native events directly emmitted by the `ExpoSpeechRecognitionModule`. These payloads are not the same as the web speech API, particularly the `result` event.
+
+```tsx
+import { useNativeEvent } from "@jamsch/expo-speech-recognition";
+
+function MyComponent() {
+  useNativeEvent("start", () => console.log("Speech recognition started"));
+  useNativeEvent("end", () => console.log("Speech recognition ended"));
+  useNativeEvent("result", (event) => {
+    console.log("results:", event.results, "final:", event.isFinal);
+  });
+
+  return <Button title="Start" onPress={ExpoSpeechRecognitionModule.start} />;
+}
 ```
 
 ### API: `getSupportedLocales`

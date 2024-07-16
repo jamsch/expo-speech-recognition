@@ -17,7 +17,7 @@ import {
   getSupportedLocales,
   ExpoSpeechRecognitionModuleEmitter,
   type ExpoSpeechRecognitionOptions,
-  type ExpoSpeechRecognitionEventMap,
+  type ExpoSpeechRecognitionNativeEventMap,
   requestPermissionsAsync,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
@@ -551,7 +551,7 @@ function OtherSettings(props: {
   useEffect(() => {
     const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
       "recording",
-      (event: ExpoSpeechRecognitionEventMap["recording"]) => {
+      (event: ExpoSpeechRecognitionNativeEventMap["recording"]) => {
         console.log("Local file path:", event.filePath);
         // Android: Will be saved as a .wav file
         // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"

@@ -50,7 +50,7 @@ type NativeEventAndListener<
 
 function stubEvent<K extends keyof SpeechRecognitionEventMap>(
   eventName: K,
-  instance: ExpoSpeechRecognition,
+  instance: ExpoWebSpeechRecognition,
   listener: (this: SpeechRecognition, ev: Event) => unknown,
 ): NativeEventAndListener<K> {
   return {
@@ -65,7 +65,7 @@ function stubEvent<K extends keyof SpeechRecognitionEventMap>(
  */
 const WebListenerTransformers: {
   [K in keyof SpeechRecognitionEventMap]?: (
-    instance: ExpoSpeechRecognition,
+    instance: ExpoWebSpeechRecognition,
     listener: (
       this: SpeechRecognition,
       ev: SpeechRecognitionEventMap[K],
@@ -146,9 +146,9 @@ type SpeechListener<K extends keyof SpeechRecognitionEventMap> = (
 ) => any;
 
 /** A compatibility wrapper that implements the web SpeechRecognition API for React Native. */
-export class ExpoSpeechRecognition implements SpeechRecognition {
+export class ExpoWebSpeechRecognition implements SpeechRecognition {
   lang: string = "en-US";
-  grammars: SpeechGrammarList = new ExpoSpeechGrammarList();
+  grammars: SpeechGrammarList = new ExpoWebSpeechGrammarList();
   maxAlternatives: number = 1;
   continuous: boolean = false;
 
@@ -374,30 +374,30 @@ export class ExpoSpeechRecognition implements SpeechRecognition {
 /**
  * This class is just a polyfill and does nothing on Android/iOS
  */
-export class ExpoSpeechGrammarList implements SpeechGrammarList {
+export class ExpoWebSpeechGrammarList implements SpeechGrammarList {
   get length() {
     return this.#grammars.length;
   }
-  #grammars: ExpoSpeechGrammar[] = [];
+  #grammars: ExpoWebSpeechGrammar[] = [];
   [index: number]: SpeechGrammar; // Indexer property
 
   addFromURI(src: string, weight?: number | undefined): void {
     // todo
   }
 
-  item(index: number): ExpoSpeechGrammar {
+  item(index: number): ExpoWebSpeechGrammar {
     return this.#grammars[index];
   }
 
   addFromString = (grammar: string, weight?: number) => {
     // TODO: parse grammar to html entities (data:application/xml,....)
-    this.#grammars.push(new ExpoSpeechGrammar(grammar, weight));
+    this.#grammars.push(new ExpoWebSpeechGrammar(grammar, weight));
     // Set key on this object for compatibility with web SpeechGrammarList API
     this[this.length - 1] = this.#grammars[this.length - 1];
   };
 }
 
-export class ExpoSpeechGrammar implements SpeechGrammar {
+export class ExpoWebSpeechGrammar implements SpeechGrammar {
   src: string = "";
   weight: number = 1;
 

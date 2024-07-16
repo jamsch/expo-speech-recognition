@@ -2,15 +2,15 @@ import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
 
 // Export the SpeechRecognition APIs
 export {
-  ExpoSpeechRecognition,
-  ExpoSpeechGrammar,
-  ExpoSpeechGrammarList,
-} from "./ExpoSpeechRecognition";
+  ExpoWebSpeechRecognition,
+  ExpoWebSpeechGrammar,
+  ExpoWebSpeechGrammarList,
+} from "./ExpoWebSpeechRecognition";
 
 // Hooks and helpers
 export {
   createSpeechRecognizer,
-  useSpeechRecognitionEvent,
+  useWebSpeechRecognitionEvent,
 } from "./createSpeechRecognizer";
 
 // Native module
@@ -18,6 +18,9 @@ export {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionModuleEmitter,
 } from "./ExpoSpeechRecognitionModule";
+
+// Hooks
+export { useNativeEvent } from "./useNativeEvent";
 
 // Constants
 export {
