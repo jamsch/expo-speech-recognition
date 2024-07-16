@@ -438,7 +438,7 @@ function TranscribeAudioFile() {
       lang: "en-US",
       interimResults: true,
       audioSource: {
-        uri: "/path/to/audio.wav", // or remote URL e.g. "https://example.com/audio.wav"
+        uri: "/path/to/audio.wav",
         /** [Android only] The number of channels in the source audio. */
         audioChannels: 1,
         /** [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android. */

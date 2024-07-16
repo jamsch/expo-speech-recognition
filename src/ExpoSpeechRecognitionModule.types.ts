@@ -140,12 +140,9 @@ export type RecordingOptions = {
 
 export type AudioSourceOptions = {
   /**
-   * Local or remote audio source URI.
+   * Local audio source URI.
    *
-   * e.g.
-   *
-   * - `"file:///storage/emulated/0/Download/audio.wav"`
-   * - `"https://example.com/audio.wav"`
+   * e.g. `"file:///storage/emulated/0/Download/audio.wav"`
    */
   uri: string;
   /**
