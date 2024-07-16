@@ -160,6 +160,12 @@ export type AudioSourceOptions = {
    * Use the `AudioEncodingAndroid` enum to get the correct value.
    */
   audioEncoding?: AudioEncodingAndroidValue;
+  /**
+   * [Android only] Audio sampling rate in Hz.
+   *
+   * Default: 16000
+   */
+  sampleRate?: number;
 };
 
 export type AudioEncodingAndroidValue =

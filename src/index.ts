@@ -29,6 +29,7 @@ export {
   AVAudioSessionMode,
   RecognizerIntentExtraLanguageModel,
   RecognizerIntentEnableLanguageSwitch,
+  AudioEncodingAndroid,
 } from "./constants";
 
 export const getSupportedLocales = (options?: {

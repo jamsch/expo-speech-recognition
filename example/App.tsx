@@ -11,12 +11,14 @@ import {
   View,
 } from "react-native";
 import {
+  AudioEncodingAndroid,
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
   ExpoSpeechRecognitionModuleEmitter,
   type ExpoSpeechRecognitionOptions,
   type ExpoSpeechRecognitionNativeEventMap,
+  type AndroidIntentOptions,
   requestPermissionsAsync,
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
@@ -28,8 +30,8 @@ import {
   TabButton,
 } from "./components/Buttons";
 import { StatusBar } from "expo-status-bar";
-import type { AndroidIntentOptions } from "expo-speech-recognition/ExpoSpeechRecognitionModule.types";
 import { Audio } from "expo-av";
+import { useAssets } from "expo-asset";
 
 const speechRecognitionServices = getSpeechRecognitionServices();
 
@@ -554,7 +556,7 @@ function OtherSettings(props: {
 
   // Enable audio recording
   return (
-    <View>
+    <View style={[styles.gap1]}>
       <CheckboxButton
         title="Persist audio recording to filesystem"
         checked={Boolean(settings.recordingOptions?.persist)}
@@ -589,6 +591,81 @@ function OtherSettings(props: {
           )}
         </View>
       ) : null}
+
+      <TranscribeLocalAudioFile />
+
+      <TranscribeRemoteAudioFile />
+    </View>
+  );
+}
+
+function TranscribeLocalAudioFile() {
+  const [assets] = useAssets([require("./assets/audio/en-us-sentence.wav")]);
+
+  const handleTranscribe = () => {
+    if (!assets) {
+      return;
+    }
+    const [enUsSentence] = assets;
+
+    console.log("enUsSentence", enUsSentence);
+    if (!enUsSentence.localUri) {
+      console.warn("No local URI");
+      return;
+    }
+
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+      audioSource: {
+        uri: enUsSentence.localUri,
+        audioChannels: 1,
+        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+        sampleRate: 16000,
+      },
+    });
+  };
+
+  return (
+    <View>
+      <Button
+        title="Transcribe local en-US audio file"
+        onPress={handleTranscribe}
+      />
+    </View>
+  );
+}
+
+function TranscribeRemoteAudioFile() {
+  const [remoteUrl, setRemoteUrl] = useState<string>(
+    "https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav",
+  );
+  const handleTranscribe = () => {
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+      audioSource: {
+        uri: remoteUrl,
+        audioChannels: 1,
+        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+        sampleRate: 16000,
+      },
+    });
+  };
+
+  return (
+    <View>
+      <TextInput
+        style={styles.textInput}
+        autoCorrect={false}
+        keyboardType="url"
+        defaultValue={remoteUrl}
+        onChangeText={setRemoteUrl}
+      />
+      <Button
+        title="Transcribe remote en-US audio file"
+        onPress={handleTranscribe}
+      />
     </View>
   );
 }

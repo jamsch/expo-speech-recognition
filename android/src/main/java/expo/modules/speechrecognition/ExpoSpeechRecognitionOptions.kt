@@ -4,7 +4,6 @@ import android.media.AudioFormat
 import android.speech.RecognizerIntent
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
-import expo.modules.kotlin.types.Enumerable
 
 class SpeechRecognitionOptions : Record {
     @Field
@@ -55,29 +54,12 @@ class RecordingOptions : Record {
     val outputFilePath: String? = null
 }
 
-enum class AudioEncodingOption(
-    val value: String,
-    val androidAudioFormat: Int,
-) : Enumerable {
-    ENCODING_MP3("ENCODING_MP3", AudioFormat.ENCODING_MP3),
-    ENCODING_MPEGH_BL_L3("ENCODING_MPEGH_BL_L3", AudioFormat.ENCODING_MPEGH_BL_L3),
-    ENCODING_MPEGH_BL_L4("ENCODING_MPEGH_BL_L4", AudioFormat.ENCODING_MPEGH_BL_L4),
-    ENCODING_MPEGH_LC_L3("ENCODING_MPEGH_LC_L3", AudioFormat.ENCODING_MPEGH_LC_L3),
-    ENCODING_MPEGH_LC_L4("ENCODING_MPEGH_LC_L4", AudioFormat.ENCODING_MPEGH_LC_L4),
-    ENCODING_OPUS("ENCODING_OPUS", AudioFormat.ENCODING_OPUS),
-    ENCODING_PCM_16BIT("ENCODING_PCM_16BIT", AudioFormat.ENCODING_PCM_16BIT),
-    ENCODING_PCM_24BIT_PACKED("ENCODING_PCM_24BIT_PACKED", AudioFormat.ENCODING_PCM_24BIT_PACKED),
-    ENCODING_PCM_32BIT("ENCODING_PCM_32BIT", AudioFormat.ENCODING_PCM_32BIT),
-    ENCODING_PCM_8BIT("ENCODING_PCM_8BIT", AudioFormat.ENCODING_PCM_8BIT),
-    ENCODING_PCM_FLOAT("ENCODING_PCM_FLOAT", AudioFormat.ENCODING_PCM_FLOAT),
-}
-
 class AudioSourceOptions : Record {
     @Field
     val uri: String = ""
 
     @Field
-    val audioEncoding: AudioEncodingOption? = AudioEncodingOption.ENCODING_PCM_16BIT
+    val audioEncoding: Int? = AudioFormat.ENCODING_PCM_16BIT
 
     @Field
     val sampleRate: Int? = 16000

@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.speech.RecognitionListener
 import android.speech.RecognitionPart
 import android.speech.RecognitionService
@@ -19,6 +20,7 @@ import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.ref.WeakReference
+import java.net.URI
 import java.net.URL
 import java.util.Locale
 import java.util.UUID
@@ -220,7 +222,10 @@ class ExpoSpeechService
             }
 
             // Feature: Stream microphone input to SpeechRecognition so the user can access the audio blob
-            if (options.recordingOptions?.persist == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (options.recordingOptions?.persist == true &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                options.audioSource == null
+            ) {
                 val filePath =
                     options.recordingOptions.outputFilePath ?: run {
                         val timestamp = System.currentTimeMillis().toString()
@@ -271,13 +276,35 @@ class ExpoSpeechService
             }
 
             // Feature: Transcribe audio from a local or remote file
-            if (options.audioSource?.uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (options.audioSource?.uri != null) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    throw Exception("Audio source is only supported on Android 13 and above")
+                }
+                log("Transcribing audio from local file: ${options.audioSource.uri}")
                 val file = resolveSourceUri(options.audioSource.uri)
-                intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, file.absolutePath)
+                // The file should exist, otherwise throw an error
+                if (!file.exists()) {
+                    throw Exception("File not found: ${file.absolutePath}")
+                }
+                if (!file.canRead()) {
+                    throw Exception("File cannot be read: ${file.absolutePath}")
+                }
+                // Get ParcelFileDescriptor of file
+
+                log("Source file: ${file.absolutePath}")
+                log("Source file exists: ${file.exists()}")
+                log("Source file length: ${file.length()}")
+                log("Sampling rate: ${options.audioSource.sampleRate}")
+                log("Channels: ${options.audioSource.audioChannels}")
+                val parcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, parcelFileDescriptor)
+
+                val encoding = options.audioSource.audioEncoding ?: AudioFormat.ENCODING_MP3
                 intent.putExtra(
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
-                    options.audioSource.audioEncoding?.androidAudioFormat ?: AudioFormat.ENCODING_MP3,
+                    encoding,
                 )
+                log("Encoding: $encoding")
                 intent.putExtra(
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
                     options.audioSource.sampleRate ?: 16000,
@@ -348,28 +375,33 @@ class ExpoSpeechService
         /**
          * Resolves the source URI to a local file path
          */
-        private fun resolveSourceUri(sourceUri: String): File {
-            // Local file assets
-            if (!sourceUri.startsWith("https://")) {
-                return File(sourceUri)
+        private fun resolveSourceUri(sourceUri: String): File =
+            when {
+                // Local file path without URI scheme
+                !sourceUri.startsWith("https://") && !sourceUri.startsWith("file://") -> File(sourceUri)
+
+                // File URI
+                sourceUri.startsWith("file://") -> File(URI(sourceUri))
+
+                // HTTP URI - Download the file
+                else -> {
+                    val generatedFileName = UUID.randomUUID().toString()
+                    val file = File(reactContext.cacheDir, generatedFileName)
+                    val url = URL(sourceUri)
+                    val connection = url.openConnection()
+                    connection.connectTimeout = 10000
+                    connection.readTimeout = 10000
+                    connection.doInput = true
+                    connection.connect()
+                    val input = connection.getInputStream()
+                    val output = FileOutputStream(file)
+                    input.copyTo(output)
+                    output.close()
+                    input.close()
+                    downloadedFileHandle = file
+                    file
+                }
             }
-            // Download the file
-            val generatedFileName = UUID.randomUUID().toString()
-            val file = File(reactContext.cacheDir, generatedFileName)
-            val url = URL(sourceUri)
-            val connection = url.openConnection()
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            connection.doInput = true
-            connection.connect()
-            val input = connection.getInputStream()
-            val output = FileOutputStream(file)
-            input.copyTo(output)
-            output.close()
-            input.close()
-            downloadedFileHandle = file
-            return file
-        }
 
         override fun onReadyForSpeech(params: Bundle?) {
             // Avoid sending this event if there was an error
@@ -456,11 +488,7 @@ class ExpoSpeechService
 
             val recognitionParts =
                 results.getParcelableArrayList(SpeechRecognizer.RECOGNITION_PARTS, RecognitionPart::class.java)
-                    ?: null
-
-            if (recognitionParts == null) {
-                return listOf()
-            }
+                    ?: return listOf()
 
             return recognitionParts
                 .mapIndexed { index, it ->

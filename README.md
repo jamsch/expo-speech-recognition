@@ -420,23 +420,29 @@ function AudioPlayer(props: { source: string }) {
 
 You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
 
+> Note: On Android, this feature is only supported on Android 13 and above. The speech recongition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support it.
+
 ```tsx
 import { Button, View } from "react-native";
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
+  AudioEncodingAndroid,
 } from "@jamsch/expo-speech-recognition";
 
-function TranscribeAudio() {
+function TranscribeAudioFile() {
   const [transcription, setTranscription] = useState("");
 
-  const handleStart = () => {
+  const handleTranscribe = () => {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       audioSource: {
-        type: "file",
-        sourceUri: "/path/to/audio.wav", // or remote URL e.g. "https://example.com/audio.wav"
+        uri: "/path/to/audio.wav", // or remote URL e.g. "https://example.com/audio.wav"
+        /** [Android only] The number of channels in the source audio. */
+        audioChannels: 1,
+        /** [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android. */
+        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
       },
     });
   };
@@ -447,7 +453,7 @@ function TranscribeAudio() {
 
   return (
     <View>
-      <Button title="Start" onPress={handleStart} />
+      <Button title="Transcribe" onPress={handleTranscribe} />
       <Text>{transcription}</Text>
     </View>
   );
