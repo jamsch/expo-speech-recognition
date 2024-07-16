@@ -11,10 +11,10 @@ let _speechRecognitionRef: SpeechRecognition | null = null;
 export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   start: (options) => {
     _speechRecognitionRef = new SpeechRecognition();
-    _speechRecognitionRef.lang = options.lang;
-    _speechRecognitionRef.interimResults = options.interimResults;
-    _speechRecognitionRef.maxAlternatives = options.maxAlternatives;
-    _speechRecognitionRef.continuous = options.continuous;
+    _speechRecognitionRef.lang = options.lang ?? "en-US";
+    _speechRecognitionRef.interimResults = options.interimResults ?? false;
+    _speechRecognitionRef.maxAlternatives = options.maxAlternatives ?? 1;
+    _speechRecognitionRef.continuous = options.continuous ?? false;
 
     // Re-subscribe to events so that we don't lose them
     // This covers the case where the user has already subscribed to an event prior to calling `start()`

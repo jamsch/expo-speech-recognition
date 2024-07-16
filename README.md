@@ -64,6 +64,7 @@ function MyComponent() {
   });
 
   const handleStart = () => {
+    // Start speech recognition
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
@@ -87,11 +88,34 @@ function MyComponent() {
 }
 ```
 
+### Requesting Permissions
+
+You may want to request the required permissions for starting speech recognition prior to starting the recognition. This library exports a `requestPermissionsAsync` function for this purpose.
+
+```ts
+import { requestPermissionsAsync } from "@jamsch/expo-speech-recognition";
+
+requestPermissionsAsync().then((result) => {
+  if (!result.granted) {
+    console.warn("Permissions not granted", result);
+    return;
+  }
+  // Permissions granted! Start speech recognition, or some other time...
+  ExpoSpeechRecognitionModule.start({ lang: "en-US" });
+});
+```
+
+If you don't use `requestPermissionsAsync`, the user will be prompted to grant permissions when starting speech recognition. If the user denies permissions, the module will emit an `error` event with the `code` set to `not-allowed`.
+
 ### Using the Web SpeechRecognition API
 
 Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars`) on some OSes aren't yet supported.
 
 ```ts
+// Import this polyfill for typings, as needed
+// "npm install -D @types/dom-speech-recognition"
+import "dom-speech-recognition";
+
 import { ExpoWebSpeechRecognition } from "@jamsch/expo-speech-recognition";
 
 const recognition = new ExpoWebSpeechRecognition();
@@ -213,24 +237,6 @@ ExpoSpeechRecognitionModule.start({
 
 // Stop speech recognition
 ExpoSpeechRecognitionModule.stop();
-```
-
-### API: `useNativeEvent`
-
-This hook allows you to listen to native events directly emmitted by the `ExpoSpeechRecognitionModule`. These payloads are not the same as the web speech API, particularly the `result` event.
-
-```tsx
-import { useNativeEvent } from "@jamsch/expo-speech-recognition";
-
-function MyComponent() {
-  useNativeEvent("start", () => console.log("Speech recognition started"));
-  useNativeEvent("end", () => console.log("Speech recognition ended"));
-  useNativeEvent("result", (event) => {
-    console.log("results:", event.results, "final:", event.isFinal);
-  });
-
-  return <Button title="Start" onPress={ExpoSpeechRecognitionModule.start} />;
-}
 ```
 
 ### API: `getSupportedLocales`

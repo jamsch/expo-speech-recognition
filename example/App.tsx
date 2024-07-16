@@ -160,7 +160,7 @@ export default function App() {
         ]}
       >
         {Platform.OS === "android" && settings.requiresOnDeviceRecognition && (
-          <DownloadOfflineModel locale={settings.lang} />
+          <DownloadOfflineModel locale={settings.lang ?? "en-US"} />
         )}
 
         {status === "idle" ? (
@@ -315,7 +315,7 @@ function GeneralSettings(props: {
       >
         <CheckboxButton
           title="Interim Results"
-          checked={settings.interimResults}
+          checked={Boolean(settings.interimResults)}
           onPress={() =>
             handleChange("interimResults", !settings.interimResults)
           }
@@ -521,7 +521,7 @@ function IOSSettings(props: {
     <View style={styles.row}>
       <CheckboxButton
         title="Continuous (iOS only)"
-        checked={settings.continuous}
+        checked={Boolean(settings.continuous)}
         onPress={() => handleChange("continuous", !settings.continuous)}
       />
     </View>

@@ -70,13 +70,19 @@ export type ExpoSpeechRecognitionNativeEventMap = {
 };
 
 export type ExpoSpeechRecognitionOptions = {
+  /** [Default: "en-US"] The language of the speech recognition */
   lang?: string;
+  /** [Default: false] Note for iOS: final results are only available after speech recognition has stopped */
   interimResults?: boolean;
+  /** [Default: 1] The maximum number of alternative transcriptions to return. */
   maxAlternatives?: number;
   /** An array of strings that will be used to provide context to the speech recognition engine. */
   contextualStrings?: string[];
+  /** [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds */
   continuous?: boolean;
+  /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it. */
   requiresOnDeviceRecognition?: boolean;
+  /** [Default: false] Include punctuation in the recognition results. This applies to full stops and commas. */
   addsPunctuation?: boolean;
   /**
    * The package name of the speech recognition service to use.
