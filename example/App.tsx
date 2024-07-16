@@ -21,6 +21,7 @@ import {
   type AndroidIntentOptions,
   requestPermissionsAsync,
   useSpeechRecognitionEvent,
+  AudioEncodingAndroidValue,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
 import {
@@ -594,31 +595,45 @@ function OtherSettings(props: {
 
       <TranscribeLocalAudioFile />
 
-      <TranscribeRemoteAudioFile />
+      <TranscribeRemoteAudioFile
+        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav"
+        audioEncoding={AudioEncodingAndroid.ENCODING_PCM_16BIT}
+        description="16000hz 16-bit 1-channel PCM audio file"
+      />
+
+      <TranscribeRemoteAudioFile
+        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
+        audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
+        description="(May not work on Android) 16000hz MP3 1-channel audio file"
+      />
+
+      <TranscribeRemoteAudioFile
+        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
+        audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
+        description="(May not work on Android) 16000hz opus 1-channel audio file"
+      />
     </View>
   );
 }
 
 function TranscribeLocalAudioFile() {
+  const [busy, setBusy] = useState(false);
   const [assets] = useAssets([require("./assets/audio/en-us-sentence.wav")]);
 
-  const handleTranscribe = () => {
-    if (!assets) {
-      return;
-    }
-    const [enUsSentence] = assets;
+  const localUri = assets?.[0]?.localUri;
 
-    console.log("enUsSentence", enUsSentence);
-    if (!enUsSentence.localUri) {
+  const handleTranscribe = () => {
+    if (!localUri) {
       console.warn("No local URI");
       return;
     }
 
+    setBusy(true);
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       audioSource: {
-        uri: enUsSentence.localUri,
+        uri: localUri,
         audioChannels: 1,
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         sampleRate: 16000,
@@ -626,44 +641,51 @@ function TranscribeLocalAudioFile() {
     });
   };
 
+  useSpeechRecognitionEvent("end", () => setBusy(false));
+
   return (
-    <View>
-      <Button
-        title="Transcribe local en-US audio file"
+    <View style={styles.card}>
+      <Text style={[styles.text, styles.mb2]}>{localUri || ""}</Text>
+      <BigButton
+        disabled={busy}
+        color="#539bf5"
+        title={busy ? "Transcribing..." : "Transcribe local en-US audio file"}
         onPress={handleTranscribe}
       />
     </View>
   );
 }
 
-function TranscribeRemoteAudioFile() {
-  const [remoteUrl, setRemoteUrl] = useState<string>(
-    "https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav",
-  );
+function TranscribeRemoteAudioFile(props: {
+  remoteUrl: string;
+  description: string;
+  audioEncoding: AudioEncodingAndroidValue;
+}) {
+  const [busy, setBusy] = useState(false);
   const handleTranscribe = () => {
+    setBusy(true);
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       audioSource: {
-        uri: remoteUrl,
+        uri: props.remoteUrl,
         audioChannels: 1,
-        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+        audioEncoding: props.audioEncoding,
         sampleRate: 16000,
       },
     });
   };
 
+  useSpeechRecognitionEvent("end", () => setBusy(false));
+
   return (
-    <View>
-      <TextInput
-        style={styles.textInput}
-        autoCorrect={false}
-        keyboardType="url"
-        defaultValue={remoteUrl}
-        onChangeText={setRemoteUrl}
-      />
-      <Button
-        title="Transcribe remote en-US audio file"
+    <View style={styles.card}>
+      <Text style={[styles.text, styles.mb2]}>{props.description}</Text>
+      <Text style={[styles.text, styles.mb2]}>{props.remoteUrl}</Text>
+      <BigButton
+        disabled={busy}
+        color="#539bf5"
+        title={busy ? "Transcribing..." : "Transcribe remote audio file"}
         onPress={handleTranscribe}
       />
     </View>

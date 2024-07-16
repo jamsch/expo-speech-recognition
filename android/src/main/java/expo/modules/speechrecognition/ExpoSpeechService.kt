@@ -17,13 +17,20 @@ import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 import java.lang.ref.WeakReference
 import java.net.URI
 import java.net.URL
 import java.util.Locale
 import java.util.UUID
+import javax.net.ssl.HttpsURLConnection
 
 data class SpeechRecognitionErrorEvent(
     val error: String,
@@ -132,20 +139,36 @@ class ExpoSpeechService
                 recognitionState = RecognitionState.ACTIVE
                 soundState = SoundState.INACTIVE
 
-                try {
-                    val intent = createSpeechIntent(options)
-                    speech = createSpeechRecognizer(options)
-                    // Start the audio recorder, if necessary
-                    audioRecorder?.start()
+                val instance = this
 
-                    // Start listening
-                    speech?.setRecognitionListener(this)
-                    speech?.startListening(intent)
-                    sendEvent("audiostart", null)
-                } catch (e: Exception) {
-                    log("Failed to create Speech Recognizer")
-                    sendEvent("error", mapOf("code" to "audio-capture", "message" to e.localizedMessage))
-                    stop()
+                GlobalScope.launch(Dispatchers.IO) {
+                    try {
+                        val intent = createSpeechIntent(options)
+                        withContext(Dispatchers.Main) {
+                            speech = createSpeechRecognizer(options)
+                            // Start the audio recorder, if necessary
+                            audioRecorder?.start()
+
+                            // Start listening
+                            speech?.setRecognitionListener(instance)
+                            speech?.startListening(intent)
+
+                            sendEvent("audiostart", null)
+                        }
+                    } catch (e: Exception) {
+                        val errorMessage =
+                            when {
+                                e.localizedMessage != null -> e.localizedMessage
+                                e.message != null -> e.message
+                                else -> "Unknown error"
+                            }
+
+                        log("Failed to create Speech Recognizer with error: $errorMessage")
+                        withContext(Dispatchers.Main) {
+                            sendEvent("error", mapOf("code" to "audio-capture", "message" to errorMessage))
+                            stop()
+                        }
+                    }
                 }
             }
         }
@@ -196,7 +219,7 @@ class ExpoSpeechService
             }
         }
 
-        private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
+        private suspend fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
             val action = options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH
             val intent = Intent(action)
 
@@ -280,8 +303,10 @@ class ExpoSpeechService
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                     throw Exception("Audio source is only supported on Android 13 and above")
                 }
+
                 log("Transcribing audio from local file: ${options.audioSource.uri}")
                 val file = resolveSourceUri(options.audioSource.uri)
+
                 // The file should exist, otherwise throw an error
                 if (!file.exists()) {
                     throw Exception("File not found: ${file.absolutePath}")
@@ -289,22 +314,14 @@ class ExpoSpeechService
                 if (!file.canRead()) {
                     throw Exception("File cannot be read: ${file.absolutePath}")
                 }
-                // Get ParcelFileDescriptor of file
 
-                log("Source file: ${file.absolutePath}")
-                log("Source file exists: ${file.exists()}")
-                log("Source file length: ${file.length()}")
-                log("Sampling rate: ${options.audioSource.sampleRate}")
-                log("Channels: ${options.audioSource.audioChannels}")
                 val parcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                 intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, parcelFileDescriptor)
 
-                val encoding = options.audioSource.audioEncoding ?: AudioFormat.ENCODING_MP3
                 intent.putExtra(
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
-                    encoding,
+                    options.audioSource.audioEncoding ?: AudioFormat.ENCODING_PCM_16BIT,
                 )
-                log("Encoding: $encoding")
                 intent.putExtra(
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
                     options.audioSource.sampleRate ?: 16000,
@@ -375,7 +392,7 @@ class ExpoSpeechService
         /**
          * Resolves the source URI to a local file path
          */
-        private fun resolveSourceUri(sourceUri: String): File =
+        private suspend fun resolveSourceUri(sourceUri: String): File =
             when {
                 // Local file path without URI scheme
                 !sourceUri.startsWith("https://") && !sourceUri.startsWith("file://") -> File(sourceUri)
@@ -385,21 +402,47 @@ class ExpoSpeechService
 
                 // HTTP URI - Download the file
                 else -> {
-                    val generatedFileName = UUID.randomUUID().toString()
-                    val file = File(reactContext.cacheDir, generatedFileName)
-                    val url = URL(sourceUri)
-                    val connection = url.openConnection()
-                    connection.connectTimeout = 10000
-                    connection.readTimeout = 10000
-                    connection.doInput = true
+                    log("Downloading file from $sourceUri")
+                    downloadFile(sourceUri)
+                }
+            }
+
+        private suspend fun downloadFile(sourceUri: String): File =
+            withContext(Dispatchers.IO) {
+                val generatedFileName = UUID.randomUUID().toString()
+                val file = File(reactContext.cacheDir, generatedFileName)
+                var input: InputStream? = null
+                var output: FileOutputStream? = null
+                try {
+                    val connection = URL(sourceUri).openConnection() as HttpsURLConnection
+                    connection.requestMethod = "GET"
                     connection.connect()
-                    val input = connection.getInputStream()
-                    val output = FileOutputStream(file)
+
+                    val responseCode = connection.responseCode
+                    if (responseCode != HttpsURLConnection.HTTP_OK) {
+                        throw IOException("Failed to download file: HTTP error code $responseCode")
+                    }
+
+                    input = connection.inputStream
+                    output = FileOutputStream(file)
                     input.copyTo(output)
-                    output.close()
-                    input.close()
+
                     downloadedFileHandle = file
                     file
+                } catch (e: Exception) {
+                    log("Error downloading file from $sourceUri: ${e.message}")
+                    throw e
+                } finally {
+                    try {
+                        input?.close()
+                    } catch (e: IOException) {
+                        log("Error closing input stream: ${e.message}")
+                    }
+                    try {
+                        output?.close()
+                    } catch (e: IOException) {
+                        log("Error closing output stream: ${e.message}")
+                    }
                 }
             }
 
