@@ -33,6 +33,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Audio } from "expo-av";
 import { useAssets } from "expo-asset";
+import * as FileSystem from "expo-file-system";
 
 const speechRecognitionServices = getSpeechRecognitionServices();
 
@@ -75,12 +76,12 @@ export default function App() {
   useSpeechRecognitionEvent("result", (ev) => {
     console.log("[event]: result", {
       isFinal: ev.isFinal,
-      transcripts: ev.results.map((result) => result.transcript),
+      transcripts: ev.results.map((result) => result?.transcript),
     });
 
     setTranscription({
       isFinal: ev.isFinal,
-      transcript: ev.results[0].transcript,
+      transcript: ev.results?.[0]?.transcript,
     });
   });
 
@@ -110,6 +111,7 @@ export default function App() {
     setError(null);
     setStatus("starting");
     requestPermissionsAsync().then((result) => {
+      console.log("Permissions", result);
       if (!result.granted) {
         console.log("Permissions not granted", result);
         return;
@@ -249,17 +251,10 @@ function Settings(props: {
           }}
         />
         <TabButton
-          title="Android"
+          title="Android-specific"
           active={tab === "android"}
           onPress={() => {
             setTab("android");
-          }}
-        />
-        <TabButton
-          title="iOS"
-          active={tab === "ios"}
-          onPress={() => {
-            setTab("ios");
           }}
         />
         <TabButton
@@ -275,9 +270,6 @@ function Settings(props: {
       )}
       {tab === "android" && (
         <AndroidSettings value={settings} onChange={handleChange} />
-      )}
-      {tab === "ios" && (
-        <IOSSettings value={settings} onChange={handleChange} />
       )}
       {tab === "other" && (
         <OtherSettings value={settings} onChange={handleChange} />
@@ -339,6 +331,11 @@ function GeneralSettings(props: {
               !settings.requiresOnDeviceRecognition,
             )
           }
+        />
+        <CheckboxButton
+          title="Continuous"
+          checked={Boolean(settings.continuous)}
+          onPress={() => handleChange("continuous", !settings.continuous)}
         />
       </View>
 
@@ -511,26 +508,6 @@ function AndroidSettings(props: {
   );
 }
 
-function IOSSettings(props: {
-  value: ExpoSpeechRecognitionOptions;
-  onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
-    key: T,
-    value: ExpoSpeechRecognitionOptions[T],
-  ) => void;
-}) {
-  const { value: settings, onChange: handleChange } = props;
-
-  return (
-    <View style={styles.row}>
-      <CheckboxButton
-        title="Continuous (iOS only)"
-        checked={Boolean(settings.continuous)}
-        onPress={() => handleChange("continuous", !settings.continuous)}
-      />
-    </View>
-  );
-}
-
 function OtherSettings(props: {
   value: ExpoSpeechRecognitionOptions;
   onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
@@ -596,21 +573,24 @@ function OtherSettings(props: {
       <TranscribeLocalAudioFile />
 
       <TranscribeRemoteAudioFile
+        fileName="remote-en-us-sentence-16000hz-pcm_s16le.wav"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav"
         audioEncoding={AudioEncodingAndroid.ENCODING_PCM_16BIT}
         description="16000hz 16-bit 1-channel PCM audio file"
       />
 
       <TranscribeRemoteAudioFile
+        fileName="remote-en-us-sentence-16000hz.mp3"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
         audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
         description="(May not work on Android) 16000hz MP3 1-channel audio file"
       />
 
       <TranscribeRemoteAudioFile
+        fileName="remote-en-us-sentence-16000hz.ogg"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
-        description="(May not work on Android) 16000hz opus 1-channel audio file"
+        description="(May not work on iOS & Android) 16000hz opus 1-channel audio file"
       />
     </View>
   );
@@ -660,15 +640,26 @@ function TranscribeRemoteAudioFile(props: {
   remoteUrl: string;
   description: string;
   audioEncoding: AudioEncodingAndroidValue;
+  fileName: string;
 }) {
   const [busy, setBusy] = useState(false);
-  const handleTranscribe = () => {
+  const handleTranscribe = async () => {
     setBusy(true);
+    // download the file
+    const file = await FileSystem.downloadAsync(
+      props.remoteUrl,
+      FileSystem.cacheDirectory + props.fileName,
+    );
+    if (file.status >= 300 || file.status < 200) {
+      console.warn("Failed to download file", file);
+      return;
+    }
+    console.log("Downloaded file", file);
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       audioSource: {
-        uri: props.remoteUrl,
+        uri: file.uri,
         audioChannels: 1,
         audioEncoding: props.audioEncoding,
         sampleRate: 16000,

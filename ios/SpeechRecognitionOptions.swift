@@ -42,7 +42,7 @@ struct AudioSourceOptions: Record {
   var uri: String = ""
 
   @Field
-  var audioEncoding: String? = nil
+  var audioEncoding: Int? = nil
 
   @Field
   var sampleRate: Int? = 16000

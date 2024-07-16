@@ -75,6 +75,14 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		44E1F19D9D084508A6E9D971 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Resources;
+			path = "";
+			sourceTree = "<group>";
+		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
@@ -91,6 +99,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				D65327D7A22EEC0BE12398D9 /* Pods */,
 				D7E4C46ADA2E9064B798F356 /* ExpoModulesProviders */,
+				44E1F19D9D084508A6E9D971 /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -349,7 +358,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = expo.modules.speechrecognition.example;
-				PRODUCT_NAME = "expospeechrecognitionexample";
+				PRODUCT_NAME = expospeechrecognitionexample;
 				SWIFT_OBJC_BRIDGING_HEADER = "expospeechrecognitionexample/expospeechrecognitionexample-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -377,7 +386,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = expo.modules.speechrecognition.example;
-				PRODUCT_NAME = "expospeechrecognitionexample";
+				PRODUCT_NAME = expospeechrecognitionexample;
 				SWIFT_OBJC_BRIDGING_HEADER = "expospeechrecognitionexample/expospeechrecognitionexample-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

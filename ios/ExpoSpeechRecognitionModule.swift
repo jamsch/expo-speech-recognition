@@ -7,12 +7,29 @@ struct Segment {
   let endTimeMillis: Double
   let segment: String
   let confidence: Float
+
+  func toDictionary() -> [String: Any] {
+    return [
+      "startTimeMillis": startTimeMillis,
+      "endTimeMillis": endTimeMillis,
+      "segment": segment,
+      "confidence": confidence,
+    ]
+  }
 }
 
 struct TranscriptionResult {
   let transcript: String
   let confidence: Float
   let segments: [Segment]
+
+  func toDictionary() -> [String: Any] {
+    return [
+      "transcript": transcript,
+      "confidence": confidence,
+      "segments": segments.map { $0.toDictionary() },
+    ]
+  }
 }
 
 public class ExpoSpeechRecognitionModule: Module {
@@ -71,7 +88,25 @@ public class ExpoSpeechRecognitionModule: Module {
       "_speechready"
     )
 
-    /** Start recognition with args: lang, interimResults, maxAlternatives */
+    OnCreate {
+      guard let permissionsManager = appContext?.permissions else {
+        return
+      }
+      permissionsManager.register([EXSpeechRecognitionPermissionRequester()])
+    }
+
+    AsyncFunction("requestPermissionsAsync") { (promise: Promise) in
+      guard let permissions = appContext?.permissions else {
+        throw Exceptions.PermissionsModuleNotFound()
+      }
+      permissions.askForPermission(
+        usingRequesterClass: EXSpeechRecognitionPermissionRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+    /** S
+    tart recognition with args: lang, interimResults, maxAlternatives */
     Function("start") { (options: SpeechRecognitionOptions) in
       Task {
         do {
@@ -267,7 +302,7 @@ public class ExpoSpeechRecognitionModule: Module {
       "result",
       [
         "isFinal": result.isFinal,
-        "results": results,
+        "results": results.map { $0.toDictionary() },
       ]
     )
   }
