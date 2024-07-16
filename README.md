@@ -46,7 +46,7 @@ Using hooks is the easiest way to get started. The `useSpeechRecognitionEvent` h
 
 ```tsx
 import {
-  startSpeechRecognition,
+  ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "@jamsch/expo-speech-recognition";
 
@@ -64,7 +64,7 @@ function MyComponent() {
   });
 
   const handleStart = () => {
-    startSpeechRecognition({
+    ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       maxAlternatives: 1,
@@ -417,7 +417,7 @@ You can use the `audioSource.sourceUri` option to transcribe audio files instead
 ```tsx
 import { Button, View } from "react-native";
 import {
-  startSpeechRecognition,
+  ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "@jamsch/expo-speech-recognition";
 
@@ -425,7 +425,7 @@ function TranscribeAudio() {
   const [transcription, setTranscription] = useState("");
 
   const handleStart = () => {
-    startSpeechRecognition({
+    ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       audioSource: {

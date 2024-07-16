@@ -31,9 +31,6 @@ export {
   RecognizerIntentEnableLanguageSwitch,
 } from "./constants";
 
-export const startRecognition = ExpoSpeechRecognitionModule.start;
-export const stopRecognition = ExpoSpeechRecognitionModule.stop;
-
 export const getSupportedLocales = (options?: {
   androidRecognitionServicePackage?: string;
   onDevice?: boolean;
