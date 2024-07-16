@@ -1,5 +1,8 @@
 import { PermissionResponse } from "expo-modules-core";
-import type { ExpoSpeechRecognitionModuleType } from "./ExpoSpeechRecognitionModule.types";
+import type {
+  ExpoSpeechRecognitionModuleType,
+  ExpoSpeechRecognitionNativeEventMap,
+} from "./ExpoSpeechRecognitionModule.types";
 
 let _speechRecognitionRef: SpeechRecognition | null = null;
 
@@ -15,7 +18,7 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
 
     // Re-subscribe to events so that we don't lose them
     // This covers the case where the user has already subscribed to an event prior to calling `start()`
-    ExpoSpeechRecognitionModuleEmitter._listeners.forEach(
+    ExpoSpeechRecognitionModuleEmitter._nativeListeners.forEach(
       (listeners, eventName) => {
         listeners.forEach((listener) => {
           // May already be subscribed
@@ -92,41 +95,129 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   },
 };
 
-export const ExpoSpeechRecognitionModuleEmitter = {
-  _listeners: new Map() as Map<string, Set<() => void>>,
-  addListener: (eventName: string, listener: () => void) => {
-    _speechRecognitionRef?.addEventListener(eventName, listener);
-    if (!ExpoSpeechRecognitionModuleEmitter._listeners.has(eventName)) {
-      ExpoSpeechRecognitionModuleEmitter._listeners.set(eventName, new Set());
+/**
+ * Convert the web SpeechRecognitionEventMap to the native event map for compatibility
+ */
+const webToNativeEventMap: {
+  [K in keyof SpeechRecognitionEventMap]: (
+    ev: SpeechRecognitionEventMap[K],
+  ) => ExpoSpeechRecognitionNativeEventMap[K];
+} = {
+  audioend: (ev) => null,
+  audiostart: (ev) => null,
+  end: (ev) => null,
+  error: (ev) => ({ code: ev.error, message: ev.message }),
+  nomatch: (ev) => null,
+  result: (ev) => {
+    const nativeResults: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
+      [];
+    for (let i = 0; i < ev.results.length; i++) {
+      const result = ev.results[i];
+      nativeResults.push({
+        transcript: result[0].transcript,
+        confidence: result[0].confidence,
+        segements: [],
+      });
     }
-    ExpoSpeechRecognitionModuleEmitter._listeners.get(eventName)?.add(listener);
+
+    return {
+      isFinal: Boolean(ev.results[ev.resultIndex]?.isFinal),
+      results: nativeResults,
+    };
+  },
+  soundstart: (ev) => null,
+  speechend: (ev) => null,
+  speechstart: (ev) => null,
+  start: (ev) => null,
+  soundend: (ev) => null,
+};
+export const ExpoSpeechRecognitionModuleEmitter = {
+  _nativeListeners: new Map() as Map<string, Set<(event: any) => void>>,
+  _clientListeners: new Map() as Map<
+    // Original listener
+    (event: any) => void,
+    // Native listener
+    (event: any) => void
+  >,
+  addListener<T extends keyof SpeechRecognitionEventMap>(
+    eventName: T,
+    listener: (ev: ExpoSpeechRecognitionNativeEventMap[T]) => void,
+  ) {
+    // Convert the web event to the native event
+    const nativeListener = (ev: SpeechRecognitionEventMap[T]) => {
+      const eventPayload = webToNativeEventMap[eventName]?.(ev);
+      listener(eventPayload);
+    };
+
+    _speechRecognitionRef?.addEventListener(eventName, nativeListener);
+    if (!ExpoSpeechRecognitionModuleEmitter._nativeListeners.has(eventName)) {
+      ExpoSpeechRecognitionModuleEmitter._nativeListeners.set(
+        eventName,
+        new Set(),
+      );
+    }
+    // Add the original listener to the enhanced listeners
+    ExpoSpeechRecognitionModuleEmitter._nativeListeners
+      .get(eventName)
+      ?.add(nativeListener);
+
+    // Map the original listener to the enhanced listener
+    ExpoSpeechRecognitionModuleEmitter._clientListeners.set(
+      listener,
+      nativeListener,
+    );
 
     return {
       remove: () => {
-        _speechRecognitionRef?.removeEventListener(eventName, listener);
+        _speechRecognitionRef?.removeEventListener(eventName, nativeListener);
+        ExpoSpeechRecognitionModuleEmitter._nativeListeners
+          .get(eventName)
+          ?.delete(nativeListener);
+        ExpoSpeechRecognitionModuleEmitter._clientListeners.delete(listener);
       },
     };
   },
-  removeListener: (eventName: string, listener: () => void) => {
-    _speechRecognitionRef?.removeEventListener(eventName, listener);
-    if (ExpoSpeechRecognitionModuleEmitter._listeners.has(eventName)) {
-      ExpoSpeechRecognitionModuleEmitter._listeners
+  removeListener: (eventName: string, listener: (event: any) => void) => {
+    const resolvedListener =
+      ExpoSpeechRecognitionModuleEmitter._clientListeners.get(listener) ??
+      listener;
+
+    _speechRecognitionRef?.removeEventListener(eventName, resolvedListener);
+    if (ExpoSpeechRecognitionModuleEmitter._nativeListeners.has(eventName)) {
+      ExpoSpeechRecognitionModuleEmitter._nativeListeners
         .get(eventName)
         ?.delete(listener);
     }
+    ExpoSpeechRecognitionModuleEmitter._clientListeners.delete(listener);
   },
   removeAllListeners: (eventName: string) => {
     // Go through _listeners and remove all listeners for this event
-    if (ExpoSpeechRecognitionModuleEmitter._listeners.has(eventName)) {
-      const listeners =
-        ExpoSpeechRecognitionModuleEmitter._listeners.get(eventName);
-      if (!listeners) {
+    if (ExpoSpeechRecognitionModuleEmitter._nativeListeners.has(eventName)) {
+      const nativeListeners =
+        ExpoSpeechRecognitionModuleEmitter._nativeListeners.get(eventName);
+      if (!nativeListeners) {
         return;
       }
-      listeners.forEach((listener) =>
+
+      // Remove the enhanced listeners
+      for (const [
+        listener,
+        nativeListener,
+      ] of ExpoSpeechRecognitionModuleEmitter._clientListeners) {
+        // if nativeListener in listeners, remove it
+        if (nativeListeners.has(nativeListener)) {
+          // Remove the enhanced listener
+          ExpoSpeechRecognitionModuleEmitter._clientListeners.delete(listener);
+        }
+      }
+
+      // Remove the native listeners
+      nativeListeners.forEach((listener) =>
         ExpoSpeechRecognitionModuleEmitter.removeListener(eventName, listener),
       );
-      ExpoSpeechRecognitionModuleEmitter._listeners.delete(eventName);
+
+      // Clean up
+      ExpoSpeechRecognitionModuleEmitter._nativeListeners.delete(eventName);
     }
   },
 };
