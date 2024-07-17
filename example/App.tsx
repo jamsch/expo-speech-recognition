@@ -551,7 +551,6 @@ function OtherSettings(props: {
           handleChange("recordingOptions", {
             ...(settings.recordingOptions ?? {}),
             persist: !settings.recordingOptions?.persist,
-            outputFilePath: FileSystem.documentDirectory ?? undefined,
           })
         }
       />

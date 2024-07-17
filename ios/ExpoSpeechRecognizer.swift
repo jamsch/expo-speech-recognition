@@ -143,7 +143,13 @@ actor ExpoSpeechRecognizer: ObservableObject {
         self.audioEngine = nil
       } else {
         audioEngine = AVAudioEngine()
-        self.audioEngine = audioEngine
+
+        // Set up the audio session to get the correct audio format
+        // Todo: allow user to configure audio session category and mode
+        // prior to starting speech recognition
+        try Self.setupAudioSession()
+
+        // Feature: file recording
         if options.recordingOptions?.persist == true {
           let (audio, outputUrl) = prepareFileWriter(
             outputFilePath: options.recordingOptions?.outputFilePath,
@@ -152,12 +158,17 @@ actor ExpoSpeechRecognizer: ObservableObject {
           self.file = audio
           self.outputFileUrl = outputUrl
         }
+
+        // Set up audio recording & sink to recognizer/file
         try Self.prepareEngine(
           audioEngine: audioEngine!,
           options: options,
           request: request,
           file: self.file
         )
+
+        // Given no errors, it should be safe to assign this
+        self.audioEngine = audioEngine
       }
 
       // Don't run any timers if the audio source is from a file
@@ -216,7 +227,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       // Ensure settings are compatible with the input format
       let file = try AVAudioFile(
         forWriting: filePath,
-        settings: audioEngine.inputNode.inputFormat(forBus: 0).settings
+        settings: audioEngine.inputNode.outputFormat(forBus: 0).settings
       )
       return (file, filePath)
     } catch {
@@ -237,6 +248,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     task?.cancel()
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
+    audioEngine = nil
+
     if let filePath = self.outputFileUrl?.path {
       Task {
         await MainActor.run {
@@ -247,7 +260,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
     file = nil
     outputFileUrl = nil
-    audioEngine = nil
     request = nil
     task = nil
     speechStartHandler = nil
@@ -294,12 +306,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     return request
   }
-  private static func prepareEngine(
-    audioEngine: AVAudioEngine,
-    options: SpeechRecognitionOptions,
-    request: SFSpeechRecognitionRequest,
-    file: AVAudioFile?
-  ) throws {
+
+  private static func setupAudioSession() throws {
     let audioSession = AVAudioSession.sharedInstance()
 
     try audioSession.setCategory(
@@ -308,8 +316,22 @@ actor ExpoSpeechRecognizer: ObservableObject {
       options: [.defaultToSpeaker, .allowBluetooth]
     )
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+  }
+
+  private static func prepareEngine(
+    audioEngine: AVAudioEngine,
+    options: SpeechRecognitionOptions,
+    request: SFSpeechRecognitionRequest,
+    file: AVAudioFile?
+  ) throws {
     let inputNode = audioEngine.inputNode
-    let recordingFormat = inputNode.inputFormat(forBus: 0)
+    let recordingFormat = inputNode.outputFormat(forBus: 0)
+
+    // Ensure the format is valid before proceeding
+    guard recordingFormat.sampleRate > 0 && recordingFormat.channelCount > 0 else {
+      print("ERROR: Invalid audio format: \(recordingFormat)")
+      throw RecognizerError.invalidAudioSource
+    }
 
     guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
       throw RecognizerError.invalidAudioSource
