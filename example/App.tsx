@@ -19,7 +19,6 @@ import {
   type ExpoSpeechRecognitionOptions,
   type ExpoSpeechRecognitionNativeEventMap,
   type AndroidIntentOptions,
-  requestPermissionsAsync,
   useSpeechRecognitionEvent,
   AudioEncodingAndroidValue,
 } from "expo-speech-recognition";
@@ -76,12 +75,12 @@ export default function App() {
   useSpeechRecognitionEvent("result", (ev) => {
     console.log("[event]: result", {
       isFinal: ev.isFinal,
-      transcripts: ev.results.map((result) => result?.transcript),
+      transcripts: ev.results.map((result) => result.transcript),
     });
 
     setTranscription({
       isFinal: ev.isFinal,
-      transcript: ev.results?.[0]?.transcript,
+      transcript: ev.results[0]?.transcript,
     });
   });
 
@@ -110,7 +109,7 @@ export default function App() {
     setTranscription(null);
     setError(null);
     setStatus("starting");
-    requestPermissionsAsync().then((result) => {
+    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
       console.log("Permissions", result);
       if (!result.granted) {
         console.log("Permissions not granted", result);
@@ -534,7 +533,30 @@ function OtherSettings(props: {
 
   // Enable audio recording
   return (
-    <View style={[styles.gap1]}>
+    <View style={styles.gap1}>
+      <View style={[styles.row, styles.gap1, styles.flexWrap]}>
+        <BigButton
+          title="Get permissions"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
+              Alert.alert("Get Permissions result", JSON.stringify(result));
+            });
+          }}
+        />
+        <BigButton
+          title="Request permissions"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.requestPermissionsAsync().then(
+              (result) => {
+                Alert.alert(
+                  "RequestPermissions result",
+                  JSON.stringify(result),
+                );
+              },
+            );
+          }}
+        />
+      </View>
       <CheckboxButton
         title="Persist audio recording to filesystem"
         checked={Boolean(settings.recordingOptions?.persist)}
@@ -652,6 +674,7 @@ function TranscribeRemoteAudioFile(props: {
     );
     if (file.status >= 300 || file.status < 200) {
       console.warn("Failed to download file", file);
+      setBusy(false);
       return;
     }
     console.log("Downloaded file", file);

@@ -105,8 +105,19 @@ public class ExpoSpeechRecognitionModule: Module {
         reject: promise.legacyRejecter
       )
     }
-    /** S
-    tart recognition with args: lang, interimResults, maxAlternatives */
+
+    AsyncFunction("getPermissionsAsync") { (promise: Promise) in
+      guard let permissions = self.appContext?.permissions else {
+        throw Exceptions.PermissionsModuleNotFound()
+      }
+      permissions.getPermissionUsingRequesterClass(
+        EXSpeechRecognitionPermissionRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+
+    /** Start recognition with args: lang, interimResults, maxAlternatives */
     Function("start") { (options: SpeechRecognitionOptions) in
       Task {
         do {

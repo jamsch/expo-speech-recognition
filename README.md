@@ -88,19 +88,26 @@ function MyComponent() {
 }
 ```
 
-### Requesting Permissions
+### Permissions
 
-You may want to request the required permissions for starting speech recognition prior to starting the recognition. This library exports a `requestPermissionsAsync` function for this purpose.
+You may want to know or request the required permissions for starting speech recognition prior to starting the recognition. This library exports two functions: `getPermissionsAsync` and `requestPermissionsAsync` for this purpose.
 
 ```ts
-import { requestPermissionsAsync } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
 
-requestPermissionsAsync().then((result) => {
+ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
+  console.log("Status:", result.status);
+  console.log("Granted:", result.granted);
+  console.log("Can ask again:", result.canAskAgain);
+  console.log("Expires:", result.expires);
+});
+
+ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
   if (!result.granted) {
     console.warn("Permissions not granted", result);
     return;
   }
-  // Permissions granted! Start speech recognition, or some other time...
+  // Permissions granted! Start speech recognition, or at some other time...
   ExpoSpeechRecognitionModule.start({ lang: "en-US" });
 });
 ```
@@ -420,7 +427,7 @@ function AudioPlayer(props: { source: string }) {
 
 You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
 
-> Note: On Android, this feature is only supported on Android 13 and above. The speech recongition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support it.
+> Note: On Android, this feature is only supported on Android 13 and above. The speech recongition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support audio source transcription.
 
 ```tsx
 import { Button, View } from "react-native";
@@ -438,11 +445,14 @@ function TranscribeAudioFile() {
       lang: "en-US",
       interimResults: true,
       audioSource: {
+        /** Local file path */
         uri: "/path/to/audio.wav",
         /** [Android only] The number of channels in the source audio. */
         audioChannels: 1,
         /** [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android. */
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+        /** [Android only] Audio sampling rate in Hz. */
+        sampleRate: 16000,
       },
     });
   };

@@ -43,6 +43,17 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       status: "granted",
     } as PermissionResponse);
   },
+  getPermissionsAsync: () => {
+    console.warn(
+      "getPermissionsAsync is not supported on the web. Returning a denied permission response.",
+    );
+    return Promise.resolve({
+      granted: false,
+      canAskAgain: false,
+      expires: "never",
+      status: "denied",
+    } as PermissionResponse);
+  },
   getSupportedLocales: async () => {
     console.warn(
       "getSupportedLocales is not supported on the web. Returning an empty array.",

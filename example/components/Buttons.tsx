@@ -88,11 +88,11 @@ export function BigButton(props: {
     <Pressable
       onPress={props.onPress}
       disabled={props.disabled}
-      style={[
+      style={(state) => [
         styles.button,
         { paddingHorizontal: 16, paddingVertical: 12 },
         props.color ? { backgroundColor: props.color } : styles.bgRed,
-        props.disabled && styles.opacity50,
+        state.pressed || props.disabled ? styles.opacity50 : null,
       ]}
       android_ripple={{ color: "#333" }}
     >

@@ -15,6 +15,7 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.annotation.RequiresApi
 import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
+import expo.modules.interfaces.permissions.Permissions.getPermissionsWithPermissionsManager
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -96,6 +97,14 @@ class ExpoSpeechRecognitionModule : Module() {
 
             AsyncFunction("requestPermissionsAsync") { promise: Promise ->
                 askForPermissionsWithPermissionsManager(
+                    appContext.permissions,
+                    promise,
+                    RECORD_AUDIO,
+                )
+            }
+
+            AsyncFunction("getPermissionsAsync") { promise: Promise ->
+                getPermissionsWithPermissionsManager(
                     appContext.permissions,
                     promise,
                     RECORD_AUDIO,

@@ -10,27 +10,26 @@ public class EXSpeechRecognitionPermissionRequester: NSObject, EXPermissionsRequ
   public func requestPermissions(
     resolver resolve: @escaping EXPromiseResolveBlock, rejecter reject: EXPromiseRejectBlock
   ) {
-    if #available(iOS 14, *) {
-
-    } else {
-      resolve(self.getPermissions())
+    SFSpeechRecognizer.requestAuthorization { status in
+      if status != .authorized {
+        resolve(self.getPermissions())
+        return
+      }
+      AVAudioSession.sharedInstance().requestRecordPermission { authorized in
+        resolve(self.getPermissions())
+      }
     }
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
     var status: EXPermissionStatus
-    let hasRecordPermission: Bool
 
-    //    if #available(iOS 17.0, *) {
-    //        hasRecordPermission = AVAudioApplication.recordPermission == .granted
-    //    } else {
-    hasRecordPermission = AVAudioSession.sharedInstance().recordPermission == .granted
-    //    }
-    let hasSpeechPermission = SFSpeechRecognizer.authorizationStatus() == .authorized
+    let recordPermission = AVAudioSession.sharedInstance().recordPermission
+    let speechPermission = SFSpeechRecognizer.authorizationStatus()
 
-    if SFSpeechRecognizer.authorizationStatus() == .authorized && hasRecordPermission {
+    if speechPermission == .authorized && recordPermission == .granted {
       status = EXPermissionStatusGranted
-    } else if SFSpeechRecognizer.authorizationStatus() == .denied || !hasRecordPermission {
+    } else if speechPermission == .denied || recordPermission == .denied {
       status = EXPermissionStatusDenied
     } else {
       status = EXPermissionStatusUndetermined
