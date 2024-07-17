@@ -446,11 +446,11 @@ function TranscribeAudioFile() {
       lang: "en-US",
       interimResults: true,
       audioSource: {
-        /** Local file path */
-        uri: "/path/to/audio.wav",
+        /** Local file URI */
+        uri: "file:///path/to/audio.wav",
         /** [Android only] The number of channels in the source audio. */
         audioChannels: 1,
-        /** [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android. */
+        /** [Android only] A value from AudioFormat - https://developer.android.com/reference/android/media/AudioFormat */
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         /** [Android only] Audio sampling rate in Hz. */
         sampleRate: 16000,

@@ -111,7 +111,7 @@ export type ExpoSpeechRecognitionOptions = {
   /**
    * Audio source options to pass to the recognizer.
    *
-   * This option can be used to recognize audio from a local or remote file path.
+   * This option can be used to recognize audio from a local or remote file URI.
    */
   audioSource?: AudioSourceOptions;
   /**
@@ -162,7 +162,7 @@ export type AudioSourceOptions = {
    */
   audioChannels?: number;
   /**
-   * [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat) for Android.
+   * [Android only] A value from [AudioFormat](https://developer.android.com/reference/android/media/AudioFormat).
    *
    * Use the `AudioEncodingAndroid` enum to get the correct value.
    */
