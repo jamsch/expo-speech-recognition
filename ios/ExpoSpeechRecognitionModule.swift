@@ -117,6 +117,13 @@ public class ExpoSpeechRecognitionModule: Module {
       )
     }
 
+    AsyncFunction("getStateAsync") { (promise: Promise) in
+      Task {
+        let state = await speechRecognizer?.getState()
+        promise.resolve(state ?? "inactive")
+      }
+    }
+
     /** Start recognition with args: lang, interimResults, maxAlternatives */
     Function("start") { (options: SpeechRecognitionOptions) in
       Task {

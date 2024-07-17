@@ -17,20 +17,10 @@ import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStream
 import java.lang.ref.WeakReference
 import java.net.URI
-import java.net.URL
 import java.util.Locale
-import java.util.UUID
-import javax.net.ssl.HttpsURLConnection
 
 data class SpeechRecognitionErrorEvent(
     val error: String,
@@ -39,7 +29,9 @@ data class SpeechRecognitionErrorEvent(
 
 enum class RecognitionState {
     INACTIVE, // Represents the inactive state
+    STARTING,
     ACTIVE, // Represents the active state
+    STOPPING,
     ERROR, // Inactive, but error occurred. Prevent dispatching any additional events until start() is called
     // Add more states as needed
 }
@@ -59,20 +51,16 @@ class ExpoSpeechService
         private val sendEvent: (name: String, body: Map<String, Any?>?) -> Unit,
     ) : RecognitionListener {
         private var speech: SpeechRecognizer? = null
-        private var recognitionState = RecognitionState.INACTIVE
         private val mainHandler = Handler(Looper.getMainLooper())
         private var audioRecorder: ExpoAudioRecorder? = null
         private var soundState = SoundState.INACTIVE
         private var lastTimeSoundDetected = 0L
 
-        /**
-         * Reference for a remote file, for file-based recognition
-         */
-        private var downloadedFileHandle: File? = null
-
         companion object {
             @Volatile
             private var instance: WeakReference<ExpoSpeechService>? = null
+
+            var recognitionState = RecognitionState.INACTIVE
 
             fun getInstance(
                 reactContext: Context,
@@ -107,7 +95,7 @@ class ExpoSpeechService
         private fun createSpeechRecognizer(options: SpeechRecognitionOptions): SpeechRecognizer? {
             val value =
                 when {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.requiresOnDeviceRecognition -> {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.requiresOnDeviceRecognition == true -> {
                         SpeechRecognizer.createOnDeviceSpeechRecognizer(reactContext)
                     }
                     // Custom service package, e.g. "com.google.android.googlequicksearchbox"
@@ -136,39 +124,31 @@ class ExpoSpeechService
                 speech?.destroy()
                 audioRecorder?.stop()
                 audioRecorder = null
-                recognitionState = RecognitionState.ACTIVE
+                recognitionState = RecognitionState.STARTING
                 soundState = SoundState.INACTIVE
 
-                val instance = this
+                try {
+                    val intent = createSpeechIntent(options)
+                    speech = createSpeechRecognizer(options)
+                    // Start the audio recorder, if necessary
+                    audioRecorder?.start()
 
-                GlobalScope.launch(Dispatchers.IO) {
-                    try {
-                        val intent = createSpeechIntent(options)
-                        withContext(Dispatchers.Main) {
-                            speech = createSpeechRecognizer(options)
-                            // Start the audio recorder, if necessary
-                            audioRecorder?.start()
+                    // Start listening
+                    speech?.setRecognitionListener(this)
+                    speech?.startListening(intent)
 
-                            // Start listening
-                            speech?.setRecognitionListener(instance)
-                            speech?.startListening(intent)
-
-                            sendEvent("audiostart", null)
+                    sendEvent("audiostart", null)
+                } catch (e: Exception) {
+                    val errorMessage =
+                        when {
+                            e.localizedMessage != null -> e.localizedMessage
+                            e.message != null -> e.message
+                            else -> "Unknown error"
                         }
-                    } catch (e: Exception) {
-                        val errorMessage =
-                            when {
-                                e.localizedMessage != null -> e.localizedMessage
-                                e.message != null -> e.message
-                                else -> "Unknown error"
-                            }
 
-                        log("Failed to create Speech Recognizer with error: $errorMessage")
-                        withContext(Dispatchers.Main) {
-                            sendEvent("error", mapOf("code" to "audio-capture", "message" to errorMessage))
-                            stop()
-                        }
-                    }
+                    log("Failed to create Speech Recognizer with error: $errorMessage")
+                    sendEvent("error", mapOf("code" to "audio-capture", "message" to errorMessage))
+                    stop()
                 }
             }
         }
@@ -197,6 +177,7 @@ class ExpoSpeechService
          * Stops speech recognition, recording and updates state
          */
         private fun teardownAndEnd(state: RecognitionState = RecognitionState.INACTIVE) {
+            recognitionState = RecognitionState.STOPPING
             mainHandler.post {
                 try {
                     speech?.stopListening()
@@ -208,18 +189,11 @@ class ExpoSpeechService
                 soundState = SoundState.INACTIVE
                 sendEvent("audioend", null)
                 sendEvent("end", null)
-
-                // If the source was a remote file, delete it
-                try {
-                    downloadedFileHandle?.delete()
-                } catch (e: Exception) {
-                    //
-                }
                 recognitionState = state
             }
         }
 
-        private suspend fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
+        private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
             val action = options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH
             val intent = Intent(action)
 
@@ -275,13 +249,13 @@ class ExpoSpeechService
                         )
                         intent.putExtra(
                             RecognizerIntent.EXTRA_SEGMENTED_SESSION,
-                            if (options.continuous) {
+                            if (options.continuous == true) {
                                 RecognizerIntent.EXTRA_AUDIO_SOURCE
                             } else {
                                 RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
                             },
                         )
-                        if (!options.continuous) {
+                        if (options.continuous == null || options.continuous == false) {
                             intent.putExtra(
                                 RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
                                 2000,
@@ -345,13 +319,13 @@ class ExpoSpeechService
                 )
             }
 
-            if (options.addsPunctuation && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (options.addsPunctuation == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.putExtra(RecognizerIntent.EXTRA_ENABLE_FORMATTING, RecognizerIntent.FORMATTING_OPTIMIZE_QUALITY)
             }
 
             // Offline recognition
             // to be used with ACTION_RECOGNIZE_SPEECH, ACTION_VOICE_SEARCH_HANDS_FREE, ACTION_WEB_SEARCH
-            if (options.requiresOnDeviceRecognition) {
+            if (options.requiresOnDeviceRecognition == true) {
                 intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             }
 
@@ -392,7 +366,7 @@ class ExpoSpeechService
         /**
          * Resolves the source URI to a local file path
          */
-        private suspend fun resolveSourceUri(sourceUri: String): File =
+        private fun resolveSourceUri(sourceUri: String): File =
             when {
                 // Local file path without URI scheme
                 !sourceUri.startsWith("https://") && !sourceUri.startsWith("file://") -> File(sourceUri)
@@ -400,49 +374,9 @@ class ExpoSpeechService
                 // File URI
                 sourceUri.startsWith("file://") -> File(URI(sourceUri))
 
-                // HTTP URI - Download the file
+                // HTTP URI - throw an error
                 else -> {
-                    log("Downloading file from $sourceUri")
-                    downloadFile(sourceUri)
-                }
-            }
-
-        private suspend fun downloadFile(sourceUri: String): File =
-            withContext(Dispatchers.IO) {
-                val generatedFileName = UUID.randomUUID().toString()
-                val file = File(reactContext.cacheDir, generatedFileName)
-                var input: InputStream? = null
-                var output: FileOutputStream? = null
-                try {
-                    val connection = URL(sourceUri).openConnection() as HttpsURLConnection
-                    connection.requestMethod = "GET"
-                    connection.connect()
-
-                    val responseCode = connection.responseCode
-                    if (responseCode != HttpsURLConnection.HTTP_OK) {
-                        throw IOException("Failed to download file: HTTP error code $responseCode")
-                    }
-
-                    input = connection.inputStream
-                    output = FileOutputStream(file)
-                    input.copyTo(output)
-
-                    downloadedFileHandle = file
-                    file
-                } catch (e: Exception) {
-                    log("Error downloading file from $sourceUri: ${e.message}")
-                    throw e
-                } finally {
-                    try {
-                        input?.close()
-                    } catch (e: IOException) {
-                        log("Error closing input stream: ${e.message}")
-                    }
-                    try {
-                        output?.close()
-                    } catch (e: IOException) {
-                        log("Error closing output stream: ${e.message}")
-                    }
+                    throw Exception("HTTP URI is not supported. Use expo-file-system to download the file.")
                 }
             }
 
@@ -451,6 +385,7 @@ class ExpoSpeechService
             // An error may preempt this event in the case of a permission error or a language not supported error
             if (recognitionState != RecognitionState.ERROR) {
                 sendEvent("start", null)
+                recognitionState = RecognitionState.ACTIVE
             }
         }
 

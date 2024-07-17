@@ -387,8 +387,6 @@ const androidIntentBooleanInputOptions = [
   "EXTRA_ENABLE_LANGUAGE_SWITCH",
   "EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION",
   "EXTRA_MASK_OFFENSIVE_WORDS",
-  "EXTRA_REQUEST_WORD_CONFIDENCE",
-  "EXTRA_REQUEST_WORD_TIMING",
   "EXTRA_SECURE",
 ] satisfies (keyof AndroidIntentOptions)[];
 
@@ -534,6 +532,15 @@ function OtherSettings(props: {
                 );
               },
             );
+          }}
+        />
+        <BigButton
+          title="Get speech recognizer state"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
+              console.log("Current state:", state);
+              Alert.alert("Current state", state);
+            });
           }}
         />
       </View>

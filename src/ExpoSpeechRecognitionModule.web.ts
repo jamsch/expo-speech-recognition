@@ -31,10 +31,16 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     // Start the speech recognition!
     _speechRecognitionRef.start();
   },
+  getStateAsync: () => {
+    console.warn(
+      "getStateAsync is not supported on web. Returning 'inactive'.",
+    );
+    return Promise.resolve("inactive");
+  },
   stop: () => _speechRecognitionRef?.stop(),
   requestPermissionsAsync: () => {
     console.warn(
-      "requestPermissionsAsync is not supported on the web. Returning a granted permission response.",
+      "requestPermissionsAsync is not supported on web. Returning a granted permission response.",
     );
     return Promise.resolve({
       granted: true,
@@ -45,7 +51,7 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   },
   getPermissionsAsync: () => {
     console.warn(
-      "getPermissionsAsync is not supported on the web. Returning a denied permission response.",
+      "getPermissionsAsync is not supported on web. Returning a denied permission response.",
     );
     return Promise.resolve({
       granted: false,
@@ -56,7 +62,7 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   },
   getSupportedLocales: async () => {
     console.warn(
-      "getSupportedLocales is not supported on the web. Returning an empty array.",
+      "getSupportedLocales is not supported on web. Returning an empty array.",
     );
     return {
       locales: [] as string[],
@@ -75,28 +81,28 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   },
   getSpeechRecognitionServices: () => {
     console.warn(
-      "getSpeechRecognitionServices is not supported on the web. Returning an empty array.",
+      "getSpeechRecognitionServices is not supported on web. Returning an empty array.",
     );
     return [] as string[];
   },
   isOnDeviceRecognitionAvailable: () => {
     console.warn(
-      "isOnDeviceRecognitionAvailable is not supported on the web. Returning false.",
+      "isOnDeviceRecognitionAvailable is not supported on web. Returning false.",
     );
     return false;
   },
   androidTriggerOfflineModelDownload: () => {
     console.warn(
-      "androidTriggerOfflineModelDownload is not supported on the web. Returning false.",
+      "androidTriggerOfflineModelDownload is not supported on web. Returning false.",
     );
     return Promise.resolve(false);
   },
   setCategoryIOS: () => {
-    console.warn("setCategoryIOS is not supported on the web.");
+    console.warn("setCategoryIOS is not supported on web.");
   },
   getAudioSessionCategoryAndOptionsIOS: () => {
     console.warn(
-      "getAudioSessionCategoryAndOptionsIOS is not supported on the web.",
+      "getAudioSessionCategoryAndOptionsIOS is not supported on web.",
     );
     return {
       category: "playAndRecord",

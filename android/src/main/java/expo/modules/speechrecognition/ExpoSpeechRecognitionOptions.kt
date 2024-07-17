@@ -7,25 +7,25 @@ import expo.modules.kotlin.records.Record
 
 class SpeechRecognitionOptions : Record {
     @Field
-    val interimResults: Boolean = false
+    val interimResults: Boolean? = false
 
     @Field
     val lang: String = "en-US"
 
     @Field
-    val continuous: Boolean = false
+    val continuous: Boolean? = false
 
     @Field
-    val maxAlternatives: Int = 1
+    val maxAlternatives: Int? = 1
 
     @Field
     var contextualStrings: List<String>? = null
 
     @Field
-    var requiresOnDeviceRecognition: Boolean = false
+    var requiresOnDeviceRecognition: Boolean? = false
 
     @Field
-    var addsPunctuation: Boolean = false
+    var addsPunctuation: Boolean? = false
 
     @Field
     var androidIntentOptions: Map<String, Any>? = null

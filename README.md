@@ -375,7 +375,7 @@ Example:
 import { Button, View } from "react-native";
 import {
   ExpoSpeechRecognitionModule,
-  ExpoSpeechRecognitionModuleEmitter,
+  useSpeechRecognitionEvent,
 } from "@jamsch/expo-speech-recognition";
 
 function RecordAudio() {

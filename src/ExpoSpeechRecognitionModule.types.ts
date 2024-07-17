@@ -417,7 +417,17 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     categoryOptions: AVAudioSessionCategoryOptionsValue[];
     mode: AVAudioSessionModeValue;
   };
+
+  /**
+   * Returns the current state of the speech recognizer.
+   */
+  getStateAsync(): Promise<SpeechRecognitionState>;
 }
+type SpeechRecognitionState =
+  | "inactive"
+  | "starting"
+  | "recognizing"
+  | "stopping";
 
 /**
  * [iOS only] See: [AVAudioSession.CategoryOptions](https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions)

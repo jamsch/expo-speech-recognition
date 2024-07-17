@@ -69,6 +69,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   ) {
     // assign the end handler to the task
     self.endHandler = endHandler
+    self.state = "starting"
     Task {
       await startRecognizer(
         options: options,
@@ -82,6 +83,26 @@ actor ExpoSpeechRecognizer: ObservableObject {
   @MainActor func stop() {
     Task {
       await reset()
+    }
+  }
+
+  ///
+  /// Returns the state of the speech recognizer task
+  /// type SpeechRecognitionState =
+  ///  | "inactive"
+  ///  | "starting"
+  ///  | "recognizing"
+  ///  | "stopping";
+  func getState() -> String {
+    switch task?.state {
+    case .none:
+      return "inactive"
+    case .some(.starting), .some(.running):
+      return "recognizing"
+    case .some(.canceling):
+      return "stopping"
+    default:
+      return "inactive"
     }
   }
 
@@ -265,6 +286,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
 
     if let error: Error {
+      // TODO: don't emit no-speech if there were already interim results
       Task { @MainActor in
         errorHandler(error)
       }

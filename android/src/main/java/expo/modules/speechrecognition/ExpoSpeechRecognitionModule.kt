@@ -111,6 +111,19 @@ class ExpoSpeechRecognitionModule : Module() {
                 )
             }
 
+            AsyncFunction("getStateAsync") { promise: Promise ->
+                val state =
+                    when (ExpoSpeechService.recognitionState) {
+                        RecognitionState.INACTIVE -> "inactive"
+                        RecognitionState.STARTING -> "starting"
+                        RecognitionState.ACTIVE -> "recognizing"
+                        RecognitionState.STOPPING -> "stopping"
+                        else -> "inactive"
+                    }
+
+                promise.resolve(state)
+            }
+
             /** Start recognition with args: lang, interimResults, maxAlternatives */
             Function("start") { options: SpeechRecognitionOptions ->
                 if (hasNotGrantedRecordPermissions()) {
