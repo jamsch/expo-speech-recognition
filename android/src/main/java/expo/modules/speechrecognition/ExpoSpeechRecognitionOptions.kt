@@ -44,6 +44,9 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val androidIntent: String? = RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+
+    @Field
+    val iosTaskHint: String? = null
 }
 
 class RecordingOptions : Record {

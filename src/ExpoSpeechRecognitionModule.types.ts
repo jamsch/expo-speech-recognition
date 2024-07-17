@@ -7,6 +7,7 @@ import {
   AVAudioSessionMode,
   RecognizerIntentEnableLanguageSwitch,
   RecognizerIntentExtraLanguageModel,
+  TaskHintIOS,
 } from "./constants";
 
 export type AVAudioSessionCategoryValue =
@@ -133,7 +134,18 @@ export type ExpoSpeechRecognitionOptions = {
     | "android.speech.action.RECOGNIZE_SPEECH"
     | "android.speech.action.VOICE_SEARCH_HANDS_FREE"
     | "android.speech.action.WEB_SEARCH";
+
+  /**
+   * The hint for the speech recognition task.
+   *
+   * Default: `"unspecified"`
+   *
+   * Docs: https://developer.apple.com/documentation/speech/sfspeechrecognitiontaskhint
+   */
+  iosTaskHint?: IOSTaskHintValue;
 };
+
+export type IOSTaskHintValue = (typeof TaskHintIOS)[keyof typeof TaskHintIOS];
 
 export type RecordingOptions = {
   /**

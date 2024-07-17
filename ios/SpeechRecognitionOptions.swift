@@ -1,4 +1,5 @@
 import ExpoModulesCore
+import Speech
 
 struct SpeechRecognitionOptions: Record {
   @Field
@@ -27,6 +28,25 @@ struct SpeechRecognitionOptions: Record {
 
   @Field
   var audioSource: AudioSourceOptions? = nil
+
+  @Field
+  var iosTaskHint: IOSTaskHint? = nil
+}
+
+enum IOSTaskHint: String, Enumerable {
+  case unspecified
+  case dictation
+  case search
+  case confirmation
+
+  var sfSpeechRecognitionTaskHint: SFSpeechRecognitionTaskHint {
+    switch self {
+    case .unspecified: return .unspecified
+    case .dictation: return .dictation
+    case .search: return .search
+    case .confirmation: return .confirmation
+    }
+  }
 }
 
 struct RecordingOptions: Record {

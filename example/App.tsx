@@ -19,6 +19,7 @@ import {
   type AndroidIntentOptions,
   useSpeechRecognitionEvent,
   AudioEncodingAndroidValue,
+  TaskHintIOS,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
 import {
@@ -236,10 +237,17 @@ function Settings(props: {
           }}
         />
         <TabButton
-          title="Android-specific"
+          title="Android"
           active={tab === "android"}
           onPress={() => {
             setTab("android");
+          }}
+        />
+        <TabButton
+          title="iOS"
+          active={tab === "ios"}
+          onPress={() => {
+            setTab("ios");
           }}
         />
         <TabButton
@@ -259,6 +267,39 @@ function Settings(props: {
       {tab === "other" && (
         <OtherSettings value={settings} onChange={handleChange} />
       )}
+      {tab === "ios" && (
+        <IOSSettings value={settings} onChange={handleChange} />
+      )}
+    </View>
+  );
+}
+
+function IOSSettings(props: {
+  value: ExpoSpeechRecognitionOptions;
+  onChange: <T extends keyof ExpoSpeechRecognitionOptions>(
+    key: T,
+    value: ExpoSpeechRecognitionOptions[T],
+  ) => void;
+}) {
+  const { value: settings, onChange: handleChange } = props;
+
+  return (
+    <View>
+      <View style={styles.gap1}>
+        <Text style={styles.textLabel}>Task Hint</Text>
+        <View style={[styles.row, styles.flexWrap]}>
+          {Object.keys(TaskHintIOS).map((hint) => (
+            <OptionButton
+              key={hint}
+              title={hint}
+              active={settings.iosTaskHint === hint}
+              onPress={() =>
+                handleChange("iosTaskHint", hint as keyof typeof TaskHintIOS)
+              }
+            />
+          ))}
+        </View>
+      </View>
     </View>
   );
 }

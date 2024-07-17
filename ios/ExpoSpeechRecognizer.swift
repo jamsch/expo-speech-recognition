@@ -296,6 +296,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
       request.requiresOnDeviceRecognition = options.requiresOnDeviceRecognition
     }
 
+    if let taskHint = options.iosTaskHint {
+      request.taskHint = taskHint.sfSpeechRecognitionTaskHint
+    }
+
     if let contextualStrings = options.contextualStrings {
       request.contextualStrings = contextualStrings
     }

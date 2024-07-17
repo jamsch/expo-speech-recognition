@@ -178,7 +178,9 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   /** [EXTENDED, default: undefined] Audio recording options to pass to the recognizer. */
   recordingOptions?: ExpoSpeechRecognitionOptions["recordingOptions"];
   /** [EXTENDED, default: "android.speech.action.RECOGNIZE_SPEECH"] The kind of intent action */
-  androidIntent?: string = undefined;
+  androidIntent?: ExpoSpeechRecognitionOptions["androidIntent"] = undefined;
+  /** [EXTENDED, default: undefined] The hint for the speech recognition task. */
+  iosTaskHint?: ExpoSpeechRecognitionOptions["iosTaskHint"] = undefined;
   /**
    * [EXTENDED, default: undefined]
    *
@@ -206,6 +208,8 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
       androidIntentOptions: this.androidIntentOptions,
       androidRecognitionServicePackage: this.androidRecognitionServicePackage,
       audioSource: this.audioSource,
+      androidIntent: this.androidIntent,
+      iosTaskHint: this.iosTaskHint,
     });
   }
   stop = ExpoSpeechRecognitionModule.stop;

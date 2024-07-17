@@ -30,6 +30,7 @@ export {
   RecognizerIntentExtraLanguageModel,
   RecognizerIntentEnableLanguageSwitch,
   AudioEncodingAndroid,
+  TaskHintIOS,
 } from "./constants";
 
 export const getSupportedLocales = (options?: {
@@ -58,4 +59,5 @@ export {
   type AudioEncodingAndroidValue,
   type AudioSourceOptions,
   type RecordingOptions,
+  type IOSTaskHintValue,
 } from "./ExpoSpeechRecognitionModule.types";

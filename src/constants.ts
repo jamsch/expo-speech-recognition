@@ -315,3 +315,35 @@ export const AudioEncodingAndroid = {
    */
   ENCODING_PCM_FLOAT: 4,
 } as const;
+
+/**
+ * [iOS Only] The type of task for which you are using speech recognition.
+ *
+ * Docs: https://developer.apple.com/documentation/speech/sfspeechrecognitiontaskhint
+ */
+export const TaskHintIOS = {
+  /**
+   * The task hint is unspecified.
+   *
+   * Use this hint type when the intended use for captured speech does not match the other task types.
+   */
+  unspecified: "unspecified",
+  /**
+   * A task that uses captured speech for text entry.
+   *
+   * Use this hint type when you are using speech recognition for a task that's similar to the keyboard's built-in dictation function.
+   */
+  dictation: "dictation",
+  /**
+   * A task that uses captured speech to specify seach terms.
+   *
+   * Use this hint type when you are using speech recognition to identify search terms.
+   */
+  search: "search",
+  /**
+   * A task that uses captured speech for short, confirmation-style requests.
+   *
+   * Use this hint type when you are using speech recognition to handle confirmation commands, such as "yes," "no," or "maybe."
+   */
+  confirmation: "confirmation",
+} as const;

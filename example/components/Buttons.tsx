@@ -42,12 +42,19 @@ export function TabButton(props: {
     <Pressable
       onPress={props.onPress}
       style={[
-        { borderBottomWidth: 2, borderColor: "transparent", padding: 4 },
+        {
+          borderBottomWidth: 2,
+          borderColor: "transparent",
+          padding: 4,
+          minWidth: 40,
+        },
         props.active && styles.borderBlue,
       ]}
       android_ripple={{ color: "#333" }}
     >
-      <Text style={styles.fontBold}>{props.title}</Text>
+      <Text style={[styles.fontBold, { textAlign: "center" }]}>
+        {props.title}
+      </Text>
     </Pressable>
   );
 }
