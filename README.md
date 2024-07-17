@@ -380,7 +380,7 @@ import {
 
 function RecordAudio() {
   const [recording, setRecording] = useState(false);
-  const [recordingPath, setRecordingPath] = useState<string | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
 
   const handleStart = () => {
     setRecording(true);
@@ -390,23 +390,26 @@ function RecordAudio() {
       recordingOptions: {
         persist: true,
         // Optional: Specify the output file path to save the recording to
+        // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
         outputFilePath: "/path/to/save/recording.wav",
       },
     });
   };
 
   useSpeechRecognitionEvent("recording", (event) => {
-    console.log("Local file path:", event.filePath);
+    console.log("Local file uri:", event.uri);
     // Android: Will be saved as a .wav file
-    // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
-    setRecordingPath(event.filePath);
+    // e.g. "file:///data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
+    // iOS: Will be saved as a .caf file
+    // e.g. "file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
+    setRecordingUri(event.uri);
     setRecording(false);
   });
 
   return (
     <View>
       <Button title="Start" onPress={handleStart} disabled={recording} />
-      {recordingPath && <AudioPlayer source={recordingPath} />}
+      {recordingUri && <AudioPlayer source={recordingUri} />}
     </View>
   );
 }

@@ -503,10 +503,10 @@ function OtherSettings(props: {
   const [recordingPath, setRecordingPath] = useState<string | null>(null);
 
   useSpeechRecognitionEvent("recording", (event) => {
-    console.log("Local file path:", event.filePath);
+    console.log("Local file path:", event.uri);
     // Android: Will be saved as a .wav file
-    // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
-    setRecordingPath(event.filePath);
+    // e.g. "file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav"
+    setRecordingPath(event.uri);
   });
 
   // Enable audio recording
@@ -551,6 +551,7 @@ function OtherSettings(props: {
           handleChange("recordingOptions", {
             ...(settings.recordingOptions ?? {}),
             persist: !settings.recordingOptions?.persist,
+            outputFilePath: FileSystem.documentDirectory ?? undefined,
           })
         }
       />
@@ -560,7 +561,7 @@ function OtherSettings(props: {
             borderStyle: "dashed",
             borderWidth: 2,
             padding: 10,
-            height: 100,
+            minHeight: 100,
             flex: 1,
           }}
         >

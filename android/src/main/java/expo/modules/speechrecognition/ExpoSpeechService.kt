@@ -159,10 +159,11 @@ class ExpoSpeechService
         private fun stopRecording() {
             audioRecorder?.stop()
             if (audioRecorder?.outputFile != null) {
+                val uri = audioRecorder?.outputFile?.absolutePath?.let { "file://$it" }
                 sendEvent(
                     "recording",
                     mapOf(
-                        "filePath" to audioRecorder?.outputFile?.absolutePath,
+                        "uri" to uri,
                     ),
                 )
             }
@@ -226,7 +227,7 @@ class ExpoSpeechService
                 val filePath =
                     options.recordingOptions.outputFilePath ?: run {
                         val timestamp = System.currentTimeMillis().toString()
-                        "${reactContext.cacheDir.absolutePath}/audio_$timestamp.wav"
+                        "${reactContext.cacheDir.absolutePath}/recording_$timestamp.wav"
                     }
 
                 audioRecorder =

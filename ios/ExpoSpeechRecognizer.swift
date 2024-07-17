@@ -28,11 +28,14 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private var task: SFSpeechRecognitionTask?
   private var recognizer: SFSpeechRecognizer?
   private var speechStartHandler: (() -> Void)?
+  private var file: AVAudioFile?
+  private var outputFileUrl: URL?
 
   /// Detection timer, for non-continuous speech recognition
   @MainActor var detectionTimer: Timer?
 
   @MainActor var endHandler: (() -> Void)?
+  @MainActor var recordingHandler: ((String) -> Void)?
 
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
@@ -65,11 +68,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
     errorHandler: @escaping (Error) -> Void,
     endHandler: (() -> Void)?,
-    speechStartHandler: @escaping (() -> Void)
+    speechStartHandler: @escaping (() -> Void),
+    recordingHandler: @escaping (String) -> Void
   ) {
-    // assign the end handler to the task
     self.endHandler = endHandler
-    self.state = "starting"
+    self.recordingHandler = recordingHandler
     Task {
       await startRecognizer(
         options: options,
@@ -115,6 +118,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     errorHandler: @escaping (Error) -> Void,
     speechStartHandler: @escaping () -> Void
   ) {
+    self.file = nil
+    self.outputFileUrl = nil
     self.speechStartHandler = speechStartHandler
 
     guard let recognizer, recognizer.isAvailable else {
@@ -133,14 +138,26 @@ actor ExpoSpeechRecognizer: ObservableObject {
       let isSourcedFromFile = options.audioSource?.uri != nil
 
       var audioEngine: AVAudioEngine?
-      if !isSourcedFromFile {
-        audioEngine = try Self.prepareEngine(
-          options: options,
-          request: request
-        )
-        self.audioEngine = audioEngine
-      } else {
+      if isSourcedFromFile {
+        // If we're doing file-based recognition we don't need to create an audio engine
         self.audioEngine = nil
+      } else {
+        audioEngine = AVAudioEngine()
+        self.audioEngine = audioEngine
+        if options.recordingOptions?.persist == true {
+          let (audio, outputUrl) = prepareFileWriter(
+            outputFilePath: options.recordingOptions?.outputFilePath,
+            audioEngine: audioEngine!
+          )
+          self.file = audio
+          self.outputFileUrl = outputUrl
+        }
+        try Self.prepareEngine(
+          audioEngine: audioEngine!,
+          options: options,
+          request: request,
+          file: self.file
+        )
       }
 
       // Don't run any timers if the audio source is from a file
@@ -176,6 +193,38 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
+  private func prepareFileWriter(outputFilePath: String?, audioEngine: AVAudioEngine) -> (
+    AVAudioFile?, URL?
+  ) {
+    let baseDir: URL
+
+    if let outputFilePath = outputFilePath {
+      baseDir = URL(fileURLWithPath: outputFilePath)
+    } else {
+      guard let dirPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+      else {
+        print("Failed to get cache directory path.")
+        return (nil, nil)
+      }
+      baseDir = dirPath
+    }
+
+    let filePath = baseDir.appendingPathComponent("recording_\(UUID().uuidString)")
+      .appendingPathExtension("caf")
+
+    do {
+      // Ensure settings are compatible with the input format
+      let file = try AVAudioFile(
+        forWriting: filePath,
+        settings: audioEngine.inputNode.inputFormat(forBus: 0).settings
+      )
+      return (file, filePath)
+    } catch {
+      print("Failed to create AVAudioFile: \(error)")
+      return (nil, nil)
+    }
+  }
+
   private func handleSpeechStart() {
     speechStartHandler?()
     speechStartHandler = nil
@@ -188,6 +237,16 @@ actor ExpoSpeechRecognizer: ObservableObject {
     task?.cancel()
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
+    if let filePath = self.outputFileUrl?.path {
+      Task {
+        await MainActor.run {
+          self.recordingHandler?(filePath)
+          self.recordingHandler = nil
+        }
+      }
+    }
+    file = nil
+    outputFileUrl = nil
     audioEngine = nil
     request = nil
     task = nil
@@ -235,11 +294,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     return request
   }
-
   private static func prepareEngine(
-    options: SpeechRecognitionOptions, request: SFSpeechRecognitionRequest
-  ) throws -> AVAudioEngine {
-    let audioEngine = AVAudioEngine()
+    audioEngine: AVAudioEngine,
+    options: SpeechRecognitionOptions,
+    request: SFSpeechRecognitionRequest,
+    file: AVAudioFile?
+  ) throws {
     let audioSession = AVAudioSession.sharedInstance()
 
     try audioSession.setCategory(
@@ -249,19 +309,26 @@ actor ExpoSpeechRecognizer: ObservableObject {
     )
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
     let inputNode = audioEngine.inputNode
-    let recordingFormat = inputNode.outputFormat(forBus: 0)
+    let recordingFormat = inputNode.inputFormat(forBus: 0)
 
-    // check if the request is a SFSpeechAudioBufferRecognitionRequest
-    if let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest {
-      inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
-        (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-        audioBufferRequest.append(buffer)
+    guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
+      throw RecognizerError.invalidAudioSource
+    }
+
+    inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
+      (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
+      audioBufferRequest.append(buffer)
+      if let file = file {
+        do {
+          try file.write(from: buffer)
+        } catch {
+          print("Failed to write buffer to file: \(error)")
+        }
       }
     }
+
     audioEngine.prepare()
     try audioEngine.start()
-
-    return audioEngine
   }
 
   nonisolated private func recognitionHandler(
@@ -334,7 +401,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     }
   }
-
 }
 
 extension SFSpeechRecognizer {

@@ -84,8 +84,8 @@ public class ExpoSpeechRecognitionModule: Module {
 
       // Custom events
 
-      // Called when the endpointer is ready for the user to start speaking.
-      "_speechready"
+      // Called when a recording file is available
+      "recording"
     )
 
     OnCreate {
@@ -166,6 +166,15 @@ public class ExpoSpeechRecognitionModule: Module {
             },
             speechStartHandler: { [weak self] in
               self?.sendEvent("speechstart")
+            },
+            recordingHandler: { [weak self] filePath in
+              self?.sendEvent(
+                "recording",
+                [
+                  // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
+                  "uri": "file://" + filePath
+                ]
+              )
             }
           )
           sendEvent("start")

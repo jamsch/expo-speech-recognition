@@ -68,8 +68,6 @@ class ExpoSpeechRecognitionModule : Module() {
                 // Called when there's results (as a string array, not API compliant)
                 "results",
                 // Custom events
-                // Called when the endpointer is ready for the user to start speaking.
-                "_speechready",
                 // Audio recording file
                 "recording",
             )
