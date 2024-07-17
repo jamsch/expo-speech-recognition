@@ -15,9 +15,7 @@ import {
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
-  ExpoSpeechRecognitionModuleEmitter,
   type ExpoSpeechRecognitionOptions,
-  type ExpoSpeechRecognitionNativeEventMap,
   type AndroidIntentOptions,
   useSpeechRecognitionEvent,
   AudioEncodingAndroidValue,
@@ -49,18 +47,6 @@ export default function App() {
   const [status, setStatus] = useState<"idle" | "starting" | "recognizing">(
     "idle",
   );
-
-  useEffect(() => {
-    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
-      "recording",
-      (event) => {
-        console.log("recording:", event);
-      },
-    );
-    return () => {
-      listener.remove();
-    };
-  }, []);
 
   const [settings, setSettings] = useState<ExpoSpeechRecognitionOptions>({
     lang: "en-US",
@@ -518,18 +504,12 @@ function OtherSettings(props: {
 
   const [recordingPath, setRecordingPath] = useState<string | null>(null);
 
-  useEffect(() => {
-    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
-      "recording",
-      (event: ExpoSpeechRecognitionNativeEventMap["recording"]) => {
-        console.log("Local file path:", event.filePath);
-        // Android: Will be saved as a .wav file
-        // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
-        setRecordingPath(event.filePath);
-      },
-    );
-    return listener.remove;
-  }, []);
+  useSpeechRecognitionEvent("recording", (event) => {
+    console.log("Local file path:", event.filePath);
+    // Android: Will be saved as a .wav file
+    // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
+    setRecordingPath(event.filePath);
+  });
 
   // Enable audio recording
   return (

@@ -78,7 +78,11 @@ function MyComponent() {
 
   return (
     <View>
-      <Button title="Start" onPress={handleStart} disabled={recognizing} />
+      {recognizing ? (
+        <Button title="Start" onPress={handleStart} />
+      ) : (
+        <Button title="Stop" onPress={ExpoSpeechRecognitionModule.stop} />
+      )}
 
       <ScrollView>
         <Text>{transcript}</Text>
@@ -195,6 +199,7 @@ You can also use the `ExpoSpeechRecognitionModule` to use the native APIs direct
 import {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionModuleEmitter,
+  type ExpoSpeechRecognitionNativeEventMap,
 } from "@jamsch/expo-speech-recognition";
 
 // Register event listeners
@@ -215,16 +220,19 @@ const endListener = ExpoSpeechRecognitionModuleEmitter.addListener(
 
 const resultListener = ExpoSpeechRecognitionModuleEmitter.addListener(
   "result",
-  (event) => {
+  (event: ExpoSpeechRecognitionNativeEventMap["result"]) => {
     // Note: this is not the same as the `result` event listener on the web speech API
     // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
     console.log("results:", event.results, "final:", event.isFinal);
   },
 );
 
-ExpoSpeechRecognitionModuleEmitter.addListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
-});
+ExpoSpeechRecognitionModuleEmitter.addListener(
+  "error",
+  (event: ExpoSpeechRecognitionNativeEventMap["error"]) => {
+    console.log("error code:", event.error, "error messsage:", event.message);
+  },
+);
 
 // Start speech recognition
 ExpoSpeechRecognitionModule.start({
@@ -359,10 +367,7 @@ console.log(values);
 
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
 
-> **Important notes before using this feature:**
->
-> - On Android, this is only supported on Android 13 and above.
-> - Because this feature doesn't comply with the Web Speech API, you'll need to use `ExpoSpeechRecognitionModuleEmitter` to listen for the `recording` event.
+> Note: For Android, this is only supported on Android 13 and above.
 
 Example:
 
@@ -390,20 +395,13 @@ function RecordAudio() {
     });
   };
 
-  useEffect(() => {
-    const listener = ExpoSpeechRecognitionModuleEmitter.addListener(
-      "recording",
-      (event) => {
-        console.log("Local file path:", event.filePath);
-
-        // Android: Will be saved as a .wav file
-        // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
-        setRecordingPath(event.filePath);
-        setRecording(false);
-      },
-    );
-    return listener.remove;
-  }, []);
+  useSpeechRecognitionEvent("recording", (event) => {
+    console.log("Local file path:", event.filePath);
+    // Android: Will be saved as a .wav file
+    // e.g. "/data/user/0/expo.modules.speechrecognition.example/cache/audio_1720678500903.wav"
+    setRecordingPath(event.filePath);
+    setRecording(false);
+  });
 
   return (
     <View>
