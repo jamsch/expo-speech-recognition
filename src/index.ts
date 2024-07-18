@@ -41,8 +41,10 @@ export const getSupportedLocales = (options?: {
 export const getSpeechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices;
 
-export const isOnDeviceRecognitionAvailable =
-  ExpoSpeechRecognitionModule.isOnDeviceRecognitionAvailable;
+export const supportsOnDeviceRecognition =
+  ExpoSpeechRecognitionModule.supportsOnDeviceRecognition;
+
+export const supportsRecording = ExpoSpeechRecognitionModule.supportsRecording;
 
 export const setCategoryIOS = ExpoSpeechRecognitionModule.setCategoryIOS;
 

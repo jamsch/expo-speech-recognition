@@ -431,7 +431,13 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   /**
    * Whether the on-device speech recognition is available on the device.
    */
-  isOnDeviceRecognitionAvailable(): boolean;
+  supportsOnDeviceRecognition(): boolean;
+  /**
+   * Whether the recording feature is available on the device.
+   *
+   * This mostly applies to Android devices, to check if it's greater than Android 13.
+   */
+  supportsRecording(): boolean;
   /**
    * Downloads the offline model for the specified locale.
    * Note: this is only supported on Android 12 and above.

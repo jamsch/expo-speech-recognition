@@ -298,18 +298,29 @@ console.log("Speech recognition services:", packages.join(", "));
 // e.g. ["com.google.android.tts", "com.samsung.android.bixby.agent"]
 ```
 
-### API: `isOnDeviceRecognitionAvailable`
+### API: `supportsOnDeviceRecognition()`
 
 Whether on-device speech recognition is available on the device.
 
 ```ts
-import { isOnDeviceRecognitionAvailable } from "@jamsch/expo-speech-recognition";
+import { supportsOnDeviceRecognition } from "@jamsch/expo-speech-recognition";
 
-const available = isOnDeviceRecognitionAvailable();
+const available = supportsOnDeviceRecognition();
 console.log("OnDevice recognition available:", available);
 ```
 
-### API: `androidTriggerOfflineModelDownload` (Android only)
+### API `supportsRecording()`
+
+Whether audio recording is supported during speech recognition. This mostly applies to Android devices, to check if it's greater than Android 13.
+
+```ts
+import { supportsRecording } from "@jamsch/expo-speech-recognition";
+
+const available = supportsRecording();
+console.log("Recording available:", available);
+```
+
+### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<boolean>`
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
@@ -336,7 +347,7 @@ The device will display a dialog to download the model. Once the model is downlo
 
 ![On Device Recognition](./images/on-device-recognition.jpg)
 
-### API: `setCategoryIOS` (iOS only)
+### API: `setCategoryIOS({...})` (iOS only)
 
 This function is an implementation of [AVAudioSession.setCategory](https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory) for iOS. For multimedia applications, you may want to set the audio session category and mode to control the audio routing.
 
@@ -357,7 +368,7 @@ setCategoryIOS({
 });
 ```
 
-### API: `getAudioSessionCategoryAndOptionsIOS` (iOS only)
+### API: `getAudioSessionCategoryAndOptionsIOS()` (iOS only)
 
 Returns the current audio session category and options. For advanced use cases, you may want to use this function to safely configure the audio session category and mode.
 
@@ -373,7 +384,7 @@ console.log(values);
 
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
 
-> Note: For Android, this is only supported on Android 13 and above.
+> Note: For Android, this is only supported on Android 13 and above. Call `supportsRecording()` to see if it's available before using this feature.
 
 Example:
 

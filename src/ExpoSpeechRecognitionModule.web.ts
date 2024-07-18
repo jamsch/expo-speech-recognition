@@ -82,10 +82,13 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     );
     return [] as string[];
   },
-  isOnDeviceRecognitionAvailable: () => {
+  supportsOnDeviceRecognition: () => {
     console.warn(
-      "isOnDeviceRecognitionAvailable is not supported on web. Returning false.",
+      "supportsOnDeviceRecognition is not supported on web. Returning false.",
     );
+    return false;
+  },
+  supportsRecording: () => {
     return false;
   },
   androidTriggerOfflineModelDownload: () => {

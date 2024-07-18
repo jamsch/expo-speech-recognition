@@ -147,9 +147,17 @@ class ExpoSpeechRecognitionModule : Module() {
                 getSupportedLocales(options, appContext.reactContext!!, promise)
             }
 
-            Function("isOnDeviceRecognitionAvailable") {
+            Function("supportsOnDeviceRecognition") {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext.reactContext!!)
+                } else {
+                    false
+                }
+            }
+
+            Function("supportsRecording") {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    true
                 } else {
                     false
                 }
