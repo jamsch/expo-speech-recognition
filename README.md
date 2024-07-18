@@ -50,7 +50,7 @@ import {
   useSpeechRecognitionEvent,
 } from "@jamsch/expo-speech-recognition";
 
-function MyComponent() {
+function App() {
   const [recognizing, setRecognizing] = useState(false);
   const [transcript, setTranscript] = useState("");
 
@@ -64,15 +64,21 @@ function MyComponent() {
   });
 
   const handleStart = () => {
-    // Start speech recognition
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: true,
-      maxAlternatives: 1,
-      continuous: false,
-      requiresOnDeviceRecognition: false,
-      addsPunctuation: false,
-      contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
+      if (!result.granted) {
+        console.warn("Permissions not granted", result);
+        return;
+      }
+      // Start speech recognition
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        interimResults: true,
+        maxAlternatives: 1,
+        continuous: false,
+        requiresOnDeviceRecognition: false,
+        addsPunctuation: false,
+        contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+      });
     });
   };
 

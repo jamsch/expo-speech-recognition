@@ -322,7 +322,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private static func setupAudioSession(_ options: SetCategoryOptions?) throws {
     let audioSession = AVAudioSession.sharedInstance()
 
-    if let options = options {
+    if let options: SetCategoryOptions {
       // Convert the array of category options to a bitmask
       let categoryOptions = options.categoryOptions.reduce(
         AVAudioSession.CategoryOptions()
@@ -330,9 +330,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
         result, option in
         result.union(option.avCategoryOption)
       }
-      print(
-        "categoryOptions: \(categoryOptions), mode: \(options.mode), category: \(options.category)"
-      )
       try audioSession.setCategory(
         options.category.avCategory,
         mode: options.mode.avMode,

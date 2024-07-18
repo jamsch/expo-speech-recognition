@@ -1,4 +1,4 @@
-import { Subscription } from "expo-modules-core";
+import type { Subscription } from "expo-modules-core";
 // Import the native module. On web, it will be resolved to ExpoSpeechRecognition.web.ts
 // and on native platforms to ExpoSpeechRecognition.ts
 import {
@@ -225,20 +225,25 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   #subscriptionMap: Map<Function, Subscription[]> = new Map();
 
   start() {
-    ExpoSpeechRecognitionModule.start({
-      lang: this.lang,
-      interimResults: this.interimResults,
-      maxAlternatives: this.maxAlternatives,
-      contextualStrings: this.contextualStrings,
-      requiresOnDeviceRecognition: this.requiresOnDeviceRecognition,
-      addsPunctuation: this.addsPunctuation,
-      continuous: this.continuous,
-      androidIntentOptions: this.androidIntentOptions,
-      androidRecognitionServicePackage: this.androidRecognitionServicePackage,
-      audioSource: this.audioSource,
-      androidIntent: this.androidIntent,
-      iosTaskHint: this.iosTaskHint,
-      iosCategory: this.iosCategory,
+    ExpoSpeechRecognitionModule.requestPermissionsAsync().then(() => {
+      // A result doesn't matter,
+      // the module will emit an error if permissions are not granted
+      ExpoSpeechRecognitionModule.start({
+        lang: this.lang,
+        interimResults: this.interimResults,
+        maxAlternatives: this.maxAlternatives,
+        contextualStrings: this.contextualStrings,
+        requiresOnDeviceRecognition: this.requiresOnDeviceRecognition,
+        addsPunctuation: this.addsPunctuation,
+        continuous: this.continuous,
+        recordingOptions: this.recordingOptions,
+        androidIntentOptions: this.androidIntentOptions,
+        androidRecognitionServicePackage: this.androidRecognitionServicePackage,
+        audioSource: this.audioSource,
+        androidIntent: this.androidIntent,
+        iosTaskHint: this.iosTaskHint,
+        iosCategory: this.iosCategory,
+      });
     });
   }
   stop = ExpoSpeechRecognitionModule.stop;
@@ -401,7 +406,9 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   ): void {
     const subscriptions = this.#subscriptionMap.get(listener);
     if (subscriptions) {
-      subscriptions.forEach((subscription) => subscription.remove());
+      for (const subscription of subscriptions) {
+        subscription.remove();
+      }
       this.#subscriptionMap.delete(listener);
     }
   }

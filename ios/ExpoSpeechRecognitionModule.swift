@@ -166,7 +166,7 @@ public class ExpoSpeechRecognitionModule: Module {
               self?.sendEvent("speechstart")
             },
             audioStartHandler: { [weak self] filePath in
-              if let filePath = filePath {
+              if let filePath: String {
                 // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
                 self?.sendEvent("audiostart", ["uri": "file://" + filePath])
               } else {
@@ -174,7 +174,7 @@ public class ExpoSpeechRecognitionModule: Module {
               }
             },
             audioEndHandler: { [weak self] filePath in
-              if let filePath = filePath {
+              if let filePath: String {
                 // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
                 self?.sendEvent("audioend", ["uri": "file://" + filePath])
               } else {

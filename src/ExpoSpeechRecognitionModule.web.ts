@@ -1,4 +1,4 @@
-import { PermissionResponse } from "expo-modules-core";
+import type { PermissionResponse } from "expo-modules-core";
 import type {
   ExpoSpeechRecognitionModuleType,
   ExpoSpeechRecognitionNativeEventMap,
@@ -20,11 +20,11 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     // This covers the case where the user has already subscribed to an event prior to calling `start()`
     ExpoSpeechRecognitionModuleEmitter._nativeListeners.forEach(
       (listeners, eventName) => {
-        listeners.forEach((listener) => {
+        for (const listener of listeners) {
           // May already be subscribed
           _speechRecognitionRef?.removeEventListener(eventName, listener);
           _speechRecognitionRef?.addEventListener(eventName, listener);
-        });
+        }
       },
     );
 
@@ -39,9 +39,6 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   },
   stop: () => _speechRecognitionRef?.stop(),
   requestPermissionsAsync: () => {
-    console.warn(
-      "requestPermissionsAsync is not supported on web. Returning a granted permission response.",
-    );
     return Promise.resolve({
       granted: true,
       canAskAgain: false,
@@ -229,9 +226,9 @@ export const ExpoSpeechRecognitionModuleEmitter = {
       }
 
       // Remove the native listeners
-      nativeListeners.forEach((listener) =>
-        ExpoSpeechRecognitionModuleEmitter.removeListener(eventName, listener),
-      );
+      for (const listener of nativeListeners) {
+        ExpoSpeechRecognitionModuleEmitter.removeListener(eventName, listener);
+      }
 
       // Clean up
       ExpoSpeechRecognitionModuleEmitter._nativeListeners.delete(eventName);
