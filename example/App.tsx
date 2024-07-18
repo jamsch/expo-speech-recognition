@@ -543,10 +543,19 @@ function OtherSettings(props: {
 
   const [recordingPath, setRecordingPath] = useState<string | null>(null);
 
-  useSpeechRecognitionEvent("recording", (event) => {
+  useSpeechRecognitionEvent("audiostart", (event) => {
+    // Note: don't use this file until the "audioend" event is emitted
+    // Note: event.uri will be null if `recordingOptions.persist` is not enabled
+    console.log("Recording started for file:", event.uri);
+  });
+
+  useSpeechRecognitionEvent("audioend", (event) => {
+    // Recording ended, the file is now safe to use
     console.log("Local file path:", event.uri);
     // Android: Will be saved as a .wav file
     // e.g. "file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav"
+    // iOS: Will be saved as a .caf file
+    // e.g. "file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
     setRecordingPath(event.uri);
   });
 

@@ -72,6 +72,32 @@ const WebListenerTransformers: {
     ) => unknown,
   ) => NativeEventAndListener<K>[];
 } = {
+  audiostart: (instance, listener) => {
+    return [
+      {
+        eventName: "audiostart",
+        nativeListener(nativeEvent) {
+          listener.call(instance, {
+            ...createEventData(instance),
+            uri: nativeEvent.uri,
+          });
+        },
+      },
+    ];
+  },
+  audioend: (instance, listener) => {
+    return [
+      {
+        eventName: "audioend",
+        nativeListener(nativeEvent) {
+          listener.call(instance, {
+            ...createEventData(instance),
+            uri: nativeEvent.uri,
+          });
+        },
+      },
+    ];
+  },
   nomatch: (instance, listener) => {
     // @ts-ignore
     return [stubEvent("nomatch", instance, listener)];
@@ -264,15 +290,6 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
     }
   }
 
-  #onaudioend: SpeechListener<"audioend"> | null = null;
-  set onaudioend(listener: SpeechListener<"audioend"> | null) {
-    this._setListeners("audioend", listener, this.#onaudioend);
-    this.#onaudioend = listener;
-  }
-  get onaudioend() {
-    return this.#onaudioend;
-  }
-
   #onresult: SpeechListener<"result"> | null = null;
   set onresult(listener: SpeechListener<"result"> | null) {
     this._setListeners("result", listener, this.#onresult);
@@ -314,10 +331,26 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
     return this.#onspeechend;
   }
 
-  /** [TODO] Fired when the user agent has finished capturing audio. */
-  // onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null = null;
-  /** [TODO] Fired when the user agent has started to capture audio. */
-  onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null = null;
+  #onaudiostart: SpeechListener<"audiostart"> | null = null;
+  set onaudiostart(listener: SpeechListener<"audiostart"> | null) {
+    this._setListeners("audiostart", listener, this.#onaudiostart);
+    this.#onaudiostart = listener;
+  }
+  /** Fired when the user agent has started to capture audio. */
+  get onaudiostart() {
+    return this.#onaudiostart;
+  }
+
+  #onaudioend: SpeechListener<"audioend"> | null = null;
+  set onaudioend(listener: SpeechListener<"audioend"> | null) {
+    this._setListeners("audioend", listener, this.#onaudioend);
+    this.#onaudioend = listener;
+  }
+  /** Fired when the user agent has finished capturing audio. */
+  get onaudioend() {
+    return this.#onaudioend;
+  }
+
   /** [TODO] */
   onsoundend: ((this: SpeechRecognition, ev: Event) => any) | null = null;
   /** [TODO] */

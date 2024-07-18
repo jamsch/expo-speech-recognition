@@ -35,7 +35,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   @MainActor var detectionTimer: Timer?
 
   @MainActor var endHandler: (() -> Void)?
-  @MainActor var recordingHandler: ((String) -> Void)?
+  @MainActor var audioEndHandler: ((String?) -> Void)?
 
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
@@ -68,11 +68,13 @@ actor ExpoSpeechRecognizer: ObservableObject {
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
     errorHandler: @escaping (Error) -> Void,
     endHandler: (() -> Void)?,
+    startHandler: @escaping (() -> Void),
     speechStartHandler: @escaping (() -> Void),
-    recordingHandler: @escaping (String) -> Void
+    audioStartHandler: @escaping (String?) -> Void,
+    audioEndHandler: @escaping (String?) -> Void
   ) {
     self.endHandler = endHandler
-    self.recordingHandler = recordingHandler
+    self.audioEndHandler = audioEndHandler
     Task {
       await startRecognizer(
         options: options,
@@ -80,6 +82,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
         errorHandler: errorHandler,
         speechStartHandler: speechStartHandler
       )
+      // Emit the "start" event
+      startHandler()
+      // If user has opted in to recording, emit a "start" recording event with the path
+      if let outputPath = await outputFileUrl?.path {
+        audioStartHandler(outputPath)
+      }
     }
   }
 
@@ -249,17 +257,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
     audioEngine = nil
-
-    if let filePath = self.outputFileUrl?.path {
-      Task {
-        await MainActor.run {
-          self.recordingHandler?(filePath)
-          self.recordingHandler = nil
-        }
-      }
-    }
     file = nil
-    outputFileUrl = nil
     request = nil
     task = nil
     speechStartHandler = nil
@@ -267,12 +265,15 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     // If the task was running, emit the end handler
     // This avoids emitting the end handler multiple times
-
     // log the end event to the console
     print("SpeechRecognizer: end")
     if taskWasRunning {
+      let filePath = self.outputFileUrl?.path
+      outputFileUrl = nil
       Task {
         await MainActor.run {
+          self.audioEndHandler?(filePath)
+          self.audioEndHandler = nil
           self.endHandler?()
         }
       }

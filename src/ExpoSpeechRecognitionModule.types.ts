@@ -47,22 +47,6 @@ export type ExpoSpeechRecognitionNativeEventMap = {
       }[];
     }[];
   };
-  /**
-   * Fired when the recording has completed.
-   * This event will only fire if `recordingOptions.persist` is enabled
-   * when starting speech recognition
-   *
-   * The event contains a `uri` property, which refers to the local path of the recording file.
-   */
-  recording: {
-    /**
-     * Example URIs:
-     *
-     * - Android: `file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav`
-     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf`
-     */
-    uri: string;
-  };
   error: {
     // `ios_${number}` refers to custom iOS error codes (e.g. 201 = kLSRErrorDomain, "Siri or Dictation is disabled".)
     code: SpeechRecognitionErrorCode | `ios_${number}`;
@@ -73,8 +57,31 @@ export type ExpoSpeechRecognitionNativeEventMap = {
   speechend: null;
   /** A final result is returned with no significant recognition */
   nomatch: null;
-  audioend: null;
-  audiostart: null;
+  /** Audio capturing had started */
+  audiostart: {
+    /**
+     * The uri is set when `recordingOptions.persist` is enabled.
+     * Do not attempt to use this file until the `audioend` event is emitted.
+     *
+     * Example URIs:
+     *
+     * - Android: `file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav`
+     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf`
+     */
+    uri: string | null;
+  };
+  /** Audio capturing had ended */
+  audioend: {
+    /**
+     * The uri is set when `recordingOptions.persist` is enabled.
+     *
+     * Example URIs:
+     *
+     * - Android: `file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav`
+     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf`
+     */
+    uri: string | null;
+  };
   end: null;
   soundstart: null;
   soundend: null;

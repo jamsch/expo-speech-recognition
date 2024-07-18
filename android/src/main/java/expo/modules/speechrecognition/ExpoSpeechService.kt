@@ -126,18 +126,23 @@ class ExpoSpeechService
                 audioRecorder = null
                 recognitionState = RecognitionState.STARTING
                 soundState = SoundState.INACTIVE
-
                 try {
                     val intent = createSpeechIntent(options)
                     speech = createSpeechRecognizer(options)
-                    // Start the audio recorder, if necessary
+
+                    // Start the audio recorder
                     audioRecorder?.start()
 
                     // Start listening
                     speech?.setRecognitionListener(this)
                     speech?.startListening(intent)
 
-                    sendEvent("audiostart", null)
+                    sendEvent(
+                        "audiostart",
+                        mapOf(
+                            "uri" to audioRecorder?.outputFileUri,
+                        ),
+                    )
                 } catch (e: Exception) {
                     val errorMessage =
                         when {
@@ -161,9 +166,16 @@ class ExpoSpeechService
             if (audioRecorder?.outputFile != null) {
                 val uri = audioRecorder?.outputFile?.absolutePath?.let { "file://$it" }
                 sendEvent(
-                    "recording",
+                    "audioend",
                     mapOf(
                         "uri" to uri,
+                    ),
+                )
+            } else {
+                sendEvent(
+                    "audioend",
+                    mapOf(
+                        "uri" to null,
                     ),
                 )
             }
@@ -188,7 +200,6 @@ class ExpoSpeechService
                 speech?.destroy()
                 stopRecording()
                 soundState = SoundState.INACTIVE
-                sendEvent("audioend", null)
                 sendEvent("end", null)
                 recognitionState = state
             }

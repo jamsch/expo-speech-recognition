@@ -33,6 +33,7 @@ class ExpoAudioRecorder(
     private var audioRecorder: AudioRecord? = null
 
     var outputFile: File? = null
+    var outputFileUri = "file://$outputFilePath"
 
     /** The file where the mic stream is being output to */
     private val tempPcmFile: File

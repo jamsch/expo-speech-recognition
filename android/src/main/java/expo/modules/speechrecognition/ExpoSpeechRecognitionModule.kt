@@ -67,9 +67,6 @@ class ExpoSpeechRecognitionModule : Module() {
                 "start",
                 // Called when there's results (as a string array, not API compliant)
                 "results",
-                // Custom events
-                // Audio recording file
-                "recording",
             )
 
             Function("getSpeechRecognitionServices") {

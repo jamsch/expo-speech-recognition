@@ -80,12 +80,7 @@ public class ExpoSpeechRecognitionModule: Module {
       // intent to recognize grammars associated with the current SpeechRecognition
       "start",
       // Called when there's results (as a string array, not API compliant)
-      "result",
-
-      // Custom events
-
-      // Called when a recording file is available
-      "recording"
+      "result"
     )
 
     OnCreate {
@@ -164,20 +159,29 @@ public class ExpoSpeechRecognitionModule: Module {
             endHandler: { [weak self] in
               self?.handleEnd()
             },
+            startHandler: { [weak self] in
+              self?.sendEvent("start")
+            },
             speechStartHandler: { [weak self] in
               self?.sendEvent("speechstart")
             },
-            recordingHandler: { [weak self] filePath in
-              self?.sendEvent(
-                "recording",
-                [
-                  // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
-                  "uri": "file://" + filePath
-                ]
-              )
+            audioStartHandler: { [weak self] filePath in
+              if let filePath = filePath {
+                // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
+                self?.sendEvent("audiostart", ["uri": "file://" + filePath])
+              } else {
+                self?.sendEvent("audiostart", ["uri": nil])
+              }
+            },
+            audioEndHandler: { [weak self] filePath in
+              if let filePath = filePath {
+                // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
+                self?.sendEvent("audioend", ["uri": "file://" + filePath])
+              } else {
+                self?.sendEvent("audioend", ["uri": nil])
+              }
             }
           )
-          sendEvent("start")
         } catch {
           self.sendEvent(
             "error",
