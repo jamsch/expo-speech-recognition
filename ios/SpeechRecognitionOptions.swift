@@ -31,6 +31,9 @@ struct SpeechRecognitionOptions: Record {
 
   @Field
   var iosTaskHint: IOSTaskHint? = nil
+
+  @Field
+  var iosCategory: SetCategoryOptions? = nil
 }
 
 enum IOSTaskHint: String, Enumerable {

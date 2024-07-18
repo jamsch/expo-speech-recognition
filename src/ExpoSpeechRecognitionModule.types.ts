@@ -150,6 +150,23 @@ export type ExpoSpeechRecognitionOptions = {
    * Docs: https://developer.apple.com/documentation/speech/sfspeechrecognitiontaskhint
    */
   iosTaskHint?: IOSTaskHintValue;
+
+  /**
+   * The audio category for the speech recognition task.
+   *
+   * Use this option to configure the default audio session category and mode prior to starting speech recognition.
+   *
+   * **Caution:** confirm that the category, options and mode are compatible with the audio source.
+   *
+   * By default, the audio session category and mode are set to:
+   *
+   * - category: `playAndRecord`
+   * - options: `defaultToSpeaker` and `allowBluetooth`
+   * - mode: `measurement`
+   *
+   * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category
+   */
+  iosCategory?: SetCategoryOptions;
 };
 
 export type IOSTaskHintValue = (typeof TaskHintIOS)[keyof typeof TaskHintIOS];
@@ -428,11 +445,7 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    *
    * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory
    */
-  setCategoryIOS(options: {
-    category: AVAudioSessionCategoryValue;
-    categoryOptions: AVAudioSessionCategoryOptionsValue[];
-    mode?: AVAudioSessionModeValue;
-  }): void;
+  setCategoryIOS(options: SetCategoryOptions): void;
   /**
    * [iOS only] Returns the current audio session category and options.
    *
@@ -452,6 +465,13 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    */
   getStateAsync(): Promise<SpeechRecognitionState>;
 }
+
+export type SetCategoryOptions = {
+  category: AVAudioSessionCategoryValue;
+  categoryOptions: AVAudioSessionCategoryOptionsValue[];
+  mode?: AVAudioSessionModeValue;
+};
+
 type SpeechRecognitionState =
   | "inactive"
   | "starting"

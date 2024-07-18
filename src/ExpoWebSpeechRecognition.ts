@@ -207,6 +207,8 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   androidIntent?: ExpoSpeechRecognitionOptions["androidIntent"] = undefined;
   /** [EXTENDED, default: undefined] The hint for the speech recognition task. */
   iosTaskHint?: ExpoSpeechRecognitionOptions["iosTaskHint"] = undefined;
+  /** [EXTENDED, default: undefined] The audio session category and options to use. */
+  iosCategory?: ExpoSpeechRecognitionOptions["iosCategory"] = undefined;
   /**
    * [EXTENDED, default: undefined]
    *
@@ -236,6 +238,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
       audioSource: this.audioSource,
       androidIntent: this.androidIntent,
       iosTaskHint: this.iosTaskHint,
+      iosCategory: this.iosCategory,
     });
   }
   stop = ExpoSpeechRecognitionModule.stop;

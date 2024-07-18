@@ -20,6 +20,13 @@ import {
   useSpeechRecognitionEvent,
   AudioEncodingAndroidValue,
   TaskHintIOS,
+  AVAudioSessionCategory,
+  type AVAudioSessionCategoryValue,
+  AVAudioSessionCategoryOptions,
+  type AVAudioSessionCategoryOptionsValue,
+  SetCategoryOptions,
+  AVAudioSessionMode,
+  type AVAudioSessionModeValue,
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
 import {
@@ -283,8 +290,21 @@ function IOSSettings(props: {
 }) {
   const { value: settings, onChange: handleChange } = props;
 
+  const updateCategoryOptions = (options: Partial<SetCategoryOptions>) => {
+    handleChange("iosCategory", {
+      category:
+        options.category ?? settings.iosCategory?.category ?? "playAndRecord",
+      categoryOptions: options.categoryOptions ??
+        settings.iosCategory?.categoryOptions ?? [
+          AVAudioSessionCategoryOptions.defaultToSpeaker,
+          AVAudioSessionCategoryOptions.allowBluetooth,
+        ],
+      mode: options.mode ?? settings.iosCategory?.mode ?? "measurement",
+    });
+  };
+
   return (
-    <View>
+    <View style={styles.gap1}>
       <View style={styles.gap1}>
         <Text style={styles.textLabel}>Task Hint</Text>
         <View style={[styles.row, styles.flexWrap]}>
@@ -295,6 +315,81 @@ function IOSSettings(props: {
               active={settings.iosTaskHint === hint}
               onPress={() =>
                 handleChange("iosTaskHint", hint as keyof typeof TaskHintIOS)
+              }
+            />
+          ))}
+        </View>
+      </View>
+      <View style={styles.gap1}>
+        <Text style={styles.textLabel}>Audio Category</Text>
+        <View style={[styles.row, styles.flexWrap]}>
+          {Object.keys(AVAudioSessionCategory).map((category) => (
+            <OptionButton
+              key={category}
+              title={category}
+              active={settings.iosCategory?.category === category}
+              onPress={() =>
+                updateCategoryOptions({
+                  category: category as AVAudioSessionCategoryValue,
+                })
+              }
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.gap1}>
+        <View style={styles.flex1}>
+          <Text style={styles.textLabel}>Category Options</Text>
+          <View style={[styles.row, styles.flexWrap]}>
+            {Object.keys(AVAudioSessionCategoryOptions).map((option) => (
+              <CheckboxButton
+                key={option}
+                title={option}
+                checked={Boolean(
+                  settings.iosCategory?.categoryOptions?.includes(
+                    option as AVAudioSessionCategoryOptionsValue,
+                  ),
+                )}
+                onPress={() => {
+                  // Remove the option if it's already selected
+                  let newOptions = [
+                    ...(settings.iosCategory?.categoryOptions ?? []),
+                  ];
+                  if (
+                    newOptions.includes(
+                      option as AVAudioSessionCategoryOptionsValue,
+                    )
+                  ) {
+                    newOptions = newOptions.filter((o) => o !== option);
+                  } else {
+                    newOptions.push(
+                      option as AVAudioSessionCategoryOptionsValue,
+                    );
+                  }
+
+                  updateCategoryOptions({
+                    categoryOptions: newOptions,
+                  });
+                }}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.gap1}>
+        <Text style={styles.textLabel}>Audio Mode</Text>
+        <View style={[styles.row, styles.flexWrap]}>
+          {Object.keys(AVAudioSessionMode).map((mode) => (
+            <OptionButton
+              key={mode}
+              title={mode}
+              active={settings.iosCategory?.mode === mode}
+              onPress={() =>
+                updateCategoryOptions({
+                  mode: mode as AVAudioSessionModeValue,
+                })
               }
             />
           ))}

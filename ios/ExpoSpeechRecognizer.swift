@@ -132,6 +132,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     guard let recognizer, recognizer.isAvailable else {
       errorHandler(RecognizerError.recognizerIsUnavailable)
+      reset()
+      end()
       return
     }
 
@@ -155,7 +157,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
         // Set up the audio session to get the correct audio format
         // Todo: allow user to configure audio session category and mode
         // prior to starting speech recognition
-        try Self.setupAudioSession()
+        try Self.setupAudioSession(options.iosCategory)
 
         // Feature: file recording
         if options.recordingOptions?.persist == true {
@@ -207,8 +209,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
         invalidateAndScheduleTimer()
       }
     } catch {
-      self.reset()
       errorHandler(error)
+      reset()
+      end()
     }
   }
 
@@ -249,6 +252,18 @@ actor ExpoSpeechRecognizer: ObservableObject {
     speechStartHandler = nil
   }
 
+  private func end() {
+    let filePath = self.outputFileUrl?.path
+    outputFileUrl = nil
+    Task {
+      await MainActor.run {
+        self.audioEndHandler?(filePath)
+        self.audioEndHandler = nil
+        self.endHandler?()
+      }
+    }
+  }
+
   /// Reset the speech recognizer.
   private func reset() {
     let taskWasRunning = task != nil
@@ -268,15 +283,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     // log the end event to the console
     print("SpeechRecognizer: end")
     if taskWasRunning {
-      let filePath = self.outputFileUrl?.path
-      outputFileUrl = nil
-      Task {
-        await MainActor.run {
-          self.audioEndHandler?(filePath)
-          self.audioEndHandler = nil
-          self.endHandler?()
-        }
-      }
+      end()
     }
   }
 
@@ -312,14 +319,34 @@ actor ExpoSpeechRecognizer: ObservableObject {
     return request
   }
 
-  private static func setupAudioSession() throws {
+  private static func setupAudioSession(_ options: SetCategoryOptions?) throws {
     let audioSession = AVAudioSession.sharedInstance()
 
-    try audioSession.setCategory(
-      .playAndRecord,
-      mode: .measurement,
-      options: [.defaultToSpeaker, .allowBluetooth]
-    )
+    if let options = options {
+      // Convert the array of category options to a bitmask
+      let categoryOptions = options.categoryOptions.reduce(
+        AVAudioSession.CategoryOptions()
+      ) {
+        result, option in
+        result.union(option.avCategoryOption)
+      }
+      print(
+        "categoryOptions: \(categoryOptions), mode: \(options.mode), category: \(options.category)"
+      )
+      try audioSession.setCategory(
+        options.category.avCategory,
+        mode: options.mode.avMode,
+        options: categoryOptions
+      )
+    } else {
+      // Default to playAndRecord with defaultToSpeaker and allowBluetooth
+      try audioSession.setCategory(
+        .playAndRecord,
+        mode: .measurement,
+        options: [.defaultToSpeaker, .allowBluetooth]
+      )
+    }
+
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
   }
 

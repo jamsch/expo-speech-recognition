@@ -47,6 +47,9 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val iosTaskHint: String? = null
+
+    @Field
+    val iosCategory: Map<String, Any>? = null
 }
 
 class RecordingOptions : Record {
