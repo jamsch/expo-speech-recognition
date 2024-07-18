@@ -1,10 +1,10 @@
 import "dom-speech-recognition";
 
-export const ExpoSpeechRecognition =
+export const ExpoWebSpeechRecognition =
   SpeechRecognition || webkitSpeechRecognition;
 
-export const ExpoSpeechGrammarList =
+export const ExpoWebSpeechGrammarList =
   SpeechGrammarList || webkitSpeechGrammarList;
 
-export const ExpoSpeechRecognitionEvent =
+export const ExpoWebSpeechRecognitionEvent =
   SpeechRecognitionEvent || webkitSpeechRecognitionEvent;
