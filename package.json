@@ -1,6 +1,6 @@
 {
   "name": "@jamsch/expo-speech-recognition",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Web SpeechRecognition implementation for React Native Expo projects",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -32,7 +32,7 @@
     "@types/dom-speech-recognition": "^0.0.4",
     "@types/react": "^18.3.3",
     "expo-module-scripts": "^3.5.2",
-    "expo-modules-core": "^1.12.12"
+    "expo-modules-core": "^1.12.19"
   },
   "prettier": {
     "trailingComma": "all"
