@@ -1,6 +1,8 @@
 # 🎙️ expo-speech-recognition
 
-expo-speech-recognition implements `SpeechRecognition` from the [Web Speech API](https://wicg.github.io/speech-api/) specification for React Native projects with the goal of code reuse across web and mobile.
+![NPM Version](https://img.shields.io/npm/v/%40jamsch%2Fexpo-speech-recognition)
+
+expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://developer.apple.com/documentation/speech/sfspeechrecognizer), Android [`SpeechRecognizer`](https://developer.android.com/reference/android/speech/SpeechRecognizer) and Web [`SpeechRecognition`](https://wicg.github.io/speech-api/) for React Native projects with the goal of code reuse across web and mobile.
 
 <img src="./images/preview.jpg" width="240" alt="expo-speech-recognition preview" />
 
