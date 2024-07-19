@@ -1,6 +1,6 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
-import {
+import type {
   AudioEncodingAndroid,
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
@@ -94,13 +94,28 @@ export type ExpoSpeechRecognitionOptions = {
   interimResults?: boolean;
   /** [Default: 1] The maximum number of alternative transcriptions to return. */
   maxAlternatives?: number;
-  /** An array of strings that will be used to provide context to the speech recognition engine. */
+  /**
+   * An array of strings that will be used to provide context to the speech recognition engine.
+   *
+   * On Android, this configures [`EXTRA_BIASING_STRINGS`](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_BIASING_STRINGS) in the recognizer intent (API level 33+).
+   *
+   * On iOS, this configures [`SFSpeechRecognitionRequest.contextualStrings`](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/1649391-contextualstrings).
+   */
   contextualStrings?: string[];
   /** [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds */
   continuous?: boolean;
-  /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it. */
+  /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
+   *
+   * Use `getSupportedLocales()` to verify if the locale is installed on the device prior to enabling this option.
+   */
   requiresOnDeviceRecognition?: boolean;
-  /** [Default: false] Include punctuation in the recognition results. This applies to full stops and commas. */
+  /**
+   * [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
+   *
+   * On Android, this configures [`EXTRA_ENABLE_FORMATTING`](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING) in the recognizer intent (API level 33+).
+   *
+   * On iOS, this configures [`SFSpeechRecognitionRequest.addsPunctuation`](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/3930023-addspunctuation).
+   */
   addsPunctuation?: boolean;
   /**
    * The package name of the speech recognition service to use.
@@ -113,6 +128,7 @@ export type ExpoSpeechRecognitionOptions = {
   androidRecognitionServicePackage?: string;
   /**
    * Extra options to provide to the Android Recognition intent.
+   *
    * For a full list of options, see https://developer.android.com/reference/android/speech/RecognizerIntent
    */
   androidIntentOptions?: Partial<AndroidIntentOptions>;

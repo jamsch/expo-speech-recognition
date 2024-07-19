@@ -93,7 +93,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
   @MainActor func stop() {
     Task {
-      await reset()
+      await reset(andEmitEnd: true)
     }
   }
 
@@ -132,8 +132,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     guard let recognizer, recognizer.isAvailable else {
       errorHandler(RecognizerError.recognizerIsUnavailable)
-      reset()
-      end()
+      reset(andEmitEnd: true)
       return
     }
 
@@ -210,8 +209,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     } catch {
       errorHandler(error)
-      reset()
-      end()
+      reset(andEmitEnd: true)
     }
   }
 
@@ -265,7 +263,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   }
 
   /// Reset the speech recognizer.
-  private func reset() {
+  private func reset(andEmitEnd: Bool = false) {
     let taskWasRunning = task != nil
 
     task?.cancel()
@@ -280,9 +278,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     // If the task was running, emit the end handler
     // This avoids emitting the end handler multiple times
-    // log the end event to the console
+    // Unless we really need to emit the end event
+    // (e.g. in the case of a setup error)
     print("SpeechRecognizer: end")
-    if taskWasRunning {
+    if taskWasRunning || andEmitEnd {
       end()
     }
   }
