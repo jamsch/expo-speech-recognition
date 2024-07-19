@@ -1,4 +1,9 @@
-import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
+import {
+  ExpoSpeechRecognitionModule,
+  ExpoSpeechRecognitionModuleEmitter,
+} from "./ExpoSpeechRecognitionModule";
+
+import type { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitionModule.types";
 
 // Export the SpeechRecognition APIs
 export {
@@ -50,6 +55,13 @@ export const setCategoryIOS = ExpoSpeechRecognitionModule.setCategoryIOS;
 
 export const getAudioSessionCategoryAndOptionsIOS =
   ExpoSpeechRecognitionModule.getAudioSessionCategoryAndOptionsIOS;
+
+export const addSpeechRecognitionListener = <
+  T extends keyof ExpoSpeechRecognitionNativeEventMap,
+>(
+  eventName: T,
+  listener: (ev: ExpoSpeechRecognitionNativeEventMap[T]) => void,
+) => ExpoSpeechRecognitionModuleEmitter.addListener(eventName, listener);
 
 export {
   type ExpoSpeechRecognitionOptions,

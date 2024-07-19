@@ -126,6 +126,8 @@ If you don't use `requestPermissionsAsync`, the user will be prompted to grant p
 
 ### Using the Web SpeechRecognition API
 
+> Note: this is intended for projects that rely on third party libraries that use the Web Speech API. If you're using this library directly, you should use the Direct Module API instead.
+
 Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars`) on some OSes aren't yet supported.
 
 ```ts
@@ -204,41 +206,30 @@ You can also use the `ExpoSpeechRecognitionModule` to use the native APIs direct
 ```ts
 import {
   ExpoSpeechRecognitionModule,
-  ExpoSpeechRecognitionModuleEmitter,
-  type ExpoSpeechRecognitionNativeEventMap,
+  addSpeechRecognitionListener,
 } from "@jamsch/expo-speech-recognition";
 
 // Register event listeners
-const startListener = ExpoSpeechRecognitionModuleEmitter.addListener(
-  "start",
-  () => console.log("Speech recognition started"),
+const startListener = addSpeechRecognitionListener("start", () =>
+  console.log("Speech recognition started"),
 );
 
 // and remove the listener when you're done:
 startListener.remove();
 
-const endListener = ExpoSpeechRecognitionModuleEmitter.addListener(
-  "end",
-  () => {
-    console.log("Speech recognition ended");
-  },
-);
+const endListener = addSpeechRecognitionListener("end", () => {
+  console.log("Speech recognition ended");
+});
 
-const resultListener = ExpoSpeechRecognitionModuleEmitter.addListener(
-  "result",
-  (event: ExpoSpeechRecognitionNativeEventMap["result"]) => {
-    // Note: this is not the same as the `result` event listener on the web speech API
-    // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
-    console.log("results:", event.results, "final:", event.isFinal);
-  },
-);
+const resultListener = addSpeechRecognitionListener("result", (event) => {
+  // Note: this is not the same as the `result` event listener on the web speech API
+  // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
+  console.log("results:", event.results, "final:", event.isFinal);
+});
 
-ExpoSpeechRecognitionModuleEmitter.addListener(
-  "error",
-  (event: ExpoSpeechRecognitionNativeEventMap["error"]) => {
-    console.log("error code:", event.error, "error messsage:", event.message);
-  },
-);
+const errorListener = addSpeechRecognitionListener("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
 
 // Start speech recognition
 ExpoSpeechRecognitionModule.start({
