@@ -370,15 +370,31 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
       this: SpeechRecognition,
       ev: SpeechRecognitionEventMap[K],
     ) => any,
+    options?: boolean | AddEventListenerOptions,
   ): void {
+    const once = typeof options === "object" && options.once;
+
+    // If the user opts in to only listening once,
+    // wrap the listener in a function that removes the listener
+    const wrappedListener = once
+      ? (((ev) => {
+          listener.call(this, ev);
+          // remove the listeners from the map
+          this.#subscriptionMap.get(listener)?.forEach((sub) => {
+            sub.remove();
+          });
+          this.#subscriptionMap.delete(listener);
+        }) as SpeechListener<K>)
+      : listener;
+
     // Enhance the native listener with any necessary polyfills
     const enhancedEvents: NativeEventAndListener<K>[] = WebListenerTransformers[
       type
-    ]?.(this, listener) ?? [
+    ]?.(this, wrappedListener) ?? [
       stubEvent(
         type,
         this,
-        listener as (this: SpeechRecognition, ev: Event) => unknown,
+        wrappedListener as (this: SpeechRecognition, ev: Event) => unknown,
       ),
     ];
 
