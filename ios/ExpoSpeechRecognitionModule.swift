@@ -299,7 +299,9 @@ public class ExpoSpeechRecognitionModule: Module {
 
   /** Normalizes the locale for compatibility between Android and iOS */
   func resolveLocale(localeIdentifier: String) -> Locale? {
-    let normalizedIdentifier = localeIdentifier.replacingOccurrences(of: "-", with: "_")
+    // The supportedLocales() method returns the locales in the format with dashes, e.g. "en-US"
+    // However, we shouldn't mind if the user passes in the locale with underscores, e.g. "en_US"
+    let normalizedIdentifier = localeIdentifier.replacingOccurrences(of: "_", with: "-")
     let localesToCheck = [localeIdentifier, normalizedIdentifier]
     let supportedLocales = SFSpeechRecognizer.supportedLocales()
 

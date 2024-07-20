@@ -486,15 +486,9 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
 
   constructor(results: ExpoSpeechRecognitionResult[]) {
     this.#results = results;
-
-    return new Proxy(this, {
-      get(target, prop) {
-        if (typeof prop === "string" && !isNaN(Number(prop))) {
-          return target.item(Number(prop));
-        }
-        return (target as any)[prop];
-      },
-    });
+    for (let i = 0; i < this.#results.length; i++) {
+      this[i] = this.#results[i];
+    }
   }
 }
 
@@ -503,9 +497,7 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/isFinal) */
   readonly isFinal: boolean;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/length) */
-  get length(): number {
-    return this.#alternatives.length;
-  }
+  length = this.#alternatives.length;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/item) */
   item(index: number): SpeechRecognitionAlternative {
     return this.#alternatives[index];
@@ -521,15 +513,9 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
   ) {
     this.isFinal = isFinal;
     this.#alternatives = alternatives;
-
-    return new Proxy(this, {
-      get(target, prop) {
-        if (typeof prop === "string" && !isNaN(Number(prop))) {
-          return target.item(Number(prop));
-        }
-        return (target as any)[prop];
-      },
-    });
+    for (let i = 0; i < alternatives.length; i++) {
+      this[i] = alternatives[i];
+    }
   }
 }
 
