@@ -12,12 +12,6 @@ export {
   ExpoWebSpeechGrammarList,
 } from "./ExpoWebSpeechRecognition";
 
-// Hooks and helpers
-export {
-  createWebSpeechRecognizer,
-  useWebSpeechRecognitionEvent,
-} from "./createWebSpeechRecognizer";
-
 // Native module
 export {
   ExpoSpeechRecognitionModule,
