@@ -1,7 +1,7 @@
 {
   "name": "@jamsch/expo-speech-recognition",
   "version": "0.1.5",
-  "description": "Web SpeechRecognition implementation for React Native Expo projects",
+  "description": "Speech Recognition for React Native Expo projects",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {

@@ -235,10 +235,31 @@ public class ExpoSpeechRecognitionModule: Module {
         .filter { categoryOptions.contains($0.option) }
         .map { $0.string }
 
+      let categoryMapping: [AVAudioSession.Category: String] = [
+        .ambient: "ambient",
+        .playback: "playback",
+        .record: "record",
+        .playAndRecord: "playAndRecord",
+        .multiRoute: "multiRoute",
+        .soloAmbient: "soloAmbient",
+      ]
+
+      let modeMapping: [AVAudioSession.Mode: String] = [
+        .default: "default",
+        .gameChat: "gameChat",
+        .measurement: "measurement",
+        .moviePlayback: "moviePlayback",
+        .spokenAudio: "spokenAudio",
+        .videoChat: "videoChat",
+        .videoRecording: "videoRecording",
+        .voiceChat: "voiceChat",
+        .voicePrompt: "voicePrompt",
+      ]
+
       return [
-        "category": instance.category.rawValue,
+        "category": categoryMapping[instance.category] ?? instance.category.rawValue,
         "categoryOptions": categoryOptionsStrings,
-        "mode": instance.mode.rawValue,
+        "mode": modeMapping[instance.mode] ?? instance.mode.rawValue,
       ]
     }
 
@@ -280,9 +301,10 @@ public class ExpoSpeechRecognitionModule: Module {
   func resolveLocale(localeIdentifier: String) -> Locale? {
     let normalizedIdentifier = localeIdentifier.replacingOccurrences(of: "-", with: "_")
     let localesToCheck = [localeIdentifier, normalizedIdentifier]
+    let supportedLocales = SFSpeechRecognizer.supportedLocales()
 
     for identifier in localesToCheck {
-      if SFSpeechRecognizer.supportedLocales().contains(where: { $0.identifier == identifier }) {
+      if supportedLocales.contains(where: { $0.identifier == identifier }) {
         return Locale(identifier: identifier)
       }
     }
@@ -347,7 +369,7 @@ public class ExpoSpeechRecognitionModule: Module {
     if let recognitionError = error as? RecognizerError {
       switch recognitionError {
       case .nilRecognizer:
-        sendEvent("error", ["code": "audio-capture", "message": recognitionError.message])
+        sendEvent("error", ["code": "language-not-supported", "message": recognitionError.message])
       case .notAuthorizedToRecognize:
         sendEvent("error", ["code": "not-allowed", "message": recognitionError.message])
       case .notPermittedToRecord:

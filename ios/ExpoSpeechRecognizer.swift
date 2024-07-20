@@ -11,7 +11,8 @@ enum RecognizerError: Error {
 
   var message: String {
     switch self {
-    case .nilRecognizer: return "Can't initialize speech recognizer"
+    case .nilRecognizer:
+      return "Can't initialize speech recognizer. Ensure the locale is supported by the device."
     case .notAuthorizedToRecognize: return "Not authorized to recognize speech"
     case .notPermittedToRecord: return "Not permitted to record audio"
     case .recognizerIsUnavailable: return "Recognizer is unavailable"
