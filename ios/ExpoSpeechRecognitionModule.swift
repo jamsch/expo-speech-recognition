@@ -344,6 +344,24 @@ public class ExpoSpeechRecognitionModule: Module {
   }
 
   func handleRecognitionError(_ error: Error) {
+    if let recognitionError = error as? RecognizerError {
+      switch recognitionError {
+      case .nilRecognizer:
+        sendEvent("error", ["code": "audio-capture", "message": recognitionError.message])
+      case .notAuthorizedToRecognize:
+        sendEvent("error", ["code": "not-allowed", "message": recognitionError.message])
+      case .notPermittedToRecord:
+        sendEvent("error", ["code": "not-allowed", "message": recognitionError.message])
+      case .recognizerIsUnavailable:
+        sendEvent("error", ["code": "service-not-allowed", "message": recognitionError.message])
+      case .invalidAudioSource:
+        sendEvent("error", ["code": "audio-capture", "message": recognitionError.message])
+      }
+      return
+    }
+
+    // Other errors thrown by SFSpeechRecognizer / SFSpeechRecognitionTask
+
     /*
      Error Code | Error Domain | Description
      102 | kLSRErrorDomain | Assets are not installed.
@@ -365,7 +383,7 @@ public class ExpoSpeechRecognitionModule: Module {
         [102, 201], "service-not-allowed",
         "Assets are not installed, Siri or Dictation is disabled."
       ),
-      ([203], "recognition-error", "Failure occurred during speech recognition."),
+      ([203], "audio-capture", "Failure occurred during speech recognition."),
       ([1100], "busy", "Trying to start recognition while an earlier instance is still active."),
       ([1101, 1107], "network", "Connection to speech process was invalidated or interrupted."),
       ([1110], "no-speech", "No speech was detected."),
@@ -381,7 +399,7 @@ public class ExpoSpeechRecognitionModule: Module {
 
     // Unknown error (but not a canceled request)
     if errorCode != 301 {
-      sendEvent("error", ["code": "ios_\(errorCode)", "message": error.localizedDescription])
+      sendEvent("error", ["code": "audio-capture", "message": error.localizedDescription])
     }
   }
 }

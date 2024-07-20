@@ -2,25 +2,26 @@ import AVFoundation
 import Foundation
 import Speech
 
-/// A helper for transcribing speech to text using SFSpeechRecognizer and AVAudioEngine.
-actor ExpoSpeechRecognizer: ObservableObject {
-  enum RecognizerError: Error {
-    case nilRecognizer
-    case notAuthorizedToRecognize
-    case notPermittedToRecord
-    case recognizerIsUnavailable
-    case invalidAudioSource
+enum RecognizerError: Error {
+  case nilRecognizer
+  case notAuthorizedToRecognize
+  case notPermittedToRecord
+  case recognizerIsUnavailable
+  case invalidAudioSource
 
-    var message: String {
-      switch self {
-      case .nilRecognizer: return "Can't initialize speech recognizer"
-      case .notAuthorizedToRecognize: return "Not authorized to recognize speech"
-      case .notPermittedToRecord: return "Not permitted to record audio"
-      case .recognizerIsUnavailable: return "Recognizer is unavailable"
-      case .invalidAudioSource: return "Invalid audio source"
-      }
+  var message: String {
+    switch self {
+    case .nilRecognizer: return "Can't initialize speech recognizer"
+    case .notAuthorizedToRecognize: return "Not authorized to recognize speech"
+    case .notPermittedToRecord: return "Not permitted to record audio"
+    case .recognizerIsUnavailable: return "Recognizer is unavailable"
+    case .invalidAudioSource: return "Invalid audio source"
     }
   }
+}
+
+/// A helper for transcribing speech to text using SFSpeechRecognizer and AVAudioEngine.
+actor ExpoSpeechRecognizer: ObservableObject {
 
   private var options: SpeechRecognitionOptions?
   private var audioEngine: AVAudioEngine?

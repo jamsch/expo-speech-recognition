@@ -48,8 +48,15 @@ export type ExpoSpeechRecognitionNativeEventMap = {
     }[];
   };
   error: {
-    // `ios_${number}` refers to custom iOS error codes (e.g. 201 = kLSRErrorDomain, "Siri or Dictation is disabled".)
-    code: SpeechRecognitionErrorCode | `ios_${number}`;
+    code:
+      | "aborted"
+      | "audio-capture"
+      | "bad-grammar"
+      | "language-not-supported"
+      | "network"
+      | "no-speech"
+      | "not-allowed"
+      | "service-not-allowed";
     message: string;
   };
   start: null;
