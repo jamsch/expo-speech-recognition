@@ -91,9 +91,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  @MainActor func stop() {
+  @MainActor func stop(_ andEmitEnd: Bool = false) {
     Task {
-      await reset(andEmitEnd: true)
+      await reset(andEmitEnd: andEmitEnd)
     }
   }
 
@@ -161,7 +161,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
         // Feature: file recording
         if options.recordingOptions?.persist == true {
           let (audio, outputUrl) = prepareFileWriter(
-            outputFilePath: options.recordingOptions?.outputFilePath,
+            outputDirectory: options.recordingOptions?.outputDirectory,
+            outputFileName: options.recordingOptions?.outputFileName,
             audioEngine: audioEngine!
           )
           self.file = audio
@@ -213,13 +214,15 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  private func prepareFileWriter(outputFilePath: String?, audioEngine: AVAudioEngine) -> (
-    AVAudioFile?, URL?
-  ) {
+  private func prepareFileWriter(
+    outputDirectory: String?,
+    outputFileName: String?,
+    audioEngine: AVAudioEngine
+  ) -> (AVAudioFile?, URL?) {
     let baseDir: URL
 
-    if let outputFilePath = outputFilePath {
-      baseDir = URL(fileURLWithPath: outputFilePath)
+    if let outputDirectory = outputDirectory {
+      baseDir = URL(fileURLWithPath: outputDirectory, isDirectory: true)
     } else {
       guard let dirPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       else {
@@ -229,8 +232,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
       baseDir = dirPath
     }
 
-    let filePath = baseDir.appendingPathComponent("recording_\(UUID().uuidString)")
-      .appendingPathExtension("caf")
+    let fileName = outputFileName ?? "recording_\(UUID().uuidString).caf"
+    let filePath = baseDir.appendingPathComponent(fileName)
 
     do {
       // Ensure settings are compatible with the input format

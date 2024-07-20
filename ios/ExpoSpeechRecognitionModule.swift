@@ -254,7 +254,7 @@ public class ExpoSpeechRecognitionModule: Module {
 
     Function("stop") {
       Task {
-        await speechRecognizer?.stop()
+        await speechRecognizer?.stop(true)
       }
     }
 

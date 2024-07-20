@@ -57,7 +57,10 @@ struct RecordingOptions: Record {
   var persist: Bool = false
 
   @Field
-  var outputFilePath: String? = nil
+  var outputDirectory: String? = nil
+
+  @Field
+  var outputFileName: String? = nil
 }
 
 struct AudioSourceOptions: Record {

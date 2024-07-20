@@ -195,9 +195,13 @@ export type RecordingOptions = {
    */
   persist: boolean;
   /**
-   * This changes the default storage location for the audio file.
+   * Default: `FileSystem.CacheDirectory`. This changes the default storage location for the audio file.
    */
-  outputFilePath?: string;
+  outputDirectory?: string;
+  /**
+   * Default: `"recording_${timestamp|uuid}.[wav|caf]"`. This changes the file name for the audio file.
+   */
+  outputFileName?: string;
 };
 
 export type AudioSourceOptions = {

@@ -235,10 +235,18 @@ class ExpoSpeechService
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 options.audioSource == null
             ) {
+                // Normalize the file directory
+                val fileDirectory =
+                    (options.recordingOptions.outputDirectory ?: reactContext.cacheDir.absolutePath)
+                        .removePrefix("file://")
+                        .trimEnd('/')
+
                 val filePath =
-                    options.recordingOptions.outputFilePath ?: run {
+                    options.recordingOptions.outputFileName?.let { fileName ->
+                        "$fileDirectory/$fileName"
+                    } ?: run {
                         val timestamp = System.currentTimeMillis().toString()
-                        "${reactContext.cacheDir.absolutePath}/recording_$timestamp.wav"
+                        "$fileDirectory/recording_$timestamp.wav"
                     }
 
                 audioRecorder =

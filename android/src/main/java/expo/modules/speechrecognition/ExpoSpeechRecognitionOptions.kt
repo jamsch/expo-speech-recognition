@@ -57,7 +57,10 @@ class RecordingOptions : Record {
     val persist: Boolean = false
 
     @Field
-    val outputFilePath: String? = null
+    val outputDirectory: String? = null
+
+    @Field
+    val outputFileName: String? = null
 }
 
 class AudioSourceOptions : Record {

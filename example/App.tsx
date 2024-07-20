@@ -696,6 +696,8 @@ function OtherSettings(props: {
           handleChange("recordingOptions", {
             ...(settings.recordingOptions ?? {}),
             persist: !settings.recordingOptions?.persist,
+            outputDirectory: FileSystem.documentDirectory ?? undefined,
+            outputFileName: "recording.wav",
           })
         }
       />

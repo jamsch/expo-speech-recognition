@@ -126,6 +126,87 @@ ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
 
 If you don't use `requestPermissionsAsync`, the user will be prompted to grant permissions when starting speech recognition. If the user denies permissions, the module will emit an `error` event with the `code` set to `not-allowed`.
 
+### Direct module API
+
+You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly. The listener events are similar to the Web Speech API.
+
+```ts
+import {
+  ExpoSpeechRecognitionModule,
+  addSpeechRecognitionListener,
+} from "@jamsch/expo-speech-recognition";
+
+// Register event listeners
+const startListener = addSpeechRecognitionListener("start", () =>
+  console.log("Speech recognition started"),
+);
+
+// and remove the listener when you're done:
+startListener.remove();
+
+const endListener = addSpeechRecognitionListener("end", () => {
+  console.log("Speech recognition ended");
+});
+
+const resultListener = addSpeechRecognitionListener("result", (event) => {
+  // Note: this is not the same as the `result` event listener on the web speech API
+  // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
+  console.log("results:", event.results, "final:", event.isFinal);
+});
+
+const errorListener = addSpeechRecognitionListener("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+// Start speech recognition
+ExpoSpeechRecognitionModule.start({
+  lang: "en-US",
+  // Whether to return results as they become available without waiting for the final result.
+  interimResults: true,
+  // The maximum number of alternative transcriptions to return.
+  maxAlternatives: 1,
+  // Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds
+  continuous: true,
+  // [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
+  requiresOnDeviceRecognition: false,
+  // [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
+  addsPunctuation: false,
+  // [Default: undefined] Short custom phrases that are unique to your app.
+  contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+  // [Default: undefined] Recording options for Android & iOS
+  // For Android, this is only supported on Android 13 and above.
+  recordingOptions: {
+    // [Default: false] Whether to persist the audio to a local file path.
+    persist: false,
+    // [Default: FileSystem.CacheDirectory]
+    // Changes the default storage location for the audio file.
+    // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
+    outputDirectory: undefined,
+    // [Default: `"recording_${timestamp|uuid}.[wav|caf]"`]
+    // Changes the file name for the audio file.
+    outputFileName: "recording.wav",
+  }
+  // [Default: undefined] Android-specific options to pass to the recognizer.
+  androidIntentOptions: {
+    EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
+    EXTRA_MASK_OFFENSIVE_WORDS: false,
+  },
+  // [Default: undefined] The package name of the speech recognition service to use.
+  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
+  // [Default: unspecified] The type of speech recognition being performed.
+  iosTaskHint: "unspecified", // "unspecified" | "dictation" | "search" | "confirmation"
+  // [Default: undefined] The audio session category and options to use.
+  iosCategory: {
+    category: "playAndRecord",
+    categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
+    mode: "measurement",
+  },
+});
+
+// Stop speech recognition
+ExpoSpeechRecognitionModule.stop();
+```
+
 ### Using the Web SpeechRecognition API
 
 > Note: this is intended for projects that rely on third party libraries that use the Web Speech API. If you're using this library directly, you should use the Direct Module API instead.
@@ -150,17 +231,12 @@ recognition.continuous = true;
 
 // Custom (non-web) properties
 
-// Short custom phrases that are unique to your app
 recognition.contextualStrings = ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"];
-// [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
 recognition.requiresOnDeviceRecognition = true;
-// [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
 recognition.addsPunctuation = true;
-// [Default: undefined] Android-specific options to pass to the recognizer.
 recognition.androidIntentOptions = {
   EXTRA_LANGUAGE_MODEL: "quick_response",
 };
-// [Default: undefined] The package name of the speech recognition service to use.
 recognition.androidRecognitionServicePackage =
   "com.google.android.googlequicksearchbox";
 
@@ -201,178 +277,6 @@ recognition.start();
 recognition.stop();
 ```
 
-### Direct module API
-
-You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly (without web-based polyfills). Note that the listener events are not the same as the web API.
-
-```ts
-import {
-  ExpoSpeechRecognitionModule,
-  addSpeechRecognitionListener,
-} from "@jamsch/expo-speech-recognition";
-
-// Register event listeners
-const startListener = addSpeechRecognitionListener("start", () =>
-  console.log("Speech recognition started"),
-);
-
-// and remove the listener when you're done:
-startListener.remove();
-
-const endListener = addSpeechRecognitionListener("end", () => {
-  console.log("Speech recognition ended");
-});
-
-const resultListener = addSpeechRecognitionListener("result", (event) => {
-  // Note: this is not the same as the `result` event listener on the web speech API
-  // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
-  console.log("results:", event.results, "final:", event.isFinal);
-});
-
-const errorListener = addSpeechRecognitionListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
-});
-
-// Start speech recognition
-ExpoSpeechRecognitionModule.start({
-  lang: "en-US",
-  interimResults: true,
-  maxAlternatives: 1,
-  continuous: true,
-  requiresOnDeviceRecognition: false,
-  addsPunctuation: false,
-  contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
-  androidIntentOptions: {
-    EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
-    EXTRA_MASK_OFFENSIVE_WORDS: false,
-  },
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
-});
-
-// Stop speech recognition
-ExpoSpeechRecognitionModule.stop();
-```
-
-### API: `getSupportedLocales`
-
-Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
-
-```ts
-import { getSupportedLocales } from "@jamsch/expo-speech-recognition";
-
-getSupportedLocales({
-  /**
-   * The package name of the speech recognition service to use.
-   * If not provided, the default service will be used.
-   */
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
-  /** If true, will return the locales that are able to be used for on-device recognition. */
-  onDevice: false,
-}).then((supportedLocales) => {
-  console.log("Supported locales:", supportedLocales.locales.join(", "));
-  console.log(
-    "On-device locales:",
-    supportedLocales.installedLocales.join(", "),
-  );
-});
-```
-
-### API: `getSpeechRecognitionServices` (Android only)
-
-Get list of speech recognition services available on the device.
-
-> Note: this only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
-
-```ts
-import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
-
-const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
-console.log("Speech recognition services:", packages.join(", "));
-// e.g. ["com.google.android.tts", "com.samsung.android.bixby.agent"]
-```
-
-### API: `supportsOnDeviceRecognition()`
-
-Whether on-device speech recognition is available on the device.
-
-```ts
-import { supportsOnDeviceRecognition } from "@jamsch/expo-speech-recognition";
-
-const available = supportsOnDeviceRecognition();
-console.log("OnDevice recognition available:", available);
-```
-
-### API `supportsRecording()`
-
-Whether audio recording is supported during speech recognition. This mostly applies to Android devices, to check if it's greater than Android 13.
-
-```ts
-import { supportsRecording } from "@jamsch/expo-speech-recognition";
-
-const available = supportsRecording();
-console.log("Recording available:", available);
-```
-
-### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<boolean>`
-
-Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
-
-You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
-
-To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
-
-```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
-
-// Download the offline model for the specified locale
-ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
-  locale: "en-US",
-})
-  .then(() => {
-    console.log("Offline model downloaded successfully!");
-  })
-  .catch((err) => {
-    console.log("Failed to download offline model!", err.message);
-  });
-```
-
-The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
-
-![On Device Recognition](./images/on-device-recognition.jpg)
-
-### API: `setCategoryIOS({...})` (iOS only)
-
-This function is an implementation of [AVAudioSession.setCategory](https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory) for iOS. For multimedia applications, you may want to set the audio session category and mode to control the audio routing.
-
-> Note: when starting speech recognition, audio session category is changed to `playAndRecord` with option `defaultToSpeaker` and `allowBluetooth` and mode `measurement`. You can instead configure the audio session category and mode by passing the `iosCategory` option to the `start` function.
-
-```ts
-import {
-  setCategoryIOS,
-  AVAudioSessionCategory,
-  AVAudioSessionCategoryOptions,
-  AVAudioSessionMode,
-} from "@jamsch/expo-speech-recognition";
-
-setCategoryIOS({
-  category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
-  categoryOptions: [AVAudioSessionCategoryOptions.defaultToSpeaker],
-  mode: AVAudioSessionMode.measurement,
-});
-```
-
-### API: `getAudioSessionCategoryAndOptionsIOS()` (iOS only)
-
-Returns the current audio session category and options. For advanced use cases, you may want to use this function to safely configure the audio session category and mode.
-
-```ts
-import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recognition";
-
-const values = getAudioSessionCategoryAndOptionsIOS();
-console.log(values);
-// { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
-```
-
 ## Persisting Audio Recordings
 
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
@@ -401,7 +305,10 @@ function RecordAudio() {
         persist: true,
         // Optional: Specify the output file path to save the recording to
         // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
-        outputFilePath: "/path/to/save/recording.wav",
+        outputDirectory:
+          "/data/user/0/expo.modules.speechrecognition.example/files",
+        // Optional: Specify the output file name to save the recording to
+        outputFileName: "recording.wav",
       },
     });
   };
@@ -485,4 +392,126 @@ function TranscribeAudioFile() {
     </View>
   );
 }
+```
+
+## APIs
+
+### API: `getSupportedLocales`
+
+Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
+
+```ts
+import { getSupportedLocales } from "@jamsch/expo-speech-recognition";
+
+getSupportedLocales({
+  /**
+   * The package name of the speech recognition service to use.
+   * If not provided, the default service will be used.
+   */
+  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
+  /** If true, will return the locales that are able to be used for on-device recognition. */
+  onDevice: false,
+}).then((supportedLocales) => {
+  console.log("Supported locales:", supportedLocales.locales.join(", "));
+  console.log(
+    "On-device locales:",
+    supportedLocales.installedLocales.join(", "),
+  );
+});
+```
+
+### API: `getSpeechRecognitionServices` (Android only)
+
+Get list of speech recognition services available on the device.
+
+> Note: this only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
+
+```ts
+import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
+
+const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
+console.log("Speech recognition services:", packages.join(", "));
+// e.g. ["com.google.android.tts", "com.samsung.android.bixby.agent"]
+```
+
+### API: `supportsOnDeviceRecognition()`
+
+Whether on-device speech recognition is available on the device.
+
+```ts
+import { supportsOnDeviceRecognition } from "@jamsch/expo-speech-recognition";
+
+const available = supportsOnDeviceRecognition();
+console.log("OnDevice recognition available:", available);
+```
+
+### API `supportsRecording()`
+
+Whether audio recording is supported during speech recognition. This mostly applies to Android devices, to check if it's at least Android 13.
+
+```ts
+import { supportsRecording } from "@jamsch/expo-speech-recognition";
+
+const available = supportsRecording();
+console.log("Recording available:", available);
+```
+
+### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<boolean>`
+
+Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
+
+You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
+
+To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
+
+```ts
+import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+
+// Download the offline model for the specified locale
+ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
+  locale: "en-US",
+})
+  .then(() => {
+    console.log("Offline model downloaded successfully!");
+  })
+  .catch((err) => {
+    console.log("Failed to download offline model!", err.message);
+  });
+```
+
+The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
+
+![On Device Recognition](./images/on-device-recognition.jpg)
+
+### API: `setCategoryIOS({...})` (iOS only)
+
+This function is an implementation of [AVAudioSession.setCategory](https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory) for iOS. For multimedia applications, you may want to set the audio session category and mode to control the audio routing.
+
+> Note: when starting speech recognition, audio session category is changed to `playAndRecord` with option `defaultToSpeaker` and `allowBluetooth` and mode `measurement`. You can instead configure the audio session category and mode by passing the `iosCategory` option to the `start` function.
+
+```ts
+import {
+  setCategoryIOS,
+  AVAudioSessionCategory,
+  AVAudioSessionCategoryOptions,
+  AVAudioSessionMode,
+} from "@jamsch/expo-speech-recognition";
+
+setCategoryIOS({
+  category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
+  categoryOptions: [AVAudioSessionCategoryOptions.defaultToSpeaker],
+  mode: AVAudioSessionMode.measurement,
+});
+```
+
+### API: `getAudioSessionCategoryAndOptionsIOS()` (iOS only)
+
+Returns the current audio session category and options. For advanced use cases, you may want to use this function to safely configure the audio session category and mode.
+
+```ts
+import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recognition";
+
+const values = getAudioSessionCategoryAndOptionsIOS();
+console.log(values);
+// { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
 ```
