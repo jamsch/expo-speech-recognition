@@ -27,8 +27,9 @@ import {
   SetCategoryOptions,
   AVAudioSessionMode,
   type AVAudioSessionModeValue,
+  ExpoWebSpeechRecognition,
 } from "expo-speech-recognition";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   OptionButton,
   CheckboxButton,
@@ -660,6 +661,7 @@ function OtherSettings(props: {
       <View style={[styles.row, styles.gap1, styles.flexWrap]}>
         <BigButton
           title="Get permissions"
+          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
               Alert.alert("Get Permissions result", JSON.stringify(result));
@@ -668,6 +670,7 @@ function OtherSettings(props: {
         />
         <BigButton
           title="Request permissions"
+          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.requestPermissionsAsync().then(
               (result) => {
@@ -681,6 +684,7 @@ function OtherSettings(props: {
         />
         <BigButton
           title="Get speech recognizer state"
+          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
               console.log("Current state:", state);
@@ -725,6 +729,8 @@ function OtherSettings(props: {
           )}
         </View>
       ) : null}
+
+      <WebSpeechAPIDemo />
 
       <TranscribeLocalAudioFile />
 
@@ -848,6 +854,96 @@ function AudioPlayer(props: { source: string }) {
   return <Button title="Play back recording" onPress={handlePlay} />;
 }
 
+function WebSpeechAPIDemo() {
+  const [error, setError] = useState<{ code: string; message: string } | null>(
+    null,
+  );
+  const [listening, setListening] = useState(false);
+  const [transcription, setTranscription] = useState<null | {
+    isFinal: boolean;
+    transcript: string;
+  }>(null);
+
+  const reconizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
+
+  useEffect(() => {
+    if (!listening) {
+      return;
+    }
+    const handleResult = (ev: SpeechRecognitionEventMap["result"]) => {
+      console.log("[WebSpeechAPIDemo] result", ev.results);
+      setTranscription({
+        isFinal: ev.results[ev.resultIndex]?.isFinal,
+        transcript: ev.results[ev.resultIndex].item(0)?.transcript,
+      });
+    };
+
+    const handleError = (ev: SpeechRecognitionEventMap["error"]) => {
+      console.log("error code:", ev.error, "error messsage:", ev.message);
+      setError({
+        code: ev.error,
+        message: ev.message,
+      });
+    };
+
+    const handleEnd = () => {
+      setListening(false);
+    };
+
+    reconizer.addEventListener("result", handleResult);
+    reconizer.addEventListener("error", handleError);
+    reconizer.addEventListener("end", handleEnd);
+
+    return () => {
+      reconizer.removeEventListener("result", handleResult);
+      reconizer.removeEventListener("error", handleError);
+      reconizer.removeEventListener("end", handleEnd);
+    };
+  }, [listening]);
+
+  const startListeningWeb = () => {
+    setListening(true);
+    setTranscription(null);
+    setError(null);
+    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
+      console.log("Permissions", result);
+      if (!result.granted) {
+        console.log("Permissions not granted", result);
+        return;
+      }
+      reconizer.lang = "en-US";
+      reconizer.continuous = true;
+      reconizer.interimResults = true;
+      reconizer.start();
+    });
+  };
+
+  return (
+    <View style={styles.card}>
+      {!listening ? (
+        <BigButton
+          color="#53917E"
+          title="Start Recognition (Web Speech API)"
+          onPress={startListeningWeb}
+        />
+      ) : (
+        <BigButton
+          color="#B1B695"
+          title="Stop Recognition"
+          onPress={() => reconizer.stop()}
+        />
+      )}
+
+      <Text style={styles.text}>Errors: {JSON.stringify(error)}</Text>
+
+      <ScrollView>
+        <Text style={styles.text}>
+          {transcription?.transcript || "Transcripts goes here"}
+        </Text>
+      </ScrollView>
+    </View>
+  );
+}
 const styles = StyleSheet.create({
   container: {
     flex: 1,

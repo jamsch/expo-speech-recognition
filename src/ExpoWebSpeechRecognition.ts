@@ -476,9 +476,7 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
   [Symbol.iterator](): IterableIterator<ExpoSpeechRecognitionResult> {
     return this.#results[Symbol.iterator]();
   }
-  get length(): number {
-    return this.#results.length;
-  }
+  length: number;
   item(index: number): SpeechRecognitionResult {
     return this.#results[index];
   }
@@ -486,6 +484,7 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
 
   constructor(results: ExpoSpeechRecognitionResult[]) {
     this.#results = results;
+    this.length = results.length;
     for (let i = 0; i < this.#results.length; i++) {
       this[i] = this.#results[i];
     }
@@ -497,7 +496,7 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/isFinal) */
   readonly isFinal: boolean;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/length) */
-  length = this.#alternatives.length;
+  length: number;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/item) */
   item(index: number): SpeechRecognitionAlternative {
     return this.#alternatives[index];
@@ -512,6 +511,7 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
     alternatives: ExpoSpeechRecognitionAlternative[],
   ) {
     this.isFinal = isFinal;
+    this.length = alternatives.length;
     this.#alternatives = alternatives;
     for (let i = 0; i < alternatives.length; i++) {
       this[i] = alternatives[i];
