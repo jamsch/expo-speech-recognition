@@ -43,9 +43,9 @@ public class ExpoSpeechRecognitionModule: Module {
     Name("ExpoSpeechRecognition")
 
     OnDestroy {
-      // Stop the speech recognizer
+      // Cancel any running speech recognizers
       Task {
-        await speechRecognizer?.stop()
+        await speechRecognizer?.abort()
       }
     }
 
@@ -272,7 +272,13 @@ public class ExpoSpeechRecognitionModule: Module {
 
     Function("stop") {
       Task {
-        await speechRecognizer?.stop(true)
+        await speechRecognizer?.stop()
+      }
+    }
+
+    Function("abort") {
+      Task {
+        await speechRecognizer?.abort()
       }
     }
 

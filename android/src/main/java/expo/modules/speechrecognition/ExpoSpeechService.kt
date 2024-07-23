@@ -45,8 +45,7 @@ enum class SoundState {
     SILENT,
 }
 
-class ExpoSpeechService
-    private constructor(
+class ExpoSpeechService(
         private val reactContext: Context,
         private val sendEvent: (name: String, body: Map<String, Any?>?) -> Unit,
     ) : RecognitionListener {
@@ -56,22 +55,7 @@ class ExpoSpeechService
         private var soundState = SoundState.INACTIVE
         private var lastTimeSoundDetected = 0L
 
-        companion object {
-            @Volatile
-            private var instance: WeakReference<ExpoSpeechService>? = null
-
-            var recognitionState = RecognitionState.INACTIVE
-
-            fun getInstance(
-                reactContext: Context,
-                sendEventFunction: (name: String, body: Map<String, Any?>?) -> Unit,
-            ): ExpoSpeechService =
-                instance?.get() ?: synchronized(this) {
-                    instance?.get() ?: ExpoSpeechService(reactContext, sendEventFunction).also {
-                        instance = WeakReference(it)
-                    }
-                }
-        }
+        var recognitionState = RecognitionState.INACTIVE
 
         @SuppressLint("QueryPermissionsNeeded")
         private fun findComponentNameByPackageName(packageName: String): ComponentName {
@@ -153,7 +137,7 @@ class ExpoSpeechService
 
                     log("Failed to create Speech Recognizer with error: $errorMessage")
                     sendEvent("error", mapOf("code" to "audio-capture", "message" to errorMessage))
-                    stop()
+                    teardownAndEnd()
                 }
             }
         }
@@ -182,7 +166,28 @@ class ExpoSpeechService
             audioRecorder = null
         }
 
+        /**
+        * Stops the speech recognizer.
+        * Attempts to emit a final result if the speech recognizer is still running.
+        */
         fun stop() {
+            recognitionState = RecognitionState.STOPPING
+            try {
+                speech?.stopListening()
+            } catch (e: Exception) {
+                // do nothing
+            }
+            stopRecording()
+            // Wait for the onResults() / onError() handlers to be called
+            // This is to ensure that the final result is emitted and the end event is sent
+        }
+
+        /**
+         * Immediately cancels the current speech recognition task.
+         * This is different from `stop` in that the recognition task is immediately cancelled and no
+         * final result is emitted.
+         */
+        fun abort() {
             teardownAndEnd()
         }
 
@@ -193,7 +198,7 @@ class ExpoSpeechService
             recognitionState = RecognitionState.STOPPING
             mainHandler.post {
                 try {
-                    speech?.stopListening()
+                    speech?.cancel()
                 } catch (e: Exception) {
                     // do nothing
                 }

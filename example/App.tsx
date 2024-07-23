@@ -165,11 +165,18 @@ export default function App() {
         {status === "idle" ? (
           <BigButton title="Start Recognition" onPress={startListening} />
         ) : (
-          <BigButton
-            title="Stop Recognition"
-            disabled={status !== "recognizing"}
-            onPress={stopListening}
-          />
+          <View style={[styles.row, styles.gap1]}>
+            <BigButton
+              title="Stop"
+              disabled={status !== "recognizing"}
+              onPress={stopListening}
+            />
+            <BigButton
+              title="Abort"
+              disabled={status !== "recognizing"}
+              onPress={() => ExpoSpeechRecognitionModule.abort()}
+            />
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -927,11 +934,18 @@ function WebSpeechAPIDemo() {
           onPress={startListeningWeb}
         />
       ) : (
-        <BigButton
-          color="#B1B695"
-          title="Stop Recognition"
-          onPress={() => reconizer.stop()}
-        />
+        <View style={[styles.row, styles.gap1]}>
+          <BigButton
+            color="#B1B695"
+            title="Stop Recognition"
+            onPress={() => reconizer.stop()}
+          />
+          <BigButton
+            color="#B1B695"
+            title="Abort Recognition"
+            onPress={() => reconizer.abort()}
+          />
+        </View>
       )}
 
       <Text style={styles.text}>Errors: {JSON.stringify(error)}</Text>

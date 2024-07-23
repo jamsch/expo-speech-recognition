@@ -32,6 +32,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private var speechStartHandler: (() -> Void)?
   private var file: AVAudioFile?
   private var outputFileUrl: URL?
+  /// Whether the recognizer has been stopped by the user or the timer has timed out
+  private var stoppedListening = false
 
   /// Detection timer, for non-continuous speech recognition
   @MainActor var detectionTimer: Timer?
@@ -93,9 +95,28 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  @MainActor func stop(_ andEmitEnd: Bool = false) {
+  /// Stops the speech recognizer.
+  /// Attempts to emit a final result if the speech recognizer is still running.
+  @MainActor func stop() {
     Task {
-      await reset(andEmitEnd: andEmitEnd)
+      let taskState = await task?.state
+      // Check if the recognizer is running
+      // If it is, then just run the stopListening function
+      if taskState == .running || taskState == .starting {
+        await stopListening()
+      } else {
+        // Task isn't likely running, just reset and emit an end event
+        await reset(andEmitEnd: true)
+      }
+    }
+  }
+
+  /// Cancels the current speech recognition task.
+  /// This is different from `stop` in that the recognition task is immediately cancelled and no
+  /// final result is emitted.
+  @MainActor func abort() {
+    Task {
+      await reset(andEmitEnd: true)
     }
   }
 
@@ -270,15 +291,30 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  /// Reset the speech recognizer.
-  private func reset(andEmitEnd: Bool = false) {
-    let taskWasRunning = task != nil
-
-    task?.cancel()
-    // End the audio buffer request (for non-file-based recognition)
+  private func stopListening() {
+    // Prevent double entry
+    // e.g. when the user presses the stop button twice
+    // or timer timeout + user interaction
+    if stoppedListening {
+      return
+    }
+    stoppedListening = true
+    audioEngine?.stop()
+    audioEngine?.inputNode.removeTap(onBus: 0)
+    audioEngine = nil
     if let request = request as? SFSpeechAudioBufferRecognitionRequest {
       request.endAudio()
     }
+    task?.finish()
+  }
+
+  /// Reset the speech recognizer.
+  private func reset(andEmitEnd: Bool = false) {
+    let taskWasRunning = task != nil
+    let shouldEmitEndEvent = andEmitEnd || taskWasRunning || stoppedListening
+
+    stoppedListening = false
+    task?.cancel()
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
     audioEngine = nil
@@ -293,7 +329,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     // Unless we really need to emit the end event
     // (e.g. in the case of a setup error)
     print("SpeechRecognizer: end")
-    if taskWasRunning || andEmitEnd {
+    if shouldEmitEndEvent {
       end()
     }
   }
@@ -458,9 +494,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
         repeats: false
       ) { [weak self] _ in
         Task { [weak self] in
-          // TODO: check if calling self?.request.endAudio() is preferable
-          // so we get final results
-          await self?.reset()
+          // Stop listening when the timer fires
+          // This will finish the current task and emit the final result (or a no-speech event)
+          await self?.stopListening()
+
         }
       }
     }

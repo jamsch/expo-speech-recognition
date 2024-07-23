@@ -38,6 +38,7 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     return Promise.resolve("inactive");
   },
   stop: () => _speechRecognitionRef?.stop(),
+  abort: () => _speechRecognitionRef?.abort(),
   requestPermissionsAsync: () => {
     return Promise.resolve({
       granted: true,

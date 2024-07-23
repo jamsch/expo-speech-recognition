@@ -203,8 +203,11 @@ ExpoSpeechRecognitionModule.start({
   },
 });
 
-// Stop speech recognition
+// Stop capturing audio (and emit a final result if there is one)
 ExpoSpeechRecognitionModule.stop();
+
+// Immediately cancel speech recognition (does not process the final result)
+ExpoSpeechRecognitionModule.abort();
 ```
 
 ### Using the Web SpeechRecognition API
@@ -275,6 +278,9 @@ recognition.start();
 
 // Stop speech recognition
 recognition.stop();
+
+// Immediately cancel speech recognition
+recognition.abort();
 ```
 
 ## Persisting Audio Recordings

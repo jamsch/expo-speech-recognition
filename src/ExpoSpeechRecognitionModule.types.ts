@@ -418,9 +418,13 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    */
   start(options: ExpoSpeechRecognitionOptions): void;
   /**
-   * Stops speech recognition.
+   * Stops speech recognition and attempts to return a final result (through the `result` event).
    */
   stop(): void;
+  /**
+   * Cancels speech recognition immediately without returning a final result.
+   */
+  abort(): void;
   /**
    * Presents a dialog to the user to request permissions for using speech recognition and the microphone.
    *

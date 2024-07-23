@@ -22,6 +22,12 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.Executors
 
 class ExpoSpeechRecognitionModule : Module() {
+
+    private val expoSpeechService = ExpoSpeechService(appContext.reactContext!!) { name, body ->
+        val nonNullBody = body ?: emptyMap()
+        sendEvent(name, nonNullBody)
+    }
+
     // Each module class must implement the definition function. The definition consists of components
     // that describes the module's functionality and behavior.
     // See https://docs.expo.dev/modules/module-api for more details about available components.
@@ -34,6 +40,10 @@ class ExpoSpeechRecognitionModule : Module() {
             // The module will be accessible from `requireNativeModule('ExpoSpeechRecognition')` in
             // JavaScript.
             Name("ExpoSpeechRecognition")
+
+            OnDestroy {
+                expoSpeechService.abort()
+            }
 
             // Defines event names that the module can send to JavaScript.
             Events(
@@ -108,7 +118,7 @@ class ExpoSpeechRecognitionModule : Module() {
 
             AsyncFunction("getStateAsync") { promise: Promise ->
                 val state =
-                    when (ExpoSpeechService.recognitionState) {
+                    when (expoSpeechService.recognitionState) {
                         RecognitionState.INACTIVE -> "inactive"
                         RecognitionState.STARTING -> "starting"
                         RecognitionState.ACTIVE -> "recognizing"
@@ -126,21 +136,15 @@ class ExpoSpeechRecognitionModule : Module() {
                     sendEvent("end")
                     return@Function
                 }
-                val service =
-                    ExpoSpeechService.getInstance(appContext.reactContext!!) { name, body ->
-                        val nonNullBody = body ?: emptyMap()
-                        sendEvent(name, nonNullBody)
-                    }
-                service.start(options)
+                expoSpeechService.start(options)
             }
 
             Function("stop") {
-                val service =
-                    ExpoSpeechService.getInstance(appContext.reactContext!!) { name, body ->
-                        val nonNullBody = body ?: emptyMap()
-                        sendEvent(name, nonNullBody)
-                    }
-                service.stop()
+                expoSpeechService.stop()
+            }
+
+            Function("abort") {
+                expoSpeechService.abort()
             }
 
             AsyncFunction("getSupportedLocales") { options: GetSupportedLocaleOptions, promise: Promise ->
@@ -156,11 +160,7 @@ class ExpoSpeechRecognitionModule : Module() {
             }
 
             Function("supportsRecording") {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    true
-                } else {
-                    false
-                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
             }
 
             // Not necessary for Android
