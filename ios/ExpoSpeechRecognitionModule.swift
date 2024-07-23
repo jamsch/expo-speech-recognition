@@ -123,9 +123,6 @@ public class ExpoSpeechRecognitionModule: Module {
     Function("start") { (options: SpeechRecognitionOptions) in
       Task {
         do {
-          // Stop transcribing, if necessary
-          await speechRecognizer?.stop()
-
           let currentLocale = await speechRecognizer?.getLocale()
 
           // Re-create the speech recognizer when locales change

@@ -128,6 +128,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     errorHandler: @escaping (Error) -> Void,
     speechStartHandler: @escaping () -> Void
   ) {
+    // Reset the speech recognizer before starting
+    reset(andEmitEnd: false)
+
     self.file = nil
     self.outputFileUrl = nil
     self.speechStartHandler = speechStartHandler
@@ -272,6 +275,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let taskWasRunning = task != nil
 
     task?.cancel()
+    // End the audio buffer request (for non-file-based recognition)
+    if let request = request as? SFSpeechAudioBufferRecognitionRequest {
+      request.endAudio()
+    }
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
     audioEngine = nil
@@ -451,6 +458,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
         repeats: false
       ) { [weak self] _ in
         Task { [weak self] in
+          // TODO: check if calling self?.request.endAudio() is preferable
+          // so we get final results
           await self?.reset()
         }
       }
