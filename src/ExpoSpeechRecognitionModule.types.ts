@@ -483,6 +483,7 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory
    */
   setCategoryIOS(options: SetCategoryOptions): void;
+
   /**
    * [iOS only] Returns the current audio session category and options.
    *
@@ -496,7 +497,20 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     categoryOptions: AVAudioSessionCategoryOptionsValue[];
     mode: AVAudioSessionModeValue;
   };
-
+  /**
+   * [iOS only] Sets the shared audio session active state.
+   *
+   * Calls the following on iOS: `AVAudioSession.sharedInstance().setActive(value, options)`
+   *
+   * See: https://developer.apple.com/documentation/avfaudio/avaudiosession/1616627-setactive
+   */
+  setAudioSessionActiveIOS(
+    value: boolean,
+    options?: {
+      /** [Default: true] Whether to notify other audio sessions when the active state changes. */
+      notifyOthersOnDeactivation: boolean;
+    },
+  ): void;
   /**
    * Returns the current state of the speech recognizer.
    */

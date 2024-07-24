@@ -177,6 +177,10 @@ class ExpoSpeechRecognitionModule : Module() {
                 )
             }
 
+            Function("setAudioSessionActiveIOS") { _: Any ->
+                // Do nothing
+            }
+
             var isDownloadingModel = false
 
             AsyncFunction("androidTriggerOfflineModelDownload") { options: TriggerOfflineModelDownloadOptions, promise: Promise ->

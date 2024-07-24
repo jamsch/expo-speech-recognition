@@ -699,6 +699,17 @@ function OtherSettings(props: {
             });
           }}
         />
+        {Platform.OS === "ios" && (
+          <BigButton
+            title="Set audio session active state"
+            color="#7C90DB"
+            onPress={() => {
+              ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(true, {
+                notifyOthersOnDeactivation: false,
+              });
+            }}
+          />
+        )}
       </View>
       <CheckboxButton
         title="Persist audio recording to filesystem"

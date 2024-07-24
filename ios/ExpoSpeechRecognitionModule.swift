@@ -260,6 +260,14 @@ public class ExpoSpeechRecognitionModule: Module {
       ]
     }
 
+    Function("setAudioSessionActiveIOS") {
+      (value: Bool, options: SetAudioSessionActiveOptions?) throws in
+      let setActiveOptions: AVAudioSession.SetActiveOptions =
+        options?.notifyOthersOnDeactivation == true ? .notifyOthersOnDeactivation : []
+
+      try AVAudioSession.sharedInstance().setActive(value, options: setActiveOptions)
+    }
+
     Function("supportsOnDeviceRecognition") {
       let recognizer = SFSpeechRecognizer()
       return recognizer?.supportsOnDeviceRecognition ?? false

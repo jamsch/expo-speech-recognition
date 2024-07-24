@@ -18,7 +18,6 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import java.io.File
-import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.Locale
 

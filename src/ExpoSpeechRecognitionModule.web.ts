@@ -111,6 +111,9 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       mode: "measurement",
     };
   },
+  setAudioSessionActiveIOS: () => {
+    console.warn("setAudioSessionActiveIOS is not supported on web.");
+  },
 };
 
 /**

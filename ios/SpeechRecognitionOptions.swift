@@ -170,3 +170,8 @@ struct SetCategoryOptions: Record {
   @Field
   var mode: ModeParam = .measurement
 }
+
+struct SetAudioSessionActiveOptions: Record {
+  @Field
+  var notifyOthersOnDeactivation: Bool? = true
+}

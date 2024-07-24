@@ -50,6 +50,9 @@ export const setCategoryIOS = ExpoSpeechRecognitionModule.setCategoryIOS;
 export const getAudioSessionCategoryAndOptionsIOS =
   ExpoSpeechRecognitionModule.getAudioSessionCategoryAndOptionsIOS;
 
+export const setAudioSessionActiveIOS =
+  ExpoSpeechRecognitionModule.setAudioSessionActiveIOS;
+
 export const addSpeechRecognitionListener = <
   T extends keyof ExpoSpeechRecognitionNativeEventMap,
 >(

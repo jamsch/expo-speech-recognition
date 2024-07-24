@@ -521,3 +521,15 @@ const values = getAudioSessionCategoryAndOptionsIOS();
 console.log(values);
 // { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
 ```
+
+### API `setAudioSessionActiveIOS(value: boolean, options?: { notifyOthersOnDeactivation: boolean })`
+
+Sets the audio session active state.
+
+```ts
+import { setAudioSessionActiveIOS } from "@jamsch/expo-speech-recognition";
+
+setAudioSessionActiveIOS(true, {
+  notifyOthersOnDeactivation: true,
+});
+```
