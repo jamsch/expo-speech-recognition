@@ -28,7 +28,8 @@ interface AudioRecorder {
  */
 class ExpoAudioRecorder(
     private val context: Context,
-    private val outputFilePath: String,
+    // Optional output file path
+    private val outputFilePath: String?,
 ) : AudioRecorder {
     private var audioRecorder: AudioRecord? = null
 
@@ -108,12 +109,13 @@ class ExpoAudioRecorder(
         audioRecorder?.release()
         audioRecorder = null
         recordingThread = null
-
-        outputFile =
-            appendWavHeader(
-                outputFilePath,
-                tempPcmFile,
-            )
+        if (outputFilePath != null) {
+            outputFile =
+                appendWavHeader(
+                    outputFilePath,
+                    tempPcmFile,
+                )
+        }
         // Close the ParcelFileDescriptor
         try {
             recordingParcel.close()
@@ -132,6 +134,7 @@ class ExpoAudioRecorder(
     private fun streamAudioToPipe() {
         val tempFileOutputStream = FileOutputStream(tempPcmFile)
         val data = ByteArray(bufferSizeInBytes / 2)
+
         while (isRecordingAudio) {
             val read = audioRecorder!!.read(data, 0, data.size)
             try {
@@ -139,8 +142,10 @@ class ExpoAudioRecorder(
                 outputStream?.flush()
 
                 // Write to the temp PCM file
-                tempFileOutputStream.write(data, 0, read)
-                tempFileOutputStream.flush()
+                if (outputFilePath != null) {
+                    tempFileOutputStream.write(data, 0, read)
+                    tempFileOutputStream.flush()
+                }
             } catch (e: IOException) {
                 e.printStackTrace()
             }
