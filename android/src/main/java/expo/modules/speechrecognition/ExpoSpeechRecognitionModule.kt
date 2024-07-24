@@ -22,10 +22,11 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.Executors
 
 class ExpoSpeechRecognitionModule : Module() {
-
-    private val expoSpeechService = ExpoSpeechService(appContext.reactContext!!) { name, body ->
-        val nonNullBody = body ?: emptyMap()
-        sendEvent(name, nonNullBody)
+    private val expoSpeechService by lazy {
+        ExpoSpeechService(appContext.reactContext!!) { name, body ->
+            val nonNullBody = body ?: emptyMap()
+            sendEvent(name, nonNullBody)
+        }
     }
 
     // Each module class must implement the definition function. The definition consists of components
