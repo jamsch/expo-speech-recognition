@@ -46,7 +46,7 @@ enum class SoundState {
 
 class ExpoSpeechService(
     private val reactContext: Context,
-    private val sendEvent: (name: String, body: Map<String, Any?>?) -> Unit,
+    private var sendEvent: (name: String, body: Map<String, Any?>?) -> Unit,
 ) : RecognitionListener {
     private var speech: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -170,8 +170,8 @@ class ExpoSpeechService(
      * Attempts to emit a final result if the speech recognizer is still running.
      */
     fun stop() {
-        recognitionState = RecognitionState.STOPPING
         mainHandler.post {
+            recognitionState = RecognitionState.STOPPING
             try {
                 speech?.stopListening()
             } catch (e: Exception) {
@@ -188,6 +188,15 @@ class ExpoSpeechService(
      * final result is emitted.
      */
     fun abort() {
+        teardownAndEnd()
+    }
+
+    /**
+     * Destroys the speech service and stops all audio recording
+     */
+    fun destroy() {
+        // Overwrite sendEvent to prevent sending events after destroy
+        sendEvent = { _, _ -> }
         teardownAndEnd()
     }
 
@@ -569,6 +578,11 @@ class ExpoSpeechService(
             )
         }
         log("onSegmentResults(), transcriptions: $resultsList")
+
+        // If the user opted to stop
+        if (recognitionState == RecognitionState.STOPPING) {
+            teardownAndEnd()
+        }
     }
 
     override fun onEndOfSegmentedSession() {

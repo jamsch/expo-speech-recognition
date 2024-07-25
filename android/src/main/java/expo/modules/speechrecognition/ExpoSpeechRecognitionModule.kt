@@ -25,7 +25,13 @@ class ExpoSpeechRecognitionModule : Module() {
     private val expoSpeechService by lazy {
         ExpoSpeechService(appContext.reactContext!!) { name, body ->
             val nonNullBody = body ?: emptyMap()
-            sendEvent(name, nonNullBody)
+            try {
+                sendEvent(name, nonNullBody)
+            } catch (e: IllegalArgumentException) {
+                // "Cannot create an event emitter for the module that isn't present in the module registry."
+                // Likely can occur after destroying the module
+                Log.e("ExpoSpeechRecognitionModule", "Failed to send event: $name", e)
+            }
         }
     }
 
@@ -43,7 +49,7 @@ class ExpoSpeechRecognitionModule : Module() {
             Name("ExpoSpeechRecognition")
 
             OnDestroy {
-                expoSpeechService.abort()
+                expoSpeechService.destroy()
             }
 
             // Defines event names that the module can send to JavaScript.
