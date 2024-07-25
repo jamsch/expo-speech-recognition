@@ -125,7 +125,7 @@ const WebListenerTransformers: {
           const clientEvent: SpeechRecognitionEventMap["error"] = {
             ...createEventData(instance),
             // TODO: handle custom ios error codes
-            error: nativeEvent.code as SpeechRecognitionErrorCode,
+            error: nativeEvent.error as SpeechRecognitionErrorCode,
             message: nativeEvent.message,
           };
           listener.call(instance, clientEvent);

@@ -72,4 +72,5 @@ export {
   type RecordingOptions,
   type IOSTaskHintValue,
   type SetCategoryOptions,
+  type ExpoSpeechRecognitionErrorCode,
 } from "./ExpoSpeechRecognitionModule.types";

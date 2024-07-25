@@ -13,6 +13,27 @@ import type {
 export type AVAudioSessionCategoryValue =
   (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
 
+export type ExpoSpeechRecognitionErrorCode =
+  /** The user called `ExpoSpeechRecognitionModule.abort()`. */
+  | "aborted"
+  /** Audio recording error. */
+  | "audio-capture"
+  /** There was an error in the speech recognition grammar or semantic tags, or the chosen grammar format or semantic tag format was unsupported. */
+  | "bad-grammar"
+  /** Locale is not supported by the speech recognizer. */
+  | "language-not-supported"
+  /** Network communication required for completing the recognition failed. */
+  | "network"
+  /** No final speech was detected. */
+  | "no-speech"
+  /** Permission to use speech recognition or microphone was not granted. */
+  | "not-allowed"
+  /** Recognizer is unavailable. */
+  | "service-not-allowed"
+  // Extra codes (not part of the spec)
+  /** The recognizer is busy and cannot accept any new recognition requests. */
+  | "busy";
+
 /**
  * Events that are dispatched from the native side
  */
@@ -48,15 +69,7 @@ export type ExpoSpeechRecognitionNativeEventMap = {
     }[];
   };
   error: {
-    code:
-      | "aborted"
-      | "audio-capture"
-      | "bad-grammar"
-      | "language-not-supported"
-      | "network"
-      | "no-speech"
-      | "not-allowed"
-      | "service-not-allowed";
+    error: ExpoSpeechRecognitionErrorCode;
     message: string;
   };
   start: null;

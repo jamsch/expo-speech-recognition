@@ -533,3 +533,41 @@ setAudioSessionActiveIOS(true, {
   notifyOthersOnDeactivation: true,
 });
 ```
+
+## Error Handling
+
+To handle errors, you can listen to the `error` event:
+
+```ts
+import {
+  type ExpoSpeechRecognitionErrorCode,
+  addSpeechRecognitionListener,
+  useSpeechRecognitionEvent,
+} from "@jamsch/expo-speech-recognition";
+
+addSpeechRecognitionListener("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+// or through the `useSpeechRecognitionEvent` hook
+useSpeechRecognitionEvent("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+// or through the `ExpoSpeechRecognitionErrorCode` type
+const error: ExpoSpeechRecognitionErrorCode = "audio-capture";
+```
+
+The error code is largely based on the Web Speech API error codes.
+
+| Error Code               | Description                                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                                                                                       |
+| `audio-capture`          | Audio recording error.                                                                                                                      |
+| `bad-grammar`            | There was an error in the speech recognition grammar or semantic tags, or the chosen grammar format or semantic tag format was unsupported. |
+| `language-not-supported` | Locale is not supported by the speech recognizer.                                                                                           |
+| `network`                | Network communication required for completing the recognition failed.                                                                       |
+| `no-speech`              | No final speech was detected.                                                                                                               |
+| `not-allowed`            | Permission to use speech recognition or microphone was not granted.                                                                         |
+| `service-not-allowed`    | Recognizer is unavailable.                                                                                                                  |
+| `busy`                   | The recognizer is busy and cannot accept any new recognition requests.                                                                      |

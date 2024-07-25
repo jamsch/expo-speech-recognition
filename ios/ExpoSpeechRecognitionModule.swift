@@ -132,7 +132,7 @@ public class ExpoSpeechRecognitionModule: Module {
                 .joined(separator: ", ")
 
               sendErrorAndStop(
-                code: "language-not-supported",
+                error: "language-not-supported",
                 message:
                   "Locale \(options.lang) is not supported by the speech recognizer. Available locales: \(availableLocales)"
               )
@@ -183,7 +183,7 @@ public class ExpoSpeechRecognitionModule: Module {
           self.sendEvent(
             "error",
             [
-              "code": "not-allowed",
+              "error": "not-allowed",
               "message": error.localizedDescription,
             ]
           )
@@ -286,6 +286,7 @@ public class ExpoSpeechRecognitionModule: Module {
 
     Function("abort") {
       Task {
+        sendEvent("error", ["error": "aborted", "message": "Speech recognition aborted."])
         await speechRecognizer?.abort()
       }
     }
@@ -325,8 +326,8 @@ public class ExpoSpeechRecognitionModule: Module {
     return nil
   }
 
-  func sendErrorAndStop(code: String, message: String) {
-    sendEvent("error", ["code": code, "message": message])
+  func sendErrorAndStop(error: String, message: String) {
+    sendEvent("error", ["error": error, "message": message])
     sendEvent("end")
   }
 
@@ -382,15 +383,16 @@ public class ExpoSpeechRecognitionModule: Module {
     if let recognitionError = error as? RecognizerError {
       switch recognitionError {
       case .nilRecognizer:
-        sendEvent("error", ["code": "language-not-supported", "message": recognitionError.message])
+        sendEvent(
+          "error", ["error": "language-not-supported", "message": recognitionError.message])
       case .notAuthorizedToRecognize:
-        sendEvent("error", ["code": "not-allowed", "message": recognitionError.message])
+        sendEvent("error", ["error": "not-allowed", "message": recognitionError.message])
       case .notPermittedToRecord:
-        sendEvent("error", ["code": "not-allowed", "message": recognitionError.message])
+        sendEvent("error", ["error": "not-allowed", "message": recognitionError.message])
       case .recognizerIsUnavailable:
-        sendEvent("error", ["code": "service-not-allowed", "message": recognitionError.message])
+        sendEvent("error", ["error": "service-not-allowed", "message": recognitionError.message])
       case .invalidAudioSource:
-        sendEvent("error", ["code": "audio-capture", "message": recognitionError.message])
+        sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
       }
       return
     }
@@ -427,14 +429,14 @@ public class ExpoSpeechRecognitionModule: Module {
 
     for (codes, code, message) in errorTypes {
       if codes.contains(errorCode) {
-        sendEvent("error", ["code": code, "message": message])
+        sendEvent("error", ["error": code, "message": message])
         return
       }
     }
 
     // Unknown error (but not a canceled request)
     if errorCode != 301 {
-      sendEvent("error", ["code": "audio-capture", "message": error.localizedDescription])
+      sendEvent("error", ["error": "audio-capture", "message": error.localizedDescription])
     }
   }
 }

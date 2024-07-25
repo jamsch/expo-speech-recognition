@@ -135,7 +135,7 @@ class ExpoSpeechService(
                     }
 
                 log("Failed to create Speech Recognizer with error: $errorMessage")
-                sendEvent("error", mapOf("code" to "audio-capture", "message" to errorMessage))
+                sendEvent("error", mapOf("error" to "audio-capture", "message" to errorMessage))
                 teardownAndEnd()
             }
         }
@@ -463,7 +463,7 @@ class ExpoSpeechService(
             sendEvent("nomatch", null)
         }
 
-        sendEvent("error", mapOf("code" to errorInfo.error, "message" to errorInfo.message))
+        sendEvent("error", mapOf("error" to errorInfo.error, "message" to errorInfo.message))
         teardownAndEnd(RecognitionState.ERROR)
         log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
     }
@@ -612,7 +612,7 @@ class ExpoSpeechService(
                 SpeechRecognizer.ERROR_SERVER -> "network"
                 // Extra codes
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "speech-timeout"
-                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "recognizer-busy"
+                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"
                 SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "language-not-supported"
                 else -> "unknown"
             }

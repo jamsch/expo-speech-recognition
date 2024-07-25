@@ -139,7 +139,7 @@ class ExpoSpeechRecognitionModule : Module() {
             /** Start recognition with args: lang, interimResults, maxAlternatives */
             Function("start") { options: SpeechRecognitionOptions ->
                 if (hasNotGrantedRecordPermissions()) {
-                    sendEvent("error", mapOf("code" to "not-allowed", "message" to "Missing RECORD_AUDIO permissions."))
+                    sendEvent("error", mapOf("error" to "not-allowed", "message" to "Missing RECORD_AUDIO permissions."))
                     sendEvent("end")
                     return@Function
                 }
@@ -151,6 +151,7 @@ class ExpoSpeechRecognitionModule : Module() {
             }
 
             Function("abort") {
+                sendEvent("error", mapOf("error" to "aborted", "message" to "Speech recognition aborted."))
                 expoSpeechService.abort()
             }
 

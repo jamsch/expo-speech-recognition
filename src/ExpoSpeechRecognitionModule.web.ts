@@ -127,7 +127,7 @@ const webToNativeEventMap: {
   audioend: (ev) => ({ uri: null }),
   audiostart: (ev) => ({ uri: null }),
   end: (ev) => null,
-  error: (ev) => ({ code: ev.error, message: ev.message }),
+  error: (ev) => ({ error: ev.error, message: ev.message }),
   nomatch: (ev) => null,
   result: (ev) => {
     const nativeResults: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
