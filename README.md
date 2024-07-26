@@ -283,6 +283,59 @@ recognition.stop();
 recognition.abort();
 ```
 
+## Speech Recognition Events
+
+Events are largely based on the [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition). The following events are supported:
+
+| Event Name    | Description                                                                                | Notes                                                                                                                                                                                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audiostart`  | Audio capturing has started                                                                | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
+| `audioend`    | Audio capturing has ended                                                                  | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
+| `end`         | Speech recognition service has disconnected.                                               | This should be the last event dispatched.                                                                                                                                                                                                                                                |
+| `error`       | Fired when a speech recognition error occurs.                                              | You'll also receive an `error` event (with code "aborted") when calling `.abort()`                                                                                                                                                                                                       |
+| `nomatch`     | Speech recognition service returns a final result with no significant recognition.         | You may have non-final results recognized. This may get emitted after cancellation.                                                                                                                                                                                                      |
+| `result`      | Speech recognition service returns a word or phrase has been positively recognized.        | On Android, continous mode runs as a segmented session, meaning when a final result is reached, additional partial and final results will cover a new segment separate from the previous final result. On iOS, you should expect one final result before speech recognition has stopped. |
+| `speechstart` | Fired when any sound — recognizable speech or not — has been detected                      |                                                                                                                                                                                                                                                                                          |
+| `speechend`   | Fired when speech recognized by the speech recognition service has stopped being detected. | Not supported yet on iOS                                                                                                                                                                                                                                                                 |
+| `start`       | Speech recognition has started                                                             | Use this event to indicate to the user when to speak.                                                                                                                                                                                                                                    |
+
+## Handling Errors
+
+To handle errors, you can listen to the `error` event:
+
+```ts
+import {
+  type ExpoSpeechRecognitionErrorCode,
+  addSpeechRecognitionListener,
+  useSpeechRecognitionEvent,
+} from "@jamsch/expo-speech-recognition";
+
+addSpeechRecognitionListener("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+// or through the `useSpeechRecognitionEvent` hook
+useSpeechRecognitionEvent("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+// or through the `ExpoSpeechRecognitionErrorCode` type
+const error: ExpoSpeechRecognitionErrorCode = "audio-capture";
+```
+
+The error code is largely based on the Web Speech API error codes.
+
+| Error Code               | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                  |
+| `audio-capture`          | Audio recording error.                                                 |
+| `language-not-supported` | Locale is not supported by the speech recognizer.                      |
+| `network`                | Network communication required for completing the recognition failed.  |
+| `no-speech`              | No final speech was detected.                                          |
+| `not-allowed`            | Permission to use speech recognition or microphone was not granted.    |
+| `service-not-allowed`    | Recognizer is unavailable.                                             |
+| `busy`                   | The recognizer is busy and cannot accept any new recognition requests. |
+
 ## Persisting Audio Recordings
 
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
@@ -533,41 +586,3 @@ setAudioSessionActiveIOS(true, {
   notifyOthersOnDeactivation: true,
 });
 ```
-
-## Error Handling
-
-To handle errors, you can listen to the `error` event:
-
-```ts
-import {
-  type ExpoSpeechRecognitionErrorCode,
-  addSpeechRecognitionListener,
-  useSpeechRecognitionEvent,
-} from "@jamsch/expo-speech-recognition";
-
-addSpeechRecognitionListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
-});
-
-// or through the `useSpeechRecognitionEvent` hook
-useSpeechRecognitionEvent("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
-});
-
-// or through the `ExpoSpeechRecognitionErrorCode` type
-const error: ExpoSpeechRecognitionErrorCode = "audio-capture";
-```
-
-The error code is largely based on the Web Speech API error codes.
-
-| Error Code               | Description                                                                                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                                                                                       |
-| `audio-capture`          | Audio recording error.                                                                                                                      |
-| `bad-grammar`            | There was an error in the speech recognition grammar or semantic tags, or the chosen grammar format or semantic tag format was unsupported. |
-| `language-not-supported` | Locale is not supported by the speech recognizer.                                                                                           |
-| `network`                | Network communication required for completing the recognition failed.                                                                       |
-| `no-speech`              | No final speech was detected.                                                                                                               |
-| `not-allowed`            | Permission to use speech recognition or microphone was not granted.                                                                         |
-| `service-not-allowed`    | Recognizer is unavailable.                                                                                                                  |
-| `busy`                   | The recognizer is busy and cannot accept any new recognition requests.                                                                      |

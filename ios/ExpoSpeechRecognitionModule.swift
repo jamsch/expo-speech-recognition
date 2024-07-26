@@ -148,7 +148,7 @@ public class ExpoSpeechRecognitionModule: Module {
           await speechRecognizer?.start(
             options: options,
             resultHandler: { [weak self] result in
-              self?.handleRecognitionResult(result)
+              self?.handleRecognitionResult(result, maxAlternatives: options.maxAlternatives)
             },
             errorHandler: { [weak self] error in
               self?.handleRecognitionError(error)
@@ -335,10 +335,13 @@ public class ExpoSpeechRecognitionModule: Module {
     sendEvent("end")
   }
 
-  func handleRecognitionResult(_ result: SFSpeechRecognitionResult) {
+  func handleRecognitionResult(_ result: SFSpeechRecognitionResult, maxAlternatives: Int) {
     var results: [TranscriptionResult] = []
 
-    for transcription in result.transcriptions {
+    // Limit the number of transcriptions to the maxAlternatives
+    let transcriptionSubsequence = result.transcriptions.prefix(maxAlternatives)
+
+    for transcription in transcriptionSubsequence {
       let segments = transcription.segments.map { segment in
         return Segment(
           startTimeMillis: segment.timestamp * 1000,

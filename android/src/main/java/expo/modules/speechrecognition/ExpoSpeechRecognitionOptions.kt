@@ -16,7 +16,7 @@ class SpeechRecognitionOptions : Record {
     val continuous: Boolean? = false
 
     @Field
-    val maxAlternatives: Int? = 1
+    val maxAlternatives: Int? = 5
 
     @Field
     var contextualStrings: List<String>? = null

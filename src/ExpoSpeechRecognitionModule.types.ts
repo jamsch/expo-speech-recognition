@@ -18,8 +18,6 @@ export type ExpoSpeechRecognitionErrorCode =
   | "aborted"
   /** Audio recording error. */
   | "audio-capture"
-  /** There was an error in the speech recognition grammar or semantic tags, or the chosen grammar format or semantic tag format was unsupported. */
-  | "bad-grammar"
   /** Locale is not supported by the speech recognizer. */
   | "language-not-supported"
   /** Network communication required for completing the recognition failed. */
@@ -112,7 +110,7 @@ export type ExpoSpeechRecognitionOptions = {
   lang?: string;
   /** [Default: false] Note for iOS: final results are only available after speech recognition has stopped */
   interimResults?: boolean;
-  /** [Default: 1] The maximum number of alternative transcriptions to return. */
+  /** [Default: 5] The maximum number of alternative transcriptions to return. */
   maxAlternatives?: number;
   /**
    * An array of strings that will be used to provide context to the speech recognition engine.

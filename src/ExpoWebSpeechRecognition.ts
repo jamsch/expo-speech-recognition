@@ -70,99 +70,86 @@ const WebListenerTransformers: {
       this: SpeechRecognition,
       ev: SpeechRecognitionEventMap[K],
     ) => unknown,
-  ) => NativeEventAndListener<K>[];
+  ) => NativeEventAndListener<K>;
 } = {
   audiostart: (instance, listener) => {
-    return [
-      {
-        eventName: "audiostart",
-        nativeListener(nativeEvent) {
-          listener.call(instance, {
-            ...createEventData(instance),
-            uri: nativeEvent.uri,
-          });
-        },
+    return {
+      eventName: "audiostart",
+      nativeListener(nativeEvent) {
+        listener.call(instance, {
+          ...createEventData(instance),
+          uri: nativeEvent.uri,
+        });
       },
-    ];
+    };
   },
   audioend: (instance, listener) => {
-    return [
-      {
-        eventName: "audioend",
-        nativeListener(nativeEvent) {
-          listener.call(instance, {
-            ...createEventData(instance),
-            uri: nativeEvent.uri,
-          });
-        },
+    return {
+      eventName: "audioend",
+      nativeListener(nativeEvent) {
+        listener.call(instance, {
+          ...createEventData(instance),
+          uri: nativeEvent.uri,
+        });
       },
-    ];
+    };
   },
   nomatch: (instance, listener) => {
     // @ts-ignore
-    return [stubEvent("nomatch", instance, listener)];
+    return stubEvent("nomatch", instance, listener);
   },
   end: (instance, listener) => {
-    return [stubEvent("end", instance, listener)];
+    return stubEvent("end", instance, listener);
   },
   start: (instance, listener) => {
-    return [
-      {
-        eventName: "start",
-        nativeListener() {
-          listener.call(instance, createEventData(instance));
-        },
+    return {
+      eventName: "start",
+      nativeListener() {
+        listener.call(instance, createEventData(instance));
       },
-    ];
+    };
   },
   error: (instance, listener) => {
-    return [
-      {
-        eventName: "error",
-        nativeListener: (
-          nativeEvent: ExpoSpeechRecognitionNativeEventMap["error"],
-        ) => {
-          const clientEvent: SpeechRecognitionEventMap["error"] = {
-            ...createEventData(instance),
-            // TODO: handle custom ios error codes
-            error: nativeEvent.error as SpeechRecognitionErrorCode,
-            message: nativeEvent.message,
-          };
-          listener.call(instance, clientEvent);
-        },
+    return {
+      eventName: "error",
+      nativeListener: (
+        nativeEvent: ExpoSpeechRecognitionNativeEventMap["error"],
+      ) => {
+        const clientEvent: SpeechRecognitionEventMap["error"] = {
+          ...createEventData(instance),
+          // TODO: handle custom ios error codes
+          error: nativeEvent.error as SpeechRecognitionErrorCode,
+          message: nativeEvent.message,
+        };
+        listener.call(instance, clientEvent);
       },
-    ];
+    };
   },
   result: (instance, listener) => {
-    return [
-      {
-        eventName: "result",
-        nativeListener: (
-          nativeEvent: ExpoSpeechRecognitionNativeEventMap["result"],
-        ) => {
-          if (!instance.interimResults && !nativeEvent.isFinal) {
-            return;
-          }
-          const alternatives = nativeEvent.results.map(
-            (result) =>
-              new ExpoSpeechRecognitionAlternative(
-                result.confidence,
-                result.transcript,
-              ),
-          );
-          const clientEvent: SpeechRecognitionEventMap["result"] = {
-            ...createEventData(instance),
-            results: new ExpoSpeechRecognitionResultList([
-              new ExpoSpeechRecognitionResult(
-                nativeEvent.isFinal,
-                alternatives,
-              ),
-            ]),
-          };
-          listener.call(instance, clientEvent);
-        },
+    return {
+      eventName: "result",
+      nativeListener: (
+        nativeEvent: ExpoSpeechRecognitionNativeEventMap["result"],
+      ) => {
+        if (!instance.interimResults && !nativeEvent.isFinal) {
+          return;
+        }
+        const alternatives = nativeEvent.results.map(
+          (result) =>
+            new ExpoSpeechRecognitionAlternative(
+              result.confidence,
+              result.transcript,
+            ),
+        );
+        const clientEvent: SpeechRecognitionEventMap["result"] = {
+          ...createEventData(instance),
+          results: new ExpoSpeechRecognitionResultList([
+            new ExpoSpeechRecognitionResult(nativeEvent.isFinal, alternatives),
+          ]),
+        };
+        listener.call(instance, clientEvent);
       },
-    ];
+    };
   },
 };
 
@@ -388,28 +375,22 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
       : listener;
 
     // Enhance the native listener with any necessary polyfills
-    const enhancedEvents: NativeEventAndListener<K>[] = WebListenerTransformers[
-      type
-    ]?.(this, wrappedListener) ?? [
+    const enhancedEvent: NativeEventAndListener<K> =
+      WebListenerTransformers[type]?.(this, wrappedListener) ??
       stubEvent(
         type,
         this,
         wrappedListener as (this: SpeechRecognition, ev: Event) => unknown,
-      ),
-    ];
+      );
 
-    const subscriptions = enhancedEvents.map(
-      ({ eventName, nativeListener }) => {
-        return ExpoSpeechRecognitionModuleEmitter.addListener(
-          eventName,
-          nativeListener,
-        );
-      },
+    const subscription = ExpoSpeechRecognitionModuleEmitter.addListener(
+      enhancedEvent.eventName,
+      enhancedEvent.nativeListener,
     );
 
     // Store the subscriptions so we can remove them later
     // This is keyed by the listener function so we can remove all subscriptions for a given listener
-    this.#subscriptionMap.set(listener, subscriptions);
+    this.#subscriptionMap.set(listener, [subscription]);
   }
 
   removeEventListener<K extends keyof SpeechRecognitionEventMap>(

@@ -12,7 +12,7 @@ struct SpeechRecognitionOptions: Record {
   var continuous: Bool = false
 
   @Field
-  var maxAlternatives: Int = 1
+  var maxAlternatives: Int = 5
 
   @Field
   var contextualStrings: [String]? = nil
