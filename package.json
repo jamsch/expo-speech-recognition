@@ -1,6 +1,6 @@
 {
   "name": "@jamsch/expo-speech-recognition",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Speech Recognition for React Native Expo projects",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -19,7 +19,9 @@
     "react-native",
     "expo",
     "expo-speech-recognition",
-    "ExpoSpeechRecognition"
+    "ExpoSpeechRecognition",
+    "webkitSpeechRecognition",
+    "SpeechRecognition"
   ],
   "repository": "https://github.com/jamsch/expo-speech-recognition",
   "bugs": {

@@ -280,14 +280,23 @@ public class ExpoSpeechRecognitionModule: Module {
 
     Function("stop") {
       Task {
-        await speechRecognizer?.stop()
+        if let recognizer = speechRecognizer {
+          await recognizer.stop()
+        } else {
+          sendEvent("end")
+        }
       }
     }
 
     Function("abort") {
       Task {
         sendEvent("error", ["error": "aborted", "message": "Speech recognition aborted."])
-        await speechRecognizer?.abort()
+
+        if let recognizer = speechRecognizer {
+          await recognizer.abort()
+        } else {
+          sendEvent("end")
+        }
       }
     }
 
