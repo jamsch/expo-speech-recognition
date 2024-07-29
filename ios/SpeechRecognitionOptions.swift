@@ -64,6 +64,9 @@ struct RecordingOptions: Record {
 
   @Field
   var outputSampleRate: Double? = nil
+
+  @Field
+  var outputEncoding: String? = nil
 }
 
 struct AudioSourceOptions: Record {
