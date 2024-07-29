@@ -405,6 +405,8 @@ public class ExpoSpeechRecognitionModule: Module {
         sendEvent("error", ["error": "service-not-allowed", "message": recognitionError.message])
       case .invalidAudioSource:
         sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
+      case .audioInputBusy:
+        sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
       }
       return
     }

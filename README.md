@@ -270,6 +270,13 @@ If you would like to persist the recognized audio for later use, you can enable 
 
 > Note: For Android, this is only supported on Android 13 and above. Call `supportsRecording()` to see if it's available before using this feature.
 
+Default audio output formats:
+
+| Platform | Output Format                                | Notes                                                                            |
+| -------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
+| Android  | Linear PCM WAV (16000 Hz, 1 channel)         |                                                                                  |
+| iOS      | Linear PCM WAV (44000/48000\* Hz, 1 channel) | The sample rate is dependent on the maximum sample rate supported by the device. |
+
 Example:
 
 ```tsx

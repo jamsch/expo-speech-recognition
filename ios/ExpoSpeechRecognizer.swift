@@ -8,6 +8,7 @@ enum RecognizerError: Error {
   case notPermittedToRecord
   case recognizerIsUnavailable
   case invalidAudioSource
+  case audioInputBusy
 
   var message: String {
     switch self {
@@ -17,6 +18,7 @@ enum RecognizerError: Error {
     case .notPermittedToRecord: return "Not permitted to record audio"
     case .recognizerIsUnavailable: return "Recognizer is unavailable"
     case .invalidAudioSource: return "Invalid audio source"
+    case .audioInputBusy: return "The audio input is busy"
     }
   }
 }
@@ -46,6 +48,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   init(
     locale: Locale
   ) async throws {
+
     recognizer = SFSpeechRecognizer(
       locale: locale
     )
@@ -63,11 +66,13 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
-  private static func getAudioFormat() -> AVAudioFormat {
-    return AVAudioFormat(
-      standardFormatWithSampleRate: AVAudioSession.sharedInstance().sampleRate,
-      channels: 1
-    )!
+  /// Returns a suitable audio format to use for the speech recognition task and audio file recording.
+  private static func getAudioFormat(forEngine: AVAudioEngine) -> AVAudioFormat {
+    return forEngine.inputNode.outputFormat(forBus: 0)
+    //    return AVAudioFormat(
+    //        standardFormatWithSampleRate: AVAudioSession.sharedInstance().sampleRate,
+    //        channels: 1
+    //    )!
   }
 
   func getLocale() -> String? {
@@ -179,12 +184,36 @@ actor ExpoSpeechRecognizer: ObservableObject {
       // Check if options.audioSource is set, if it is, then it is sourced from a file
       let isSourcedFromFile = options.audioSource?.uri != nil
 
-      var audioEngine: AVAudioEngine?
       if isSourcedFromFile {
         // If we're doing file-based recognition we don't need to create an audio engine
         self.audioEngine = nil
       } else {
-        audioEngine = AVAudioEngine()
+        self.audioEngine?.reset()
+        self.audioEngine = AVAudioEngine()
+
+        guard let audioEngine = self.audioEngine else {
+          print("expo-speech-recognition: ERROR - Failed to create AVAudioEngine")
+          throw RecognizerError.invalidAudioSource
+        }
+
+        let inputNode = audioEngine.inputNode
+        // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with the error:
+        // `required condition is false: format.sampleRate == hwFormat.sampleRate`
+        // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
+        // To avoid this, I'm resetting the engine above just in case that's necessary
+        let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
+
+        // Check if the microphone is busy
+        guard !Self.audioInputIsBusy(audioFormat) else {
+          print(
+            "expo-speech-recognition: ERROR - input is busy \(audioFormat.sampleRate)"
+          )
+          throw RecognizerError.audioInputBusy
+        }
+
+        let mixerNode = AVAudioMixerNode()
+        audioEngine.attach(mixerNode)
+        audioEngine.connect(inputNode, to: mixerNode, format: audioFormat)
 
         // Set up the audio session to get the correct audio format
         // Todo: allow user to configure audio session category and mode
@@ -196,7 +225,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
           let (audio, outputUrl) = prepareFileWriter(
             outputDirectory: options.recordingOptions?.outputDirectory,
             outputFileName: options.recordingOptions?.outputFileName,
-            audioEngine: audioEngine!
+            audioFormat: audioFormat
           )
           self.file = audio
           self.outputFileUrl = outputUrl
@@ -204,18 +233,17 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
         // Set up audio recording & sink to recognizer/file
         try Self.prepareEngine(
-          audioEngine: audioEngine!,
+          audioEngine: audioEngine,
+          mixerNode: mixerNode,
           options: options,
           request: request,
           file: self.file
         )
-
-        // Given no errors, it should be safe to assign this
-        self.audioEngine = audioEngine
       }
 
       // Don't run any timers if the audio source is from a file
       let continuous = options.continuous || isSourcedFromFile
+      let audioEngine = self.audioEngine;
 
       self.task = recognizer.recognitionTask(
         with: request,
@@ -250,7 +278,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private func prepareFileWriter(
     outputDirectory: String?,
     outputFileName: String?,
-    audioEngine: AVAudioEngine
+    audioFormat: AVAudioFormat
   ) -> (AVAudioFile?, URL?) {
     let baseDir: URL
 
@@ -269,14 +297,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let filePath = baseDir.appendingPathComponent(fileName)
 
     do {
-      // let recordingFormat = audioEngine.inputNode.outputFormat(forBus: 0)
-      // let settings = recordingFormat.settings
-      // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with error:
-      // `required condition is false: format.sampleRate == hwFormat.sampleRate`
-      // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
       let file = try AVAudioFile(
         forWriting: filePath,
-        settings: Self.getAudioFormat().settings
+        settings: audioFormat.settings
       )
       return (file, filePath)
 
@@ -313,6 +336,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     stoppedListening = true
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
+    audioEngine?.inputNode.reset()
+    audioEngine?.reset()
     audioEngine = nil
     if let request = request as? SFSpeechAudioBufferRecognitionRequest {
       request.endAudio()
@@ -329,6 +354,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     task?.cancel()
     audioEngine?.stop()
     audioEngine?.inputNode.removeTap(onBus: 0)
+    audioEngine?.inputNode.reset()
+    audioEngine?.reset()
     audioEngine = nil
     file = nil
     request = nil
@@ -406,44 +433,27 @@ actor ExpoSpeechRecognizer: ObservableObject {
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
   }
 
+  private static func audioInputIsBusy(_ recordingFormat: AVAudioFormat) -> Bool {
+    guard recordingFormat.sampleRate == 0 || recordingFormat.channelCount == 0 else {
+      return false
+    }
+    return true
+  }
+
   private static func prepareEngine(
     audioEngine: AVAudioEngine,
+    mixerNode: AVAudioMixerNode,
     options: SpeechRecognitionOptions,
     request: SFSpeechRecognitionRequest,
     file: AVAudioFile?
   ) throws {
-    let inputNode = audioEngine.inputNode
-
     guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
       throw RecognizerError.invalidAudioSource
     }
 
-    let inputSampleRate = inputNode.inputFormat(forBus: 0).sampleRate
-    // Guard the input format sample rate > 0
-    guard inputSampleRate > 0 else {
-      print(
-        "expo-speech-recognition: ERROR - Invalid input sample rate: \(inputSampleRate)"
-      )
-      throw RecognizerError.invalidAudioSource
-    }
+    let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
 
-    let audioFormat = Self.getAudioFormat()
-
-    // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with error:
-    // `required condition is false: format.sampleRate == hwFormat.sampleRate`
-    // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
-    // let recordingFormat = inputNode.outputFormat(forBus: 0)
-
-    // // Ensure the format is valid before proceeding
-    // guard recordingFormat.sampleRate > 0 && recordingFormat.channelCount > 0 else {
-    //   print("ERROR: Invalid audio format: \(recordingFormat)")
-    //   throw RecognizerError.invalidAudioSource
-    // }
-
-    // Just in case it's still in-use
-    inputNode.removeTap(onBus: 0)
-
-    inputNode.installTap(
+    mixerNode.installTap(
       onBus: 0,
       bufferSize: 1024,
       format: audioFormat
