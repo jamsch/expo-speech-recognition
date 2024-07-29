@@ -188,7 +188,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
         // If we're doing file-based recognition we don't need to create an audio engine
         self.audioEngine = nil
       } else {
-        self.audioEngine?.reset()
+        // Set up the audio session to get the correct audio format
+        try Self.setupAudioSession(options.iosCategory)
+
         self.audioEngine = AVAudioEngine()
 
         guard let audioEngine = self.audioEngine else {
@@ -215,11 +217,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
         audioEngine.attach(mixerNode)
         audioEngine.connect(inputNode, to: mixerNode, format: audioFormat)
 
-        // Set up the audio session to get the correct audio format
-        // Todo: allow user to configure audio session category and mode
-        // prior to starting speech recognition
-        try Self.setupAudioSession(options.iosCategory)
-
         // Feature: file recording
         if options.recordingOptions?.persist == true {
           let (audio, outputUrl) = prepareFileWriter(
@@ -243,7 +240,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
       // Don't run any timers if the audio source is from a file
       let continuous = options.continuous || isSourcedFromFile
-      let audioEngine = self.audioEngine;
+      let audioEngine = self.audioEngine
 
       self.task = recognizer.recognitionTask(
         with: request,
