@@ -210,79 +210,6 @@ ExpoSpeechRecognitionModule.stop();
 ExpoSpeechRecognitionModule.abort();
 ```
 
-### Using the Web SpeechRecognition API
-
-> Note: this is intended for projects that rely on third party libraries that use the Web Speech API. If you're using this library directly, you should use the Direct Module API instead.
-
-Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars`) on some OSes aren't yet supported.
-
-```ts
-// Import this polyfill for typings, as needed
-// "npm install -D @types/dom-speech-recognition"
-import "dom-speech-recognition";
-
-import { ExpoWebSpeechRecognition } from "@jamsch/expo-speech-recognition";
-
-const recognition = new ExpoWebSpeechRecognition();
-
-recognition.lang = "en-US";
-// [Default: false] Note for iOS: final results are only available after speech recognition has stopped
-recognition.interimResults = true;
-recognition.maxAlternatives = 1;
-// [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds
-recognition.continuous = true;
-
-// Custom (non-web) properties
-
-recognition.contextualStrings = ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"];
-recognition.requiresOnDeviceRecognition = true;
-recognition.addsPunctuation = true;
-recognition.androidIntentOptions = {
-  EXTRA_LANGUAGE_MODEL: "quick_response",
-};
-recognition.androidRecognitionServicePackage =
-  "com.google.android.googlequicksearchbox";
-
-// Assign an event listener (note: this overwrites all event listeners)
-recognition.onstart = (event) => console.log("started!");
-recognition.onend = (event) => console.log("ended!");
-recognition.onresult = (event) => {
-  console.log(
-    "result:",
-    event.results[event.resultIndex][0].transcript,
-    "final:",
-    event.results[event.resultIndex][0].isFinal,
-  );
-};
-
-// Or register an event listener
-const handleStart = (event: Event) => console.log("started!");
-recognition.registerEventListener("start", handleStart);
-// and remember to unregister after you're done:
-recognition.unregisterEventListener("start", handleStart);
-
-const handleResult = (event: SpeechRecognitionEvent) => {
-  console.log("result:", event.results[event.resultIndex][0].transcript);
-};
-
-recognition.registerEventListener("result", handleResult);
-
-recognition.registerEventListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
-});
-
-recognition.registerEventListener("end", (event) => console.log("ended!"));
-
-// Start speech recognition
-recognition.start();
-
-// Stop speech recognition
-recognition.stop();
-
-// Immediately cancel speech recognition
-recognition.abort();
-```
-
 ## Speech Recognition Events
 
 Events are largely based on the [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition). The following events are supported:
@@ -452,6 +379,86 @@ function TranscribeAudioFile() {
     </View>
   );
 }
+```
+
+## Polyfilling the Web SpeechRecognition API
+
+> **Note: this is intended for projects that rely on third party libraries that use the Web Speech API**. If you're using this library directly, you should use the [Direct Module API](#direct-module-api) instead.
+
+If you intend to polyfill the `webkitSpeechRecognition` or `SpeechRecognition` globals for use with external libraries, you can use the `ExpoWebSpeechRecognition` class to do so.
+
+Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) for usage. Note that some features (such as `grammars`) on some OSes aren't yet supported.
+
+```ts
+// Import this polyfill for typings, as needed
+// "npm install -D @types/dom-speech-recognition"
+import "dom-speech-recognition";
+
+import { ExpoWebSpeechRecognition } from "@jamsch/expo-speech-recognition";
+
+// Polyfill the globals for use in external libraries
+webkitSpeechRecognition = ExpoWebSpeechRecognition;
+SpeechRecognition = ExpoWebSpeechRecognition;
+
+// Usage is the same as the Web Speech API..
+const recognition = new ExpoWebSpeechRecognition();
+
+recognition.lang = "en-US";
+// [Default: false] Note for iOS: final results are only available after speech recognition has stopped
+recognition.interimResults = true;
+recognition.maxAlternatives = 1;
+// [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds
+recognition.continuous = true;
+
+// Custom (non-web) properties
+
+recognition.contextualStrings = ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"];
+recognition.requiresOnDeviceRecognition = true;
+recognition.addsPunctuation = true;
+recognition.androidIntentOptions = {
+  EXTRA_LANGUAGE_MODEL: "quick_response",
+};
+recognition.androidRecognitionServicePackage =
+  "com.google.android.googlequicksearchbox";
+
+// Assign an event listener (note: this overwrites all event listeners)
+recognition.onstart = (event) => console.log("started!");
+recognition.onend = (event) => console.log("ended!");
+recognition.onresult = (event) => {
+  console.log(
+    "result:",
+    event.results[event.resultIndex][0].transcript,
+    "final:",
+    event.results[event.resultIndex][0].isFinal,
+  );
+};
+
+// Or register an event listener
+const handleStart = (event: Event) => console.log("started!");
+recognition.registerEventListener("start", handleStart);
+// and remember to unregister after you're done:
+recognition.unregisterEventListener("start", handleStart);
+
+const handleResult = (event: SpeechRecognitionEvent) => {
+  console.log("result:", event.results[event.resultIndex][0].transcript);
+};
+
+recognition.registerEventListener("result", handleResult);
+
+recognition.registerEventListener("error", (event) => {
+  console.log("error code:", event.error, "error messsage:", event.message);
+});
+
+recognition.registerEventListener("end", (event) => console.log("ended!"));
+
+// Start speech recognition
+recognition.start();
+
+// Stop speech recognition
+recognition.stop();
+
+// Immediately cancel speech recognition
+recognition.abort();
 ```
 
 ## APIs

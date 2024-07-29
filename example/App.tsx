@@ -44,7 +44,7 @@ import * as FileSystem from "expo-file-system";
 const speechRecognitionServices = getSpeechRecognitionServices();
 
 export default function App() {
-  const [error, setError] = useState<{ code: string; message: string } | null>(
+  const [error, setError] = useState<{ error: string; message: string } | null>(
     null,
   );
 
@@ -90,11 +90,8 @@ export default function App() {
   });
 
   useSpeechRecognitionEvent("error", (ev) => {
-    console.log("[event]: error", ev.code, ev.message);
-    setError({
-      code: ev.code,
-      message: ev.message,
-    });
+    console.log("[event]: error", ev.error, ev.message);
+    setError(ev);
   });
 
   const startListening = () => {

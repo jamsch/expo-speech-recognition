@@ -63,6 +63,13 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
   }
 
+  private static func getAudioFormat() -> AVAudioFormat {
+    return AVAudioFormat(
+      standardFormatWithSampleRate: AVAudioSession.sharedInstance().sampleRate,
+      channels: 1
+    )!
+  }
+
   func getLocale() -> String? {
     return recognizer?.locale.identifier
   }
@@ -262,14 +269,19 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let filePath = baseDir.appendingPathComponent(fileName)
 
     do {
-      // Ensure settings are compatible with the input format
+      // let recordingFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+      // let settings = recordingFormat.settings
+      // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with error:
+      // `required condition is false: format.sampleRate == hwFormat.sampleRate`
+      // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
       let file = try AVAudioFile(
         forWriting: filePath,
-        settings: audioEngine.inputNode.outputFormat(forBus: 0).settings
+        settings: Self.getAudioFormat().settings
       )
       return (file, filePath)
+
     } catch {
-      print("Failed to create AVAudioFile: \(error)")
+      print("expo-speech-recognition: Failed to create AVAudioFile: \(error)")
       return (nil, nil)
     }
   }
@@ -401,19 +413,41 @@ actor ExpoSpeechRecognizer: ObservableObject {
     file: AVAudioFile?
   ) throws {
     let inputNode = audioEngine.inputNode
-    let recordingFormat = inputNode.outputFormat(forBus: 0)
-
-    // Ensure the format is valid before proceeding
-    guard recordingFormat.sampleRate > 0 && recordingFormat.channelCount > 0 else {
-      print("ERROR: Invalid audio format: \(recordingFormat)")
-      throw RecognizerError.invalidAudioSource
-    }
 
     guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
       throw RecognizerError.invalidAudioSource
     }
 
-    inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
+    let inputSampleRate = inputNode.inputFormat(forBus: 0).sampleRate
+    // Guard the input format sample rate > 0
+    guard inputSampleRate > 0 else {
+      print(
+        "expo-speech-recognition: ERROR - Invalid input sample rate: \(inputSampleRate)"
+      )
+      throw RecognizerError.invalidAudioSource
+    }
+
+    let audioFormat = Self.getAudioFormat()
+
+    // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with error:
+    // `required condition is false: format.sampleRate == hwFormat.sampleRate`
+    // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
+    // let recordingFormat = inputNode.outputFormat(forBus: 0)
+
+    // // Ensure the format is valid before proceeding
+    // guard recordingFormat.sampleRate > 0 && recordingFormat.channelCount > 0 else {
+    //   print("ERROR: Invalid audio format: \(recordingFormat)")
+    //   throw RecognizerError.invalidAudioSource
+    // }
+
+    // Just in case it's still in-use
+    inputNode.removeTap(onBus: 0)
+
+    inputNode.installTap(
+      onBus: 0,
+      bufferSize: 1024,
+      format: audioFormat
+    ) {
       (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
       audioBufferRequest.append(buffer)
       if let file = file {
