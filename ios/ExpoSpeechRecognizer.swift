@@ -67,12 +67,32 @@ actor ExpoSpeechRecognizer: ObservableObject {
   }
 
   /// Returns a suitable audio format to use for the speech recognition task and audio file recording.
-  private static func getAudioFormat(forEngine: AVAudioEngine) -> AVAudioFormat {
-    return forEngine.inputNode.outputFormat(forBus: 0)
-    //    return AVAudioFormat(
-    //        standardFormatWithSampleRate: AVAudioSession.sharedInstance().sampleRate,
-    //        channels: 1
-    //    )!
+  private static func getAudioFormat(forEngine engine: AVAudioEngine) -> AVAudioFormat {
+    return engine.inputNode.outputFormat(forBus: 0)
+
+    // let format = engine.inputNode.outputFormat(forBus: 0)
+    // if format.sampleRate > 0 {
+    //   return format
+    // }
+    // print("WARN: returning custom audio format")
+    // return AVAudioFormat(
+    //   standardFormatWithSampleRate: AVAudioSession.sharedInstance().sampleRate,
+    //   channels: 1
+    // )!
+  }
+
+  private static func getFileAudioFormat(
+    options: SpeechRecognitionOptions, engine: AVAudioEngine
+  ) -> AVAudioFormat? {
+    if let outputSampleRate = options.recordingOptions?.outputSampleRate {
+      return AVAudioFormat(
+        commonFormat: .pcmFormatFloat32,
+        sampleRate: outputSampleRate,
+        channels: 1,
+        interleaved: false
+      )
+    }
+    return engine.inputNode.outputFormat(forBus: 0)
   }
 
   func getLocale() -> String? {
@@ -188,7 +208,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
         // If we're doing file-based recognition we don't need to create an audio engine
         self.audioEngine = nil
       } else {
-        self.audioEngine?.reset()
+        // Set up the audio session to get the correct audio format
+        try Self.setupAudioSession(options.iosCategory)
+
         self.audioEngine = AVAudioEngine()
 
         guard let audioEngine = self.audioEngine else {
@@ -206,7 +228,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
         // Check if the microphone is busy
         guard !Self.audioInputIsBusy(audioFormat) else {
           print(
-            "expo-speech-recognition: ERROR - input is busy \(audioFormat.sampleRate)"
+            "expo-speech-recognition: ERROR - input is busy \(audioFormat)"
           )
           throw RecognizerError.audioInputBusy
         }
@@ -215,17 +237,24 @@ actor ExpoSpeechRecognizer: ObservableObject {
         audioEngine.attach(mixerNode)
         audioEngine.connect(inputNode, to: mixerNode, format: audioFormat)
 
-        // Set up the audio session to get the correct audio format
-        // Todo: allow user to configure audio session category and mode
-        // prior to starting speech recognition
-        try Self.setupAudioSession(options.iosCategory)
-
         // Feature: file recording
         if options.recordingOptions?.persist == true {
+          guard
+            let fileAudioFormat = Self.getFileAudioFormat(
+              options: options,
+              engine: audioEngine
+            )
+          else {
+            print(
+              "expo-speech-recognition: ERROR - Failed to create AVAudioFormat from given sample rate"
+            )
+            throw RecognizerError.invalidAudioSource
+          }
+
           let (audio, outputUrl) = prepareFileWriter(
             outputDirectory: options.recordingOptions?.outputDirectory,
             outputFileName: options.recordingOptions?.outputFileName,
-            audioFormat: audioFormat
+            audioFormat: fileAudioFormat
           )
           self.file = audio
           self.outputFileUrl = outputUrl
@@ -243,7 +272,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
       // Don't run any timers if the audio source is from a file
       let continuous = options.continuous || isSourcedFromFile
-      let audioEngine = self.audioEngine;
+      let audioEngine = self.audioEngine
 
       self.task = recognizer.recognitionTask(
         with: request,
@@ -453,6 +482,22 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
 
+    let shouldConvert = options.recordingOptions?.outputSampleRate != nil
+
+    var converter: AVAudioConverter?
+    var fileOutputFormat: AVAudioFormat?
+
+    if shouldConvert {
+      fileOutputFormat = Self.getFileAudioFormat(
+        options: options,
+        engine: audioEngine
+      )
+      guard let unwrappedFileOutputFormat = fileOutputFormat else {
+        throw RecognizerError.invalidAudioSource
+      }
+      converter = AVAudioConverter(from: audioFormat, to: unwrappedFileOutputFormat)
+    }
+
     mixerNode.installTap(
       onBus: 0,
       bufferSize: 1024,
@@ -460,9 +505,54 @@ actor ExpoSpeechRecognizer: ObservableObject {
     ) {
       (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
       audioBufferRequest.append(buffer)
-      if let file = file {
+
+      // Feature: Record to a file
+      guard let file = file else {
+        return
+      }
+
+      // Case: no conversion (straight to file)
+      if !shouldConvert {
         do {
           try file.write(from: buffer)
+        } catch {
+          print("Failed to write buffer to file: \(error)")
+        }
+        return
+      }
+      var newBufferAvailable = true
+
+      // Else, convert the buffer to the specified sample rate
+      let inputCallback: AVAudioConverterInputBlock = { inNumPackets, outStatus in
+        if newBufferAvailable {
+          outStatus.pointee = .haveData
+          newBufferAvailable = false
+          return buffer
+        } else {
+          outStatus.pointee = .noDataNow
+          return nil
+        }
+      }
+
+      guard let outputFormat = fileOutputFormat, let converter = converter else {
+        return
+      }
+
+      if let convertedBuffer = AVAudioPCMBuffer(
+        pcmFormat: outputFormat,
+        frameCapacity: AVAudioFrameCount(outputFormat.sampleRate) * buffer.frameLength
+          / AVAudioFrameCount(buffer.format.sampleRate))
+      {
+        var error: NSError?
+        let status = converter.convert(
+          to: convertedBuffer,
+          error: &error,
+          withInputFrom: inputCallback
+        )
+        assert(status != .error)
+
+        do {
+          try file.write(from: convertedBuffer)
         } catch {
           print("Failed to write buffer to file: \(error)")
         }

@@ -184,7 +184,12 @@ ExpoSpeechRecognitionModule.start({
     outputDirectory: undefined,
     // [Default: `"recording_${timestamp|uuid}.[wav|caf]"`]
     // Changes the file name for the audio file.
+    // (you can retrieve the file path using `event.uri` on the `audiostart`/`audioend` events)
     outputFileName: "recording.wav",
+    // [Default: undefined] The sample rate of the output audio file.
+    // Only supported on iOS
+    // Default sample rate is: 16000 on Android, 44100/48000 on iOS
+    outputSampleRate: undefined,
   }
   // [Default: undefined] Android-specific options to pass to the recognizer.
   androidIntentOptions: {
@@ -272,10 +277,10 @@ If you would like to persist the recognized audio for later use, you can enable 
 
 Default audio output formats:
 
-| Platform | Output Format                                | Notes                                                                            |
-| -------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| Android  | Linear PCM WAV (16000 Hz, 1 channel)         |                                                                                  |
-| iOS      | Linear PCM WAV (44000/48000\* Hz, 1 channel) | The sample rate is dependent on the maximum sample rate supported by the device. |
+| Platform | Output Format                       | Notes                                                                                                  |
+| -------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Android  | Linear PCM (16000 Hz, mono)         |                                                                                                        |
+| iOS      | Linear PCM (44100/48000\* Hz, mono) | Default sample rate is device specific. You can change this using `recordingOptions.outputSampleRate`. |
 
 Example:
 
@@ -303,6 +308,10 @@ function RecordAudio() {
           "/data/user/0/expo.modules.speechrecognition.example/files",
         // Optional: Specify the output file name to save the recording to
         outputFileName: "recording.wav",
+        // Optional: Specify the output sample rate to save the recording to
+        // Only supported on iOS
+        // Default sample rate is: 16000 on Android, 44100/48000 on iOS
+        // outputSampleRate: 16000,
       },
     });
   };

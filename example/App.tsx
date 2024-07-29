@@ -717,6 +717,7 @@ function OtherSettings(props: {
             persist: !settings.recordingOptions?.persist,
             outputDirectory: FileSystem.documentDirectory ?? undefined,
             outputFileName: "recording.wav",
+            outputSampleRate: 16000,
           })
         }
       />
