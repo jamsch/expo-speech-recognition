@@ -173,6 +173,22 @@ ExpoSpeechRecognitionModule.start({
   addsPunctuation: false,
   // [Default: undefined] Short custom phrases that are unique to your app.
   contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+  // [Default: undefined] Android-specific options to pass to the recognizer.
+  androidIntentOptions: {
+    EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
+    EXTRA_MASK_OFFENSIVE_WORDS: false,
+  },
+  // [Default: undefined] The package name of the speech recognition service to use.
+  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
+  // [Default: unspecified] The type of speech recognition being performed.
+  iosTaskHint: "unspecified", // "unspecified" | "dictation" | "search" | "confirmation"
+  // [Default: undefined] The audio session category and options to use.
+  iosCategory: {
+    category: "playAndRecord",
+    categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
+    mode: "measurement",
+  },
+
   // [Default: undefined] Recording options for Android & iOS
   // For Android, this is only supported on Android 13 and above.
   recordingOptions: {
@@ -190,21 +206,9 @@ ExpoSpeechRecognitionModule.start({
     // Only supported on iOS
     // Default sample rate is: 16000 on Android, 44100/48000 on iOS
     outputSampleRate: undefined,
-  }
-  // [Default: undefined] Android-specific options to pass to the recognizer.
-  androidIntentOptions: {
-    EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
-    EXTRA_MASK_OFFENSIVE_WORDS: false,
-  },
-  // [Default: undefined] The package name of the speech recognition service to use.
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
-  // [Default: unspecified] The type of speech recognition being performed.
-  iosTaskHint: "unspecified", // "unspecified" | "dictation" | "search" | "confirmation"
-  // [Default: undefined] The audio session category and options to use.
-  iosCategory: {
-    category: "playAndRecord",
-    categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
-    mode: "measurement",
+    // [Default: undefined] The encoding of the output audio file.
+    // Only supported on iOS
+    outputEncoding: undefined,
   },
 });
 
