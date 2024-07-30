@@ -314,8 +314,12 @@ function RecordAudio() {
         outputFileName: "recording.wav",
         // Optional: Specify the output sample rate to save the recording to
         // Only supported on iOS
-        // Default sample rate is: 16000 on Android, 44100/48000 on iOS
-        // outputSampleRate: 16000,
+        // Default sample rate: 16000 on Android, 44100/48000 on iOS
+        outputSampleRate: 16000,
+        // Optional: Specify the output encoding to save the recording to
+        // Only supported on iOS
+        // Default encoding: pcmFormatInt16 on Android, pcmFormatFloat32 on iOS
+        outputEncoding: "pcmFormatInt16",
       },
     });
   };

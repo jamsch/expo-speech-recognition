@@ -32,7 +32,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private var task: SFSpeechRecognitionTask?
   private var recognizer: SFSpeechRecognizer?
   private var speechStartHandler: (() -> Void)?
-  private var file: AVAudioFile?
+  private var audioFileRef: ExtAudioFileRef?
   private var outputFileUrl: URL?
   /// Whether the recognizer has been stopped by the user or the timer has timed out
   private var stoppedListening = false
@@ -84,9 +84,31 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private static func getFileAudioFormat(
     options: SpeechRecognitionOptions, engine: AVAudioEngine
   ) -> AVAudioFormat? {
+
+    var commonFormat: AVAudioCommonFormat = .pcmFormatFloat32
+
+    if let outputEncoding = options.recordingOptions?.outputEncoding {
+      switch outputEncoding {
+      case "pcmFormatFloat32":
+        commonFormat = .pcmFormatFloat32
+      case "pcmFormatFloat64":
+        commonFormat = .pcmFormatFloat64
+      case "pcmFormatInt16":
+        commonFormat = .pcmFormatInt16
+      case "pcmFormatInt32":
+        commonFormat = .pcmFormatInt32
+      default:
+        print(
+          "[expo-speech-recognition] Unsupported encoding: \(outputEncoding). Using default pcmFormatFloat32."
+        )
+      }
+    }
+
+    // Whether we should be downsampling the audio
     if let outputSampleRate = options.recordingOptions?.outputSampleRate {
+      print("commonFormat: \(commonFormat), sample rate: \(outputSampleRate)")
       return AVAudioFormat(
-        commonFormat: .pcmFormatFloat32,
+        commonFormat: commonFormat,
         sampleRate: outputSampleRate,
         channels: 1,
         interleaved: false
@@ -184,7 +206,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     // Reset the speech recognizer before starting
     reset(andEmitEnd: false)
 
-    self.file = nil
     self.outputFileUrl = nil
     self.speechStartHandler = speechStartHandler
 
@@ -251,12 +272,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
             throw RecognizerError.invalidAudioSource
           }
 
-          let (audio, outputUrl) = prepareFileWriter(
+          let outputUrl = prepareFileWriter(
             outputDirectory: options.recordingOptions?.outputDirectory,
             outputFileName: options.recordingOptions?.outputFileName,
             audioFormat: fileAudioFormat
           )
-          self.file = audio
           self.outputFileUrl = outputUrl
         }
 
@@ -266,7 +286,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
           mixerNode: mixerNode,
           options: options,
           request: request,
-          file: self.file
+          audioFileRef: self.audioFileRef
         )
       }
 
@@ -308,7 +328,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     outputDirectory: String?,
     outputFileName: String?,
     audioFormat: AVAudioFormat
-  ) -> (AVAudioFile?, URL?) {
+  ) -> URL? {
     let baseDir: URL
 
     if let outputDirectory = outputDirectory {
@@ -317,7 +337,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       guard let dirPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       else {
         print("Failed to get cache directory path.")
-        return (nil, nil)
+        return nil
       }
       baseDir = dirPath
     }
@@ -325,17 +345,24 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let fileName = outputFileName ?? "recording_\(UUID().uuidString).caf"
     let filePath = baseDir.appendingPathComponent(fileName)
 
-    do {
-      let file = try AVAudioFile(
-        forWriting: filePath,
-        settings: audioFormat.settings
-      )
-      return (file, filePath)
+    _ = ExtAudioFileCreateWithURL(
+      filePath as CFURL,
+      kAudioFileWAVEType,
+      audioFormat.streamDescription,
+      nil,
+      AudioFileFlags.eraseFile.rawValue,
+      &audioFileRef
+    )
 
-    } catch {
-      print("expo-speech-recognition: Failed to create AVAudioFile: \(error)")
-      return (nil, nil)
-    }
+    // Note: using `AVAudioFile()` doesn't seem to work
+    // when downsampling pcmFloat32 to pcmInt16
+
+    // let file = try AVAudioFile(
+    //   forWriting: filePath,
+    //   settings: audioFormat.settings
+    // )
+
+    return filePath
   }
 
   private func handleSpeechStart() {
@@ -386,7 +413,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
     audioEngine?.inputNode.reset()
     audioEngine?.reset()
     audioEngine = nil
-    file = nil
+
+    if let audioFileRef = audioFileRef {
+      ExtAudioFileDispose(audioFileRef)
+    }
+    audioFileRef = nil
     request = nil
     task = nil
     speechStartHandler = nil
@@ -474,7 +505,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     mixerNode: AVAudioMixerNode,
     options: SpeechRecognitionOptions,
     request: SFSpeechRecognitionRequest,
-    file: AVAudioFile?
+    audioFileRef: ExtAudioFileRef?
   ) throws {
     guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
       throw RecognizerError.invalidAudioSource
@@ -482,12 +513,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
 
-    let shouldConvert = options.recordingOptions?.outputSampleRate != nil
-
+    let shouldDownsample = options.recordingOptions?.outputSampleRate != nil
     var converter: AVAudioConverter?
     var fileOutputFormat: AVAudioFormat?
 
-    if shouldConvert {
+    if shouldDownsample {
       fileOutputFormat = Self.getFileAudioFormat(
         options: options,
         engine: audioEngine
@@ -496,6 +526,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
         throw RecognizerError.invalidAudioSource
       }
       converter = AVAudioConverter(from: audioFormat, to: unwrappedFileOutputFormat)
+      // converter?.channelMap = [0]
     }
 
     mixerNode.installTap(
@@ -507,60 +538,68 @@ actor ExpoSpeechRecognizer: ObservableObject {
       audioBufferRequest.append(buffer)
 
       // Feature: Record to a file
-      guard let file = file else {
+      guard let audioFileRef = audioFileRef else {
         return
       }
 
-      // Case: no conversion (straight to file)
-      if !shouldConvert {
-        do {
-          try file.write(from: buffer)
-        } catch {
-          print("Failed to write buffer to file: \(error)")
+      if !shouldDownsample {
+        ExtAudioFileWrite(audioFileRef, buffer.frameLength, buffer.audioBufferList)
+      } else {
+        guard let outputFormat = fileOutputFormat, let converter = converter else {
+          return
         }
-        return
-      }
-      var newBufferAvailable = true
-
-      // Else, convert the buffer to the specified sample rate
-      let inputCallback: AVAudioConverterInputBlock = { inNumPackets, outStatus in
-        if newBufferAvailable {
-          outStatus.pointee = .haveData
-          newBufferAvailable = false
-          return buffer
-        } else {
-          outStatus.pointee = .noDataNow
-          return nil
-        }
-      }
-
-      guard let outputFormat = fileOutputFormat, let converter = converter else {
-        return
-      }
-
-      if let convertedBuffer = AVAudioPCMBuffer(
-        pcmFormat: outputFormat,
-        frameCapacity: AVAudioFrameCount(outputFormat.sampleRate) * buffer.frameLength
-          / AVAudioFrameCount(buffer.format.sampleRate))
-      {
-        var error: NSError?
-        let status = converter.convert(
-          to: convertedBuffer,
-          error: &error,
-          withInputFrom: inputCallback
-        )
-        assert(status != .error)
-
-        do {
-          try file.write(from: convertedBuffer)
-        } catch {
-          print("Failed to write buffer to file: \(error)")
-        }
+        Self.downsampleToFile(
+          buffer: buffer, audioFileRef: audioFileRef, converter: converter,
+          downsampledFormat: outputFormat)
       }
     }
 
     audioEngine.prepare()
     try audioEngine.start()
+  }
+
+  /// Downsamples the audio buffer to a file ref
+  private static func downsampleToFile(
+    buffer: AVAudioPCMBuffer,
+    audioFileRef: ExtAudioFileRef?,
+    converter: AVAudioConverter,
+    downsampledFormat: AVAudioFormat
+  ) {
+    guard let audioFileRef = audioFileRef else {
+      print("Error: Could not create output file.")
+      return
+    }
+
+    let sampleRateRatio = buffer.format.sampleRate / downsampledFormat.sampleRate
+    let outputCapacity = AVAudioFrameCount(Double(buffer.frameCapacity) / sampleRateRatio)
+
+    guard
+      let convertedBuffer = AVAudioPCMBuffer(
+        pcmFormat: downsampledFormat,
+        frameCapacity: outputCapacity
+      )
+    else {
+      print("Error: Could not create converted buffer.")
+      return
+    }
+
+    var conversionError: NSError?
+    let status = converter.convert(to: convertedBuffer, error: &conversionError) {
+      inNumPackets, outStatus in
+      outStatus.pointee = .haveData
+      return buffer
+    }
+
+    if status == .error || conversionError != nil {
+      if let error = conversionError {
+        print("Conversion error: \(error.localizedDescription)")
+      } else {
+        print("Conversion error: unknown error")
+      }
+      return
+    }
+
+    ExtAudioFileWrite(audioFileRef, convertedBuffer.frameLength, convertedBuffer.audioBufferList)
   }
 
   nonisolated private func recognitionHandler(
