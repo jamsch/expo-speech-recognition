@@ -188,7 +188,6 @@ ExpoSpeechRecognitionModule.start({
     categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
     mode: "measurement",
   },
-
   // [Default: undefined] Recording options for Android & iOS
   // For Android, this is only supported on Android 13 and above.
   recordingOptions: {
@@ -281,10 +280,10 @@ If you would like to persist the recognized audio for later use, you can enable 
 
 Default audio output formats:
 
-| Platform | Output Format                       | Notes                                                                                                  |
-| -------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Android  | Linear PCM (16000 Hz, mono)         |                                                                                                        |
-| iOS      | Linear PCM (44100/48000\* Hz, mono) | Default sample rate is device specific. You can change this using `recordingOptions.outputSampleRate`. |
+| Platform | Output Format                             | Notes                                                                                                                               |
+| -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Android  | Linear PCM (16000 Hz, mono)               |                                                                                                                                     |
+| iOS      | 32-bit Float PCM (44100/48000\* Hz, mono) | Default sample rate is device specific. Change this with `recordingOptions.outputSampleRate` and `recordingOptions.outputEncoding`. |
 
 Example:
 
