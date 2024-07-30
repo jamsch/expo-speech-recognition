@@ -138,14 +138,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
         options: options,
         resultHandler: resultHandler,
         errorHandler: errorHandler,
+        startHandler: startHandler,
+        audioStartHandler: audioStartHandler,
         speechStartHandler: speechStartHandler
       )
-      // Emit the "start" event
-      startHandler()
-      // If user has opted in to recording, emit a "start" recording event with the path
-      if let outputPath = await outputFileUrl?.path {
-        audioStartHandler(outputPath)
-      }
     }
   }
 
@@ -201,7 +197,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     options: SpeechRecognitionOptions,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
     errorHandler: @escaping (Error) -> Void,
-    speechStartHandler: @escaping () -> Void
+    speechStartHandler: @escaping () -> Void,
+    startHandler: @escaping () -> Void,
+    audioStartHandler: @escaping (String?) -> Void
   ) {
     // Reset the speech recognizer before starting
     reset(andEmitEnd: false)
@@ -318,6 +316,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
       if !continuous {
         invalidateAndScheduleTimer()
       }
+
+      // Emit the "start" event to indicate that speech recognition has started
+      startHandler()
+
+      // If user has opted in to recording, emit an "audiostart" event with the path
+      audioStartHandler(outputFileUrl?.path)
     } catch {
       errorHandler(error)
       reset(andEmitEnd: true)
