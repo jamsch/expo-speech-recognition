@@ -589,8 +589,11 @@ import {
 
 setCategoryIOS({
   category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
-  categoryOptions: [AVAudioSessionCategoryOptions.defaultToSpeaker],
-  mode: AVAudioSessionMode.measurement,
+  categoryOptions: [
+    AVAudioSessionCategoryOptions.defaultToSpeaker,
+    AVAudioSessionCategoryOptions.allowBluetooth,
+  ],
+  mode: AVAudioSessionMode.default,
 });
 ```
 

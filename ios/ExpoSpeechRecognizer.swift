@@ -139,8 +139,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
         resultHandler: resultHandler,
         errorHandler: errorHandler,
         startHandler: startHandler,
-        audioStartHandler: audioStartHandler,
-        speechStartHandler: speechStartHandler
+        speechStartHandler: speechStartHandler,
+        audioStartHandler: audioStartHandler
       )
     }
   }
@@ -197,8 +197,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     options: SpeechRecognitionOptions,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
     errorHandler: @escaping (Error) -> Void,
-    speechStartHandler: @escaping () -> Void,
     startHandler: @escaping () -> Void,
+    speechStartHandler: @escaping () -> Void,
     audioStartHandler: @escaping (String?) -> Void
   ) {
     // Reset the speech recognizer before starting
