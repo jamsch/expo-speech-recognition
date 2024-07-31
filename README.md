@@ -102,7 +102,7 @@ function App() {
 
 ### Permissions
 
-You may want to know or request the required permissions for starting speech recognition prior to starting the recognition. This library exports two functions: `getPermissionsAsync` and `requestPermissionsAsync` for this purpose.
+You should request permissions prior to starting recognition. This library exports two functions: `getPermissionsAsync` and `requestPermissionsAsync` for this purpose. If you do not request permissions or the user has denied permissions after starting, expect an `error` event with the `error` code set to `not-allowed`.
 
 ```ts
 import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
@@ -123,8 +123,6 @@ ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
   ExpoSpeechRecognitionModule.start({ lang: "en-US" });
 });
 ```
-
-If you don't use `requestPermissionsAsync`, the user will be prompted to grant permissions when starting speech recognition. If the user denies permissions, the module will emit an `error` event with the `code` set to `not-allowed`.
 
 ### Direct module API
 
