@@ -713,10 +713,12 @@ function OtherSettings(props: {
         checked={Boolean(settings.recordingOptions?.persist)}
         onPress={() =>
           handleChange("recordingOptions", {
-            ...(settings.recordingOptions ?? {}),
             persist: !settings.recordingOptions?.persist,
             outputDirectory: FileSystem.documentDirectory ?? undefined,
             outputFileName: "recording.wav",
+            // for iOS if you'd like to downsample the audio, set the outputSampleRate + outputEncoding
+            outputSampleRate: 16000,
+            outputEncoding: "pcmFormatInt16",
           })
         }
       />

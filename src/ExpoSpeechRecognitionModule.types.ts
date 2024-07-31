@@ -222,6 +222,24 @@ export type RecordingOptions = {
    * Default: `"recording_${timestamp|uuid}.[wav|caf]"`. This changes the file name for the audio file.
    */
   outputFileName?: string;
+  /**
+   * Default: undefined. The sample rate of the output audio file.
+   *
+   * Only supported on iOS
+   *
+   * Default sample rate is: 16000 on Android, 44100/48000 on iOS
+   */
+  outputSampleRate?: number;
+  /**
+   * Default: undefined. The encoding of the output audio file.
+   *
+   * Only supported on iOS
+   */
+  outputEncoding?:
+    | "pcmFormatFloat32"
+    | "pcmFormatFloat64"
+    | "pcmFormatInt16"
+    | "pcmFormatInt32";
 };
 
 export type AudioSourceOptions = {

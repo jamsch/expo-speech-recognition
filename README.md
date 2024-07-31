@@ -173,19 +173,6 @@ ExpoSpeechRecognitionModule.start({
   addsPunctuation: false,
   // [Default: undefined] Short custom phrases that are unique to your app.
   contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
-  // [Default: undefined] Recording options for Android & iOS
-  // For Android, this is only supported on Android 13 and above.
-  recordingOptions: {
-    // [Default: false] Whether to persist the audio to a local file path.
-    persist: false,
-    // [Default: FileSystem.CacheDirectory]
-    // Changes the default storage location for the audio file.
-    // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
-    outputDirectory: undefined,
-    // [Default: `"recording_${timestamp|uuid}.[wav|caf]"`]
-    // Changes the file name for the audio file.
-    outputFileName: "recording.wav",
-  }
   // [Default: undefined] Android-specific options to pass to the recognizer.
   androidIntentOptions: {
     EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
@@ -200,6 +187,27 @@ ExpoSpeechRecognitionModule.start({
     category: "playAndRecord",
     categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
     mode: "measurement",
+  },
+  // [Default: undefined] Recording options for Android & iOS
+  // For Android, this is only supported on Android 13 and above.
+  recordingOptions: {
+    // [Default: false] Whether to persist the audio to a local file path.
+    persist: false,
+    // [Default: FileSystem.CacheDirectory]
+    // Changes the default storage location for the audio file.
+    // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
+    outputDirectory: undefined,
+    // [Default: `"recording_${timestamp|uuid}.[wav|caf]"`]
+    // Changes the file name for the audio file.
+    // (you can retrieve the file path using `event.uri` on the `audiostart`/`audioend` events)
+    outputFileName: "recording.wav",
+    // [Default: undefined] The sample rate of the output audio file.
+    // Only supported on iOS
+    // Default sample rate is: 16000 on Android, 44100/48000 on iOS
+    outputSampleRate: undefined,
+    // [Default: undefined] The encoding of the output audio file.
+    // Only supported on iOS
+    outputEncoding: undefined,
   },
 });
 
@@ -272,10 +280,10 @@ If you would like to persist the recognized audio for later use, you can enable 
 
 Default audio output formats:
 
-| Platform | Output Format                                | Notes                                                                            |
-| -------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| Android  | Linear PCM WAV (16000 Hz, 1 channel)         |                                                                                  |
-| iOS      | Linear PCM WAV (44000/48000\* Hz, 1 channel) | The sample rate is dependent on the maximum sample rate supported by the device. |
+| Platform | Output Format                             | Notes                                                                                                                               |
+| -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Android  | Linear PCM (16000 Hz, mono)               |                                                                                                                                     |
+| iOS      | 32-bit Float PCM (44100/48000\* Hz, mono) | Default sample rate is device specific. Change this with `recordingOptions.outputSampleRate` and `recordingOptions.outputEncoding`. |
 
 Example:
 
@@ -303,6 +311,14 @@ function RecordAudio() {
           "/data/user/0/expo.modules.speechrecognition.example/files",
         // Optional: Specify the output file name to save the recording to
         outputFileName: "recording.wav",
+        // Optional: Specify the output sample rate to save the recording to
+        // Only supported on iOS
+        // Default sample rate: 16000 on Android, 44100/48000 on iOS
+        outputSampleRate: 16000,
+        // Optional: Specify the output encoding to save the recording to
+        // Only supported on iOS
+        // Default encoding: pcmFormatInt16 on Android, pcmFormatFloat32 on iOS
+        outputEncoding: "pcmFormatInt16",
       },
     });
   };
@@ -573,8 +589,11 @@ import {
 
 setCategoryIOS({
   category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
-  categoryOptions: [AVAudioSessionCategoryOptions.defaultToSpeaker],
-  mode: AVAudioSessionMode.measurement,
+  categoryOptions: [
+    AVAudioSessionCategoryOptions.defaultToSpeaker,
+    AVAudioSessionCategoryOptions.allowBluetooth,
+  ],
+  mode: AVAudioSessionMode.default,
 });
 ```
 

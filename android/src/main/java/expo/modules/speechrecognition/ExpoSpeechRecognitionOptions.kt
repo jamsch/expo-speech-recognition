@@ -61,6 +61,12 @@ class RecordingOptions : Record {
 
     @Field
     val outputFileName: String? = null
+
+    @Field
+    val outputSampleRate: Int? = null
+
+    @Field
+    val outputEncoding: String? = null
 }
 
 class AudioSourceOptions : Record {
