@@ -58,11 +58,11 @@ function App() {
 
   useSpeechRecognitionEvent("start", () => setRecognizing(true));
   useSpeechRecognitionEvent("end", () => setRecognizing(false));
-  useSpeechRecognitionEvent("result", (ev) => {
-    setTranscript(ev.results[0].transcript);
+  useSpeechRecognitionEvent("result", (event) => {
+    setTranscript(event.results[0].transcript);
   });
-  useSpeechRecognitionEvent("error", (ev) => {
-    console.log("error code:", ev.error, "error messsage:", ev.message);
+  useSpeechRecognitionEvent("error", (event) => {
+    console.log("error code:", event.error, "error messsage:", event.message);
   });
 
   const handleStart = () => {
@@ -135,9 +135,9 @@ import {
 } from "@jamsch/expo-speech-recognition";
 
 // Register event listeners
-const startListener = addSpeechRecognitionListener("start", () =>
-  console.log("Speech recognition started"),
-);
+const startListener = addSpeechRecognitionListener("start", () => {
+  console.log("Speech recognition started");
+});
 
 // and remove the listener when you're done:
 startListener.remove();
@@ -207,6 +207,17 @@ ExpoSpeechRecognitionModule.start({
     // Only supported on iOS
     outputEncoding: undefined,
   },
+  // [Default: undefined] Use for file-based transcription.
+  audioSource: {
+    /** Local file URI, e.g. "file:///path/to/audio.wav" */
+    uri: undefined,
+    // [Android only] The number of channels in the source audio.
+    audioChannels: 1,
+    // [Android only] A value from AudioFormat - https://developer.android.com/reference/android/media/AudioFormat
+    audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+    // [Android only] Audio sampling rate in Hz.
+    sampleRate: 16000,
+  },
 });
 
 // Stop capturing audio (and emit a final result if there is one)
@@ -228,7 +239,7 @@ Events are largely based on the [Web Speech API](https://developer.mozilla.org/e
 | `error`       | Fired when a speech recognition error occurs.                                              | You'll also receive an `error` event (with code "aborted") when calling `.abort()`                                                                                                                                                                                                       |
 | `nomatch`     | Speech recognition service returns a final result with no significant recognition.         | You may have non-final results recognized. This may get emitted after cancellation.                                                                                                                                                                                                      |
 | `result`      | Speech recognition service returns a word or phrase has been positively recognized.        | On Android, continous mode runs as a segmented session, meaning when a final result is reached, additional partial and final results will cover a new segment separate from the previous final result. On iOS, you should expect one final result before speech recognition has stopped. |
-| `speechstart` | Fired when any sound — recognizable speech or not — has been detected                      |                                                                                                                                                                                                                                                                                          |
+| `speechstart` | Fired when any sound — recognizable speech or not — has been detected                      | On iOS, this will fire once in the session after a result has occurred                                                                                                                                                                                                                   |
 | `speechend`   | Fired when speech recognized by the speech recognition service has stopped being detected. | Not supported yet on iOS                                                                                                                                                                                                                                                                 |
 | `start`       | Speech recognition has started                                                             | Use this event to indicate to the user when to speak.                                                                                                                                                                                                                                    |
 
@@ -280,7 +291,7 @@ Default audio output formats:
 
 | Platform | Output Format                             | Notes                                                                                                                               |
 | -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Android  | Linear PCM (16000 Hz, mono)               |                                                                                                                                     |
+| Android  | Linear PCM (16000 Hz, mono)               | Suitable for processing on various external services (such as Google Speech API, Whisper, Deepgram, etc)                            |
 | iOS      | 32-bit Float PCM (44100/48000\* Hz, mono) | Default sample rate is device specific. Change this with `recordingOptions.outputSampleRate` and `recordingOptions.outputEncoding`. |
 
 Example:

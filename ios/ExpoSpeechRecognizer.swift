@@ -241,7 +241,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
         // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with the error:
         // `required condition is false: format.sampleRate == hwFormat.sampleRate`
         // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
-        // To avoid this, I'm resetting the engine above just in case that's necessary
         let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
 
         // Check if the microphone is busy
