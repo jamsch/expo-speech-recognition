@@ -10,7 +10,11 @@ let _speechRecognitionRef: SpeechRecognition | null = null;
 // the bridge module (from NativeModulesProxy) if the remote debugger is on.
 export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   start: (options) => {
-    _speechRecognitionRef = new SpeechRecognition();
+    const SpeechRecognitionClass =
+      typeof webkitSpeechRecognition !== "undefined"
+        ? webkitSpeechRecognition
+        : SpeechRecognition;
+    _speechRecognitionRef = new SpeechRecognitionClass();
     _speechRecognitionRef.lang = options.lang ?? "en-US";
     _speechRecognitionRef.interimResults = options.interimResults ?? false;
     _speechRecognitionRef.maxAlternatives = options.maxAlternatives ?? 1;
