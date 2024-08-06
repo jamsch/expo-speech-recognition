@@ -94,6 +94,10 @@ export default function App() {
     setError(ev);
   });
 
+  useSpeechRecognitionEvent("nomatch", (ev) => {
+    console.log("[event]: nomatch");
+  });
+
   const startListening = () => {
     if (status !== "idle") {
       return;

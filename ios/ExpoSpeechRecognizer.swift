@@ -393,14 +393,17 @@ actor ExpoSpeechRecognizer: ObservableObject {
       return
     }
     stoppedListening = true
-    audioEngine?.stop()
-    audioEngine?.inputNode.removeTap(onBus: 0)
-    audioEngine?.inputNode.reset()
-    audioEngine?.reset()
-    audioEngine = nil
     if let request = request as? SFSpeechAudioBufferRecognitionRequest {
       request.endAudio()
     }
+    if audioEngine?.isRunning ?? false {
+      audioEngine?.stop()
+      audioEngine?.inputNode.removeTap(onBus: 0)
+      audioEngine?.inputNode.reset()
+      audioEngine?.reset()
+      audioEngine = nil
+    }
+
     task?.finish()
   }
 

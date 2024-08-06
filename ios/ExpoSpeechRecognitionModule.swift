@@ -443,7 +443,19 @@ public class ExpoSpeechRecognitionModule: Module {
 
     for (codes, code, message) in errorTypes {
       if codes.contains(errorCode) {
-        sendEvent("error", ["error": code, "message": message])
+        // Handle nomatch error for the underlying error:
+        // +[AFAggregator logDictationFailedWithErrr:] Error Domain=kAFAssistantErrorDomain Code=203 "Retry" UserInfo={NSLocalizedDescription=Retry, NSUnderlyingError=0x600000d0ca50 {Error Domain=SiriSpeechErrorDomain Code=1 "(null)"}}
+        if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+          if errorCode == 203 && underlyingError.domain == "SiriSpeechErrorDomain"
+            && underlyingError.code == 1
+          {
+            sendEvent("nomatch")
+          } else {
+            sendEvent("error", ["error": code, "message": message])
+          }
+        } else {
+          sendEvent("error", ["error": code, "message": message])
+        }
         return
       }
     }
