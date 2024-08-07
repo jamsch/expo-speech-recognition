@@ -248,21 +248,7 @@ class ExpoSpeechService(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.audioSource == null) {
             // Feature: Stream microphone input to SpeechRecognition so the user can access the audio blob
             if (options.recordingOptions?.persist == true) {
-                // Normalize the file directory
-                val fileDirectory =
-                    (options.recordingOptions.outputDirectory ?: reactContext.cacheDir.absolutePath)
-                        .removePrefix("file://")
-                        .trimEnd('/')
-
-                val filePath =
-                    options.recordingOptions.outputFileName?.let { fileName ->
-                        "$fileDirectory/$fileName"
-                    } ?: run {
-                        val timestamp = System.currentTimeMillis().toString()
-                        "$fileDirectory/recording_$timestamp.wav"
-                    }
-
-                audioRecorder = ExpoAudioRecorder(reactContext, filePath)
+                audioRecorder = ExpoAudioRecorder(reactContext, resolveFilePathFromConfig(options.recordingOptions))
             } else if (options.continuous == true) {
                 // Feature: Continuous transcription from microphone using `RecognizerIntent.EXTRA_AUDIO_SOURCE`
                 audioRecorder = ExpoAudioRecorder(reactContext, null)
@@ -388,6 +374,23 @@ class ExpoSpeechService(
         }
 
         return intent
+    }
+
+    private fun resolveFilePathFromConfig(options: RecordingOptions): String {
+        // Normalize the file directory
+        val fileDirectory =
+            (options.recordingOptions.outputDirectory ?: reactContext.cacheDir.absolutePath)
+                .removePrefix("file://")
+                .trimEnd('/')
+
+        val filePath =
+            options.recordingOptions.outputFileName?.let { fileName ->
+                "$fileDirectory/$fileName"
+            } ?: run {
+                val timestamp = System.currentTimeMillis().toString()
+                "$fileDirectory/recording_$timestamp.wav"
+            }
+        return filePath
     }
 
     /**

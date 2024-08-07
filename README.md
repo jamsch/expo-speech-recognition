@@ -493,6 +493,23 @@ recognition.stop();
 recognition.abort();
 ```
 
+## Compatibility Table
+
+As of 7 Aug 2024, the following platforms are supported:
+
+| Platform               | Supported | Default Recognition Engine | Notes                                                                                                                                                                                                    |
+| ---------------------- | --------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android (React Native) | ✅        | Google                     | Recording feature is only supported on Android 13 and above. Recognition engine can be changed via `androidRecognitionServicePackage`                                                                    |
+| iOS (React Native)     | ✅        | Siri                       |                                                                                                                                                                                                          |
+| Chrome Desktop         | ✅        | Google (server-based)      | Implemented via prefix `webkitSpeechRecognition`.                                                                                                                                                        |
+| Safari Desktop >= v16  | ✅        | Siri                       | Implemented via prefix `webkitSpeechRecognition`. Siri needs to be enabled                                                                                                                               |
+| Chrome on Android      | ✅        | Google                     | There's a few differences in how results get handled in comparison to the Chrome Desktop implementation                                                                                                  |
+| Chrome on iOS          | ❌        | Google                     | Not working (Last tested 2023)                                                                                                                                                                           |
+| Edge on Windows        | (unknown) | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it’s presence at `edge://components`                                                                               |
+| Edge on Mac ARM        | ❌        | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it’s presence at `edge://components`                                                                               |
+| Brave Desktop          | ❌        | -                          | As of Aug 2024, Brave is working on an implementation however there's currently no ETA (source: [brave-browser/issues/3725](https://github.com/brave/brave-browser/issues/3725#issuecomment-2224068859)) |
+| Firefox Desktop        | ❌        | -                          | No SpeechRecognition implementation                                                                                                                                                                      |
+
 ## APIs
 
 ### API: `getSupportedLocales`
