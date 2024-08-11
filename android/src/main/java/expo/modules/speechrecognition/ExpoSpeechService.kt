@@ -376,15 +376,15 @@ class ExpoSpeechService(
         return intent
     }
 
-    private fun resolveFilePathFromConfig(options: RecordingOptions): String {
+    private fun resolveFilePathFromConfig(recordingOptions: RecordingOptions): String {
         // Normalize the file directory
         val fileDirectory =
-            (options.recordingOptions.outputDirectory ?: reactContext.cacheDir.absolutePath)
+            (recordingOptions.outputDirectory ?: reactContext.cacheDir.absolutePath)
                 .removePrefix("file://")
                 .trimEnd('/')
 
         val filePath =
-            options.recordingOptions.outputFileName?.let { fileName ->
+            recordingOptions.outputFileName?.let { fileName ->
                 "$fileDirectory/$fileName"
             } ?: run {
                 val timestamp = System.currentTimeMillis().toString()
