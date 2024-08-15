@@ -5,6 +5,7 @@
     "paths": {
       "expo-speech-recognition": ["../src/index"],
       "expo-speech-recognition/*": ["../src/*"]
-    }
-  }
+    },
+    "types": ["@types/dom-speech-recognition"],
+  },
 }

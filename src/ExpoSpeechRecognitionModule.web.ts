@@ -136,11 +136,12 @@ const webToNativeEventMap: {
   result: (ev) => {
     const nativeResults: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
       [];
-    for (let i = 0; i < ev.results.length; i++) {
-      const result = ev.results[i];
+
+    for (let i = 0; i < ev.results[ev.resultIndex].length; i++) {
+      const result = ev.results[ev.resultIndex][i];
       nativeResults.push({
-        transcript: result[0].transcript,
-        confidence: result[0].confidence,
+        transcript: result.transcript,
+        confidence: result.confidence,
         segements: [],
       });
     }

@@ -7,5 +7,6 @@ module.exports = {
   },
   rules: {
     "import/order": "off",
+    "@typescript-eslint/array-type": "off",
   },
 };

@@ -160,7 +160,9 @@ export default function App() {
         ]}
       >
         {Platform.OS === "android" && settings.requiresOnDeviceRecognition && (
-          <DownloadOfflineModel locale={settings.lang ?? "en-US"} />
+          <View style={styles.flex1}>
+            <DownloadOfflineModel locale={settings.lang ?? "en-US"} />
+          </View>
         )}
 
         {status === "idle" ? (
@@ -201,7 +203,9 @@ function DownloadOfflineModel(props: { locale: string }) {
       .catch((err) => {
         Alert.alert("Failed to download offline model!", err.message);
       })
-      .finally(() => setDownloading(null));
+      .finally(() => {
+        setDownloading(null);
+      });
   };
 
   return (
@@ -209,12 +213,13 @@ function DownloadOfflineModel(props: { locale: string }) {
       disabled={Boolean(downloading)}
       onPress={handleDownload}
     >
-      <View style={{ maxWidth: 200 }}>
+      <View>
         <Text
           style={{
             fontWeight: "bold",
             color: downloading ? "#999" : "#539bf5",
           }}
+          adjustsFontSizeToFit
         >
           {downloading
             ? `Downloading ${props.locale} model...`

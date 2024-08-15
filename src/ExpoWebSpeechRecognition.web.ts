@@ -1,5 +1,3 @@
-import "dom-speech-recognition";
-
 export const ExpoWebSpeechRecognition =
   SpeechRecognition || webkitSpeechRecognition;
 
