@@ -49,7 +49,7 @@ export default function App() {
   );
 
   const [transcription, setTranscription] = useState<null | {
-    isFinal: boolean;
+    transcriptTally: string;
     transcript: string;
   }>(null);
 
@@ -73,9 +73,21 @@ export default function App() {
       transcripts: ev.results.map((result) => result.transcript),
     });
 
-    setTranscription({
-      isFinal: ev.isFinal,
-      transcript: ev.results[0]?.transcript,
+    const transcript = ev.results[0]?.transcript || "";
+
+    setTranscription((current) => {
+      // When a final result comes in, we need to update the base transcript to build off from
+      // Because on Android and Web, multiple final results can be returned within a continuous session
+      // When a final result is received, any following recognized transcripts will omit the previous final result
+      const transcriptTally =
+        ev.isFinal && current
+          ? current.transcriptTally + transcript
+          : current?.transcriptTally ?? "";
+
+      return {
+        transcriptTally,
+        transcript: ev.isFinal ? transcriptTally : transcriptTally + transcript,
+      };
     });
   });
 

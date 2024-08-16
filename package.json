@@ -34,7 +34,7 @@
     "@types/dom-speech-recognition": "^0.0.4",
     "@types/react": "^18.3.3",
     "expo-module-scripts": "^3.5.2",
-    "expo-modules-core": "^1.12.20"
+    "expo-modules-core": "^1.12.21"
   },
   "prettier": {
     "trailingComma": "all"
