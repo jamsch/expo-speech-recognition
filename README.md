@@ -283,7 +283,7 @@ The error code is largely based on the Web Speech API error codes.
 
 ## Persisting Audio Recordings
 
-If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit a `recording` event with the local file path after speech recognition ends.
+If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit an `{ uri: string }` event object in the `audiostart` and `audioend` events with the local file path.
 
 > Note: For Android, this is only supported on Android 13 and above. Call `supportsRecording()` to see if it's available before using this feature.
 
