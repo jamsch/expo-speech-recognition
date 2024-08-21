@@ -79,10 +79,9 @@ export default function App() {
       // When a final result comes in, we need to update the base transcript to build off from
       // Because on Android and Web, multiple final results can be returned within a continuous session
       // When a final result is received, any following recognized transcripts will omit the previous final result
-      const transcriptTally =
-        ev.isFinal && current
-          ? current.transcriptTally + transcript
-          : current?.transcriptTally ?? "";
+      const transcriptTally = ev.isFinal
+        ? (current?.transcriptTally ?? "") + transcript
+        : current?.transcriptTally ?? "";
 
       return {
         transcriptTally,
@@ -589,13 +588,7 @@ function AndroidSettings(props: {
           <View style={styles.flex1}>
             <Text style={styles.textLabel}>EXTRA_LANGUAGE_MODEL</Text>
             <View style={[styles.row, styles.flexWrap]}>
-              {[
-                "free_form",
-                "web_search",
-                "balanced",
-                "quick_response",
-                "high_precision",
-              ].map((model) => (
+              {["free_form", "web_search"].map((model) => (
                 <OptionButton
                   key={model}
                   title={model}

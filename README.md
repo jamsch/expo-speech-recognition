@@ -493,6 +493,15 @@ recognition.stop();
 recognition.abort();
 ```
 
+## Improving accuracy of single-word prompts
+
+You may notice that after saying single words, letters, or numbers (e.g. "a", "b", 1, 5, etc.) that the speech recognition service may not return any results until you speak further. In order to improve the accuracy of single-word prompts for Android and iOS, you have the following options:
+
+- For iOS, you can use the `iosTaskHint` option and set it to `confirmation`.
+- For Android, you can change the language model to web_search by adding `androidIntentOptions: { EXTRA_LANGUAGE_MODEL: "web_search" }` to `ExpoSpeechRecognitionModule.start(...)`. This seems to be superior over the default `free_form` model for single-word prompts.
+- For both platforms, you may want to consider using on-device recognition. On-device recognition tends to process smaller chunks of audio and is more responsive.
+- Alternatively, you may want to consider recording the recognized audio and sending it to an external service for further processing. See [Persisting Audio Recordings](#persisting-audio-recordings) for more information. Note that some services (such as the Google Speech API) may require an audio file with a duration of at least 3 seconds.
+
 ## Compatibility Table
 
 As of 7 Aug 2024, the following platforms are supported:
