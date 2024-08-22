@@ -205,7 +205,7 @@ public class ExpoSpeechRecognitionModule: Module {
       )
     }
 
-    Function("getAudioSessionCategoryAndOptionsIOS") {
+    Function("getAudioSessionCategoryAndOptionsIOS") { () -> [String: Any] in
       let instance = AVAudioSession.sharedInstance()
 
       let categoryOptions: AVAudioSession.CategoryOptions = instance.categoryOptions
@@ -268,17 +268,17 @@ public class ExpoSpeechRecognitionModule: Module {
       try AVAudioSession.sharedInstance().setActive(value, options: setActiveOptions)
     }
 
-    Function("supportsOnDeviceRecognition") {
+    Function("supportsOnDeviceRecognition") { () -> Bool in
       let recognizer = SFSpeechRecognizer()
       return recognizer?.supportsOnDeviceRecognition ?? false
     }
 
-    Function("supportsRecording") {
+    Function("supportsRecording") { () -> Bool in
       let recognizer: SFSpeechRecognizer? = SFSpeechRecognizer()
       return recognizer?.isAvailable ?? false
     }
 
-    Function("stop") {
+    Function("stop") { () -> Void in
       Task {
         if let recognizer = speechRecognizer {
           await recognizer.stop()
@@ -288,7 +288,7 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
-    Function("abort") {
+    Function("abort") { () -> Void in
       Task {
         sendEvent("error", ["error": "aborted", "message": "Speech recognition aborted."])
 
@@ -300,7 +300,7 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
-    Function("getSpeechRecognitionServices") {
+    Function("getSpeechRecognitionServices") { () -> [String] in
       // Return an empty array on iOS
       return []
     }
