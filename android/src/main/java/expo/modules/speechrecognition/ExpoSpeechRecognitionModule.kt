@@ -201,7 +201,7 @@ class ExpoSpeechRecognitionModule : Module() {
                     return@AsyncFunction
                 }
 
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                     promise.reject(
                         "not_supported",
                         "Android version is too old to trigger offline model download.",
@@ -209,9 +209,28 @@ class ExpoSpeechRecognitionModule : Module() {
                     )
                     return@AsyncFunction
                 }
-                isDownloadingModel = true
+
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, options.locale)
+
+                // API 33 (Android 13) -- Trigger the model download but resolve immediately
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    Handler(appContext.reactContext!!.mainLooper).post {
+                        val recognizer =
+                            SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
+                        recognizer.triggerModelDownload(intent)
+                    }
+                    promise.resolve(
+                        mapOf(
+                            "status" to "opened_dialog",
+                            "message" to "Opened the model download dialog.",
+                        ),
+                    )
+                    return@AsyncFunction
+                }
+
+                // API 34+ (Android 14+) -- Trigger the model download and listen to the progress
+                isDownloadingModel = true
                 Handler(appContext.reactContext!!.mainLooper).post {
                     val recognizer =
                         SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
@@ -225,7 +244,12 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onSuccess() {
-                                promise.resolve(true)
+                                promise.resolve(
+                                    mapOf(
+                                        "status" to "download_success",
+                                        "message" to "Offline model download completed successfully.",
+                                    ),
+                                )
                                 isDownloadingModel = false
                                 recognizer.destroy()
                             }

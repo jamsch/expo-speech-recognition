@@ -370,7 +370,13 @@ function AudioPlayer(props: { source: string }) {
 
 You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
 
-> Note: On Android, this feature is only supported on Android 13 and above. The speech recongition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support audio source transcription.
+> **Important notes**:
+>
+> - On Android, this feature is only supported on Android 13 and above. The speech recognition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support audio source transcription.
+> - On Android, this feature is only verified to work with 16000hz 16bit PCM audio files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio) for an example audio file that works for Android and the ffmpeg command used.
+> - On iOS, this feature is only verified to work with 16000hz 16bit PCM WAV files and 16000hz MP3 files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio-remote) for a list of example audio files that work for iOS (excluding the .ogg file).
+
+Example:
 
 ```tsx
 import { Button, View } from "react-native";
@@ -581,7 +587,7 @@ const available = supportsRecording();
 console.log("Recording available:", available);
 ```
 
-### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<boolean>`
+### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<{ status: "download_success" | "opened_dialog", message: string }>`
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
@@ -596,8 +602,14 @@ import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
 ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
   locale: "en-US",
 })
-  .then(() => {
-    console.log("Offline model downloaded successfully!");
+  .then((result) => {
+    if (result.status === "opened_dialog") {
+      // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+      console.log("Offline model download dialog opened.");
+    } else if (result.status === "download_success") {
+      // On Android 14+, the status will be "download_success" indicating that the model download was successful.
+      console.log("Offline model downloaded successfully!");
+    }
   })
   .catch((err) => {
     console.log("Failed to download offline model!", err.message);

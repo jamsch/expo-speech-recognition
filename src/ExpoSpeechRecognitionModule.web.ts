@@ -100,7 +100,10 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     console.warn(
       "androidTriggerOfflineModelDownload is not supported on web. Returning false.",
     );
-    return Promise.resolve(false);
+    return Promise.resolve({
+      status: "opened_dialog",
+      message: "Offline model download is not supported on web.",
+    });
   },
   setCategoryIOS: () => {
     console.warn("setCategoryIOS is not supported on web.");

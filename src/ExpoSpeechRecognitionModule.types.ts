@@ -507,7 +507,14 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   androidTriggerOfflineModelDownload(options: {
     /** The locale to download the model for, e.g. "en-US" */
     locale: string;
-  }): Promise<boolean>;
+  }): Promise<{
+    /**
+     * On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+     * On Android 14+, the status will be "download_success" indicating that the model download was successful.
+     */
+    status: "download_success" | "opened_dialog";
+    message: string;
+  }>;
   /**
    * [iOS only] For advanced use cases, you may use this function to set the audio session category and mode.
    *

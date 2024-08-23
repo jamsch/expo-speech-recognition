@@ -208,8 +208,14 @@ function DownloadOfflineModel(props: { locale: string }) {
     ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
       locale: props.locale,
     })
-      .then(() => {
-        Alert.alert("Offline model downloaded successfully!");
+      .then((result) => {
+        if (result.status === "opened_dialog") {
+          // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+          Alert.alert("Offline model download dialog opened.");
+        } else if (result.status === "download_success") {
+          // On Android 14+, the status will be "download_success" indicating that the model download was successful.
+          Alert.alert("Offline model downloaded successfully!");
+        }
       })
       .catch((err) => {
         Alert.alert("Failed to download offline model!", err.message);
