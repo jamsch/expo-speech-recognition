@@ -32,7 +32,9 @@ export type ExpoSpeechRecognitionErrorCode =
   | "service-not-allowed"
   // Extra codes (not part of the spec)
   /** The recognizer is busy and cannot accept any new recognition requests. */
-  | "busy";
+  | "busy"
+  /** (Android only) An unknown client-side error occurred. */
+  | "client";
 
 /**
  * Events that are dispatched from the native side
