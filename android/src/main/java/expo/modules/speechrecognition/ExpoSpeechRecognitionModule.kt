@@ -255,7 +255,12 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onScheduled() {
-                                //
+                                promise.resolve(
+                                    mapOf(
+                                        "status" to "download_canceled",
+                                        "message" to "The offline model download was canceled.",
+                                    ),
+                                )
                             }
 
                             override fun onError(error: Int) {

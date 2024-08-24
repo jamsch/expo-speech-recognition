@@ -502,7 +502,7 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   supportsRecording(): boolean;
   /**
    * Downloads the offline model for the specified locale.
-   * Note: this is only supported on Android 12 and above.
+   * Note: this is only supported on Android 13 and above.
    */
   androidTriggerOfflineModelDownload(options: {
     /** The locale to download the model for, e.g. "en-US" */
@@ -511,8 +511,9 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     /**
      * On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
      * On Android 14+, the status will be "download_success" indicating that the model download was successful.
+     * On Android 14+, "download_canceled" will be returned if the download was canceled by a user interaction.
      */
-    status: "download_success" | "opened_dialog";
+    status: "download_success" | "opened_dialog" | "download_canceled";
     message: string;
   }>;
   /**

@@ -587,7 +587,7 @@ const available = supportsRecording();
 console.log("Recording available:", available);
 ```
 
-### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<{ status: "download_success" | "opened_dialog", message: string }>`
+### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<{ status: "opened_dialog" | "download_success" | "download_canceled", message: string }>`
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
@@ -603,13 +603,19 @@ ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
   locale: "en-US",
 })
   .then((result) => {
-    if (result.status === "opened_dialog") {
-      // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
-      console.log("Offline model download dialog opened.");
-    } else if (result.status === "download_success") {
-      // On Android 14+, the status will be "download_success" indicating that the model download was successful.
-      console.log("Offline model downloaded successfully!");
-    }
+    switch (result.status) {
+      case "opened_dialog":
+        // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+        console.log("Offline model download dialog opened.");
+        break;
+      case "download_success":
+        // On Android 14+, model was succesfully downloaded.
+        console.log("Offline model downloaded successfully!");
+        break;
+      case "download_canceled":
+        // On Android 14+, the download was canceled by a user interaction.
+        console.log("Offline model download was canceled.");
+        break;
   })
   .catch((err) => {
     console.log("Failed to download offline model!", err.message);

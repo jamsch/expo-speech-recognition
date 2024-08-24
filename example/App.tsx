@@ -215,6 +215,9 @@ function DownloadOfflineModel(props: { locale: string }) {
         } else if (result.status === "download_success") {
           // On Android 14+, the status will be "download_success" indicating that the model download was successful.
           Alert.alert("Offline model downloaded successfully!");
+        } else if (result.status === "download_canceled") {
+          // On Android 14+, the download was canceled by a user interaction.
+          Alert.alert("Offline model download was canceled.");
         }
       })
       .catch((err) => {
