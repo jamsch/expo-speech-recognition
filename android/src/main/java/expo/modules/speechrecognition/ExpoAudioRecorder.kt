@@ -61,6 +61,58 @@ class ExpoAudioRecorder(
     private var recordingThread: Thread? = null
     private var isRecordingAudio = false
 
+    companion object {
+        private fun shortReverseBytes(s: Short): Int =
+            java.lang.Short
+                .reverseBytes(s)
+                .toInt()
+
+        fun appendWavHeader(
+            outputFilePath: String,
+            pcmFile: File,
+            sampleRateInHz: Int
+        ): File {
+            val outputFile = File(outputFilePath)
+            val audioDataLength = pcmFile.length()
+            val numChannels = 1
+            val bitsPerSample = 16
+
+            DataOutputStream(FileOutputStream(outputFile)).use { out ->
+                val totalDataLen = 36 + audioDataLength
+                val byteRate = sampleRateInHz * numChannels * bitsPerSample / 8
+                val blockAlign = numChannels * bitsPerSample / 8
+
+                // Write the RIFF chunk descriptor
+                out.writeBytes("RIFF") // ChunkID
+                out.writeInt(Integer.reverseBytes(totalDataLen.toInt())) // ChunkSize
+                out.writeBytes("WAVE")
+                out.writeBytes("fmt ")
+                out.writeInt(Integer.reverseBytes(16)) // Subchunk1Size (16 for PCM)
+                out.writeShort(shortReverseBytes(1)) // AudioFormat (1 for PCM)
+                out.writeShort(shortReverseBytes(numChannels.toShort())) // NumChannels
+                out.writeInt(Integer.reverseBytes(sampleRateInHz)) // SampleRate
+                out.writeInt(Integer.reverseBytes(byteRate)) // ByteRate
+                out.writeShort(shortReverseBytes(blockAlign.toShort())) // BlockAlign
+                out.writeShort(shortReverseBytes(bitsPerSample.toShort())) // BitsPerSample
+
+                // Write the data sub-chunk
+                out.writeBytes("data")
+                out.writeInt(Integer.reverseBytes(audioDataLength.toInt()))
+
+                try {
+                    val pcmData = pcmFile.readBytes()
+                    out.write(pcmData)
+                    pcmFile.delete()
+                } catch (e: IOException) {
+                    e.localizedMessage?.let { Log.d("ExpoSpeechService", it) }
+                    e.printStackTrace()
+                }
+            }
+
+            return outputFile
+        }
+    }
+
     private fun createTempPcmFile(): File {
         val file = File(context.cacheDir, "temp_${UUID.randomUUID()}.pcm")
         if (!file.exists()) {
@@ -114,6 +166,7 @@ class ExpoAudioRecorder(
                 appendWavHeader(
                     outputFilePath,
                     tempPcmFile,
+                    sampleRateInHz
                 )
         }
         // Close the ParcelFileDescriptor
@@ -153,53 +206,4 @@ class ExpoAudioRecorder(
         tempFileOutputStream.close()
     }
 
-    private fun appendWavHeader(
-        outputFilePath: String,
-        audioData: File,
-    ): File {
-        val outputFile = File(outputFilePath)
-        val audioDataLength = audioData.length()
-        val sampleRate = sampleRateInHz
-        val numChannels = 1
-        val bitsPerSample = 16
-
-        DataOutputStream(FileOutputStream(outputFile)).use { out ->
-            val totalDataLen = 36 + audioDataLength
-            val byteRate = sampleRate * numChannels * bitsPerSample / 8
-            val blockAlign = numChannels * bitsPerSample / 8
-
-            // Write the RIFF chunk descriptor
-            out.writeBytes("RIFF") // ChunkID
-            out.writeInt(Integer.reverseBytes(totalDataLen.toInt())) // ChunkSize
-            out.writeBytes("WAVE")
-            out.writeBytes("fmt ")
-            out.writeInt(Integer.reverseBytes(16)) // Subchunk1Size (16 for PCM)
-            out.writeShort(shortReverseBytes(1)) // AudioFormat (1 for PCM)
-            out.writeShort(shortReverseBytes(numChannels.toShort())) // NumChannels
-            out.writeInt(Integer.reverseBytes(sampleRate)) // SampleRate
-            out.writeInt(Integer.reverseBytes(byteRate)) // ByteRate
-            out.writeShort(shortReverseBytes(blockAlign.toShort())) // BlockAlign
-            out.writeShort(shortReverseBytes(bitsPerSample.toShort())) // BitsPerSample
-
-            // Write the data sub-chunk
-            out.writeBytes("data")
-            out.writeInt(Integer.reverseBytes(audioDataLength.toInt()))
-
-            try {
-                val pcmData = tempPcmFile.readBytes()
-                out.write(pcmData)
-                tempPcmFile.delete()
-            } catch (e: IOException) {
-                e.localizedMessage?.let { Log.d("ExpoSpeechService", it) }
-                e.printStackTrace()
-            }
-        }
-
-        return outputFile
-    }
-
-    private fun shortReverseBytes(s: Short): Int =
-        java.lang.Short
-            .reverseBytes(s)
-            .toInt()
 }
