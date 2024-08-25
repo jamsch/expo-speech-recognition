@@ -41,7 +41,7 @@ import { Audio } from "expo-av";
 import { useAssets } from "expo-asset";
 import * as FileSystem from "expo-file-system";
 
-const speechRecognitionServices = getSpeechRecognitionServices();
+const speechRecognitionServices = getSpeechRecognitionServices().packages;
 
 export default function App() {
   const [error, setError] = useState<{ error: string; message: string } | null>(
@@ -91,7 +91,7 @@ export default function App() {
   });
 
   useSpeechRecognitionEvent("start", () => {
-    console.log("[event]: start");
+    setTranscription(null);
     setStatus("recognizing");
   });
 
@@ -449,10 +449,17 @@ function GeneralSettings(props: {
 
   useEffect(() => {
     getSupportedLocales({
-      onDevice: settings.requiresOnDeviceRecognition,
       androidRecognitionServicePackage:
         settings.androidRecognitionServicePackage,
-    }).then(setSupportedLocales);
+    })
+      .then(setSupportedLocales)
+      .catch((err) => {
+        console.log(
+          "Error getting supported locales for package:",
+          settings.androidRecognitionServicePackage,
+          err,
+        );
+      });
   }, [
     settings.requiresOnDeviceRecognition,
     settings.androidRecognitionServicePackage,
@@ -761,6 +768,23 @@ function OtherSettings(props: {
                 Audio recording saved to {recordingPath}
               </Text>
               <AudioPlayer source={recordingPath} />
+              {/* 
+              <BigButton
+                title="Transcribe the recording"
+                color="#539bf5"
+                onPress={() => {
+                  ExpoSpeechRecognitionModule.start({
+                    lang: "en-US",
+                    interimResults: true,
+                    audioSource: {
+                      uri: recordingPath,
+                      audioChannels: 1,
+                      audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+                      sampleRate: 16000,
+                    },
+                  });
+                }}
+              /> */}
             </View>
           ) : (
             <Text style={styles.text}>
@@ -888,7 +912,11 @@ function TranscribeRemoteAudioFile(props: {
 
 function AudioPlayer(props: { source: string }) {
   const handlePlay = () => {
-    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true });
+    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true }).catch(
+      (reason) => {
+        console.log("Failed to play audio", reason);
+      },
+    );
   };
 
   return <Button title="Play back recording" onPress={handlePlay} />;

@@ -85,7 +85,11 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     console.warn(
       "getSpeechRecognitionServices is not supported on web. Returning an empty array.",
     );
-    return [] as string[];
+    return {
+      packages: [] as string[],
+      defaultRecognitionServicePackage: "",
+      assistantServicePackage: "",
+    };
   },
   supportsOnDeviceRecognition: () => {
     console.warn(

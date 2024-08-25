@@ -2,10 +2,14 @@ package expo.modules.speechrecognition
 
 import android.Manifest.permission.RECORD_AUDIO
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.os.Build
 import android.os.Handler
+import android.provider.Settings
 import android.speech.ModelDownloadListener
 import android.speech.RecognitionService
 import android.speech.RecognitionSupport
@@ -91,7 +95,11 @@ class ExpoSpeechRecognitionModule : Module() {
                 val serviceNames = mutableListOf<String>()
 
                 if (packageManager == null) {
-                    return@Function serviceNames // Early return with an empty list
+                    return@Function mapOf(
+                        "packages" to serviceNames,
+                        "defaultRecognitionServicePackage" to "",
+                        "assistantServicePackage" to "",
+                    )
                 }
 
                 val services =
@@ -103,8 +111,14 @@ class ExpoSpeechRecognitionModule : Module() {
                 for (service in services) {
                     serviceNames.add(service.serviceInfo.packageName)
                 }
+                val defaultRecognitionService = getDefaultVoiceRecognitionService()?.packageName ?: ""
+                val assistantServicePackage = getDefaultAssistantService()?.packageName ?: ""
 
-                serviceNames
+                return@Function mapOf(
+                    "packages" to serviceNames,
+                    "defaultRecognitionServicePackage" to defaultRecognitionService,
+                    "assistantServicePackage" to assistantServicePackage,
+                )
             }
 
             AsyncFunction("requestPermissionsAsync") { promise: Promise ->
@@ -264,6 +278,7 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onError(error: Int) {
+                                Log.e("ExpoSpeechService", "Error downloading model with code: $error")
                                 isDownloadingModel = false
                                 promise.reject(
                                     "error_$error",
@@ -279,6 +294,36 @@ class ExpoSpeechRecognitionModule : Module() {
         }
 
     private fun hasNotGrantedRecordPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
+
+    private fun getDefaultAssistantService(): ComponentName? {
+        val contentResolver = appContext.reactContext?.contentResolver ?: return null
+        val defaultAssistant = Settings.Secure.getString(contentResolver, "assistant")
+        return ComponentName.unflattenFromString(defaultAssistant)
+    }
+
+
+    private fun getDefaultVoiceRecognitionService(): ComponentName? {
+        // Note: this line below returns "com.google.android.tts"
+        // Settings.Secure.getString(contentResolver, "voice_recognition_service")
+
+        // However this line from the Android Settings app returns "com.google.android.as"
+        // source: https://android.googlesource.com/platform/packages/apps/Settings/+/085028d/src/com/android/settings/applications/DefaultAssistPreference.java#116
+        val resolveInfo: ResolveInfo? =
+            appContext.reactContext?.packageManager?.resolveService(
+                Intent(RecognitionService.SERVICE_INTERFACE),
+                PackageManager.GET_META_DATA,
+            )
+
+        if (resolveInfo?.serviceInfo == null) {
+            Log.w("ExpoSpeechService", "Unable to resolve default voice recognition service.")
+            return null
+        }
+
+        return ComponentName(
+            resolveInfo.serviceInfo.packageName,
+            resolveInfo.serviceInfo.name,
+        )
+    }
 
     private fun getSupportedLocales(
         options: GetSupportedLocaleOptions,

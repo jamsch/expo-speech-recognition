@@ -487,11 +487,15 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   }>;
   /**
    * Returns an array of package names of speech recognition services that are available on the device.
-   * Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
-   *
-   * e.g. `["com.google.android.googlequicksearchbox"]`
    */
-  getSpeechRecognitionServices(): string[];
+  getSpeechRecognitionServices(): {
+    /** List of all available services, e.g. ["com.google.android.as", "com.google.android.tts"] */
+    packages: string[];
+    /** Default service used for speech recognition, e.g. "com.google.android.as" */
+    defaultRecognitionServicePackage: string;
+    /** Assistant package used, e.g. "com.google.android.googlequicksearchbox" */
+    assistantServicePackage: string;
+  };
   /**
    * Whether the on-device speech recognition is available on the device.
    */

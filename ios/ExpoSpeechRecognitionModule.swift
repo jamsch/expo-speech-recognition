@@ -300,9 +300,13 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
-    Function("getSpeechRecognitionServices") { () -> [String] in
+    Function("getSpeechRecognitionServices") { () -> [String: Any] in
       // Return an empty array on iOS
-      return []
+      return [
+        "packages": [],
+        "defaultRecognitionServicePackage": "",
+        "assistantServicePackage": "",
+      ]
     }
 
     AsyncFunction("getSupportedLocales") { (options: GetSupportedLocaleOptions, promise: Promise) in

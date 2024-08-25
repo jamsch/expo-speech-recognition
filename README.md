@@ -538,11 +538,9 @@ import { getSupportedLocales } from "@jamsch/expo-speech-recognition";
 getSupportedLocales({
   /**
    * The package name of the speech recognition service to use.
-   * If not provided, the default service will be used.
+   * If not provided, the default service used for on-device recognition will be used.
    */
   androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
-  /** If true, will return the locales that are able to be used for on-device recognition. */
-  onDevice: false,
 }).then((supportedLocales) => {
   console.log("Supported locales:", supportedLocales.locales.join(", "));
   console.log(
@@ -561,9 +559,18 @@ Get list of speech recognition services available on the device.
 ```ts
 import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
 
-const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
-console.log("Speech recognition services:", packages.join(", "));
-// e.g. ["com.google.android.tts", "com.samsung.android.bixby.agent"]
+const result = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
+console.log("Speech recognition services:", result.packages.join(", "));
+// e.g. ["com.google.android.as", "com.google.android.tts", "com.samsung.android.bixby.agent"]
+
+console.log(
+  "Default speech recognition service:",
+  result.defaultRecognitionServicePackage,
+);
+// e.g. "com.google.android.tts"
+
+console.log("Configured assistant package:", result.assistantPackage);
+// e.g. "com.google.android.googlequicksearchbox" (not necessarily in the list of packages)
 ```
 
 ### API: `supportsOnDeviceRecognition()`
@@ -592,7 +599,7 @@ console.log("Recording available:", available);
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
-You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
+You can see which locales are supported and installed on your device by running `getSupportedLocales()`.
 
 To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
 
