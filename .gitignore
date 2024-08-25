@@ -55,3 +55,6 @@ yarn-error.log
 
 # Expo
 .expo/*
+
+# Test assets
+example/assets/audio/test/

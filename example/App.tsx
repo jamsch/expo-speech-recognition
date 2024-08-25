@@ -29,7 +29,7 @@ import {
   type AVAudioSessionModeValue,
   ExpoWebSpeechRecognition,
 } from "expo-speech-recognition";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   OptionButton,
   CheckboxButton,
@@ -40,6 +40,11 @@ import { StatusBar } from "expo-status-bar";
 import { Audio } from "expo-av";
 import { useAssets } from "expo-asset";
 import * as FileSystem from "expo-file-system";
+import {
+  AndroidAudioEncoder,
+  AndroidOutputFormat,
+  IOSOutputFormat,
+} from "expo-av/build/Audio";
 
 const speechRecognitionServices = getSpeechRecognitionServices().packages;
 
@@ -771,7 +776,6 @@ function OtherSettings(props: {
                 Audio recording saved to {recordingPath}
               </Text>
               <AudioPlayer source={recordingPath} />
-              {/* 
               <BigButton
                 title="Transcribe the recording"
                 color="#539bf5"
@@ -787,7 +791,7 @@ function OtherSettings(props: {
                     },
                   });
                 }}
-              /> */}
+              />
             </View>
           ) : (
             <Text style={styles.text}>
@@ -798,6 +802,8 @@ function OtherSettings(props: {
       ) : null}
 
       <WebSpeechAPIDemo />
+
+      <RecordUsingExpoAvDemo />
 
       <TranscribeLocalAudioFile />
 
@@ -812,14 +818,14 @@ function OtherSettings(props: {
         fileName="remote-en-us-sentence-16000hz.mp3"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
         audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
-        description="(May not work on Android) 16000hz MP3 1-channel audio file"
+        description="16000hz MP3 1-channel audio file"
       />
 
       <TranscribeRemoteAudioFile
         fileName="remote-en-us-sentence-16000hz.ogg"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
-        description="(May not work on iOS & Android) 16000hz opus 1-channel audio file"
+        description="(May not work on iOS) 16000hz opus 1-channel audio file"
       />
     </View>
   );
@@ -827,7 +833,7 @@ function OtherSettings(props: {
 
 function TranscribeLocalAudioFile() {
   const [busy, setBusy] = useState(false);
-  const [assets] = useAssets([require("./assets/audio/en-us-sentence.wav")]);
+  const [assets] = useAssets([require("./assets/audio/test/goty.wav")]);
 
   const localUri = assets?.[0]?.localUri;
 
@@ -841,13 +847,12 @@ function TranscribeLocalAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
-      requiresOnDeviceRecognition: false,
+      requiresOnDeviceRecognition: true,
       audioSource: {
         uri: localUri,
         audioChannels: 1,
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         sampleRate: 16000,
-        chunkDelayMillis: 50,
       },
     });
   };
@@ -1024,6 +1029,98 @@ function WebSpeechAPIDemo() {
     </View>
   );
 }
+
+function RecordUsingExpoAvDemo() {
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+
+  const handleStart = async () => {
+    setIsRecording(true);
+
+    const { recording } = await Audio.Recording.createAsync({
+      isMeteringEnabled: true,
+      android: {
+        bitRate: 32000,
+        extension: ".m4a",
+        outputFormat: AndroidOutputFormat.MPEG_4,
+        audioEncoder: AndroidAudioEncoder.AAC,
+        numberOfChannels: 1,
+        sampleRate: 16000,
+      },
+      ios: {
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
+        extension: ".wav",
+        outputFormat: IOSOutputFormat.LINEARPCM,
+      },
+      web: {
+        mimeType: "audio/wav",
+        bitsPerSecond: 128000,
+      },
+    });
+
+    recordingRef.current = recording;
+  };
+
+  const handleStop = async () => {
+    setIsRecording(false);
+    const recording = recordingRef.current;
+    if (!recording) {
+      return;
+    }
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setRecordingUri(uri);
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={[styles.text, styles.mb2]}>Record using Expo AV</Text>
+
+      <View style={styles.row}>
+        {!isRecording ? (
+          <BigButton
+            title="Start Recording"
+            color="#539bf5"
+            onPress={handleStart}
+          />
+        ) : (
+          <BigButton
+            title="Stop Recording"
+            color="#7C90DB"
+            onPress={handleStop}
+          />
+        )}
+      </View>
+
+      {recordingUri && <AudioPlayer source={recordingUri} />}
+
+      {recordingUri && (
+        <BigButton
+          title="Transcribe the recording"
+          color="#539bf5"
+          onPress={() => {
+            console.log("Transcribing recording", recordingUri);
+            ExpoSpeechRecognitionModule.start({
+              lang: "en-US",
+              interimResults: true,
+              // Switch to true for faster transcription
+              // (Make sure you downloaded the offline model first)
+              requiresOnDeviceRecognition: false,
+              audioSource: {
+                uri: recordingUri,
+                audioChannels: 1,
+                audioEncoding: AudioEncodingAndroid.ENCODING_MP3,
+                sampleRate: 16000,
+              },
+            });
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
