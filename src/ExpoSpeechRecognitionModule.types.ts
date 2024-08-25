@@ -269,6 +269,16 @@ export type AudioSourceOptions = {
    * Default: 16000
    */
   sampleRate?: number;
+  /**
+   * [Android only] The delay between chunks of audio to stream to the speech recognition service.
+   *
+   * Use this setting to avoid being rate-limited when using network-based recognition.
+   *
+   * If you're using on-device recognition, you may want to increase this value to avoid unprocessed audio chunks.
+   *
+   * Default: 50ms for network-based recognition, 15ms for on-device recognition
+   */
+  chunkDelayMillis?: number;
 };
 
 export type AudioEncodingAndroidValue =
@@ -469,9 +479,18 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * Returns the current permission status for the microphone and speech recognition.
    */
   getPermissionsAsync(): Promise<PermissionResponse>;
-  /** Returns an array of locales supported by the speech recognizer. */
+  /**
+   * Returns an array of locales supported by the speech recognizer.
+   *
+   * @throws {"package_not_found"} If the service package is not found.
+   * @throws {"error_[number]"} If there was an error retrieving the supported locales.
+   */
   getSupportedLocales(options: {
-    /** The package name of the speech recognition service to use. */
+    /**
+     * The package name of the speech recognition service to use.
+     *
+     * Warning: the service package (such as Bixby) may not be able to return any results.
+     */
     androidRecognitionServicePackage?: string;
     /** If true, will return the installed locales of the on-device speech recognition service. */
     onDevice?: boolean;

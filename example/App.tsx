@@ -140,7 +140,10 @@ export default function App() {
         </Text>
       </View>
 
-      <ScrollView style={[styles.card, { height: 140, maxHeight: 140 }]}>
+      <ScrollView
+        style={[styles.card, { padding: 0, height: 140, maxHeight: 140 }]}
+        contentContainerStyle={{ padding: 10 }}
+      >
         <View>
           <Text style={styles.text}>
             Status:{" "}
@@ -838,11 +841,13 @@ function TranscribeLocalAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
+      requiresOnDeviceRecognition: false,
       audioSource: {
         uri: localUri,
         audioChannels: 1,
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         sampleRate: 16000,
+        chunkDelayMillis: 50,
       },
     });
   };

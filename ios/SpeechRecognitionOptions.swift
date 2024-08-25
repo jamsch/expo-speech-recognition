@@ -81,6 +81,9 @@ struct AudioSourceOptions: Record {
 
   @Field
   var audioChannels: Int? = 1
+
+  @Field
+  var chunkDelayMillis: Int? = nil
 }
 
 struct GetSupportedLocaleOptions: Record {

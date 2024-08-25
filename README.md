@@ -217,6 +217,10 @@ ExpoSpeechRecognitionModule.start({
     audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
     // [Android only] Audio sampling rate in Hz.
     sampleRate: 16000,
+    // [Android only] The delay between chunks of audio to stream to the speech recognition service.
+    // Use this setting to avoid being rate-limited when using network-based recognition.
+    // Default: 50ms for network-based recognition, 15ms for on-device recognition
+    chunkDelayMillis: undefined,
   },
 });
 
@@ -403,6 +407,12 @@ function TranscribeAudioFile() {
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         /** [Android only] Audio sampling rate in Hz. */
         sampleRate: 16000,
+        /**
+         * [Android only] The delay between chunks of audio to stream to the speech recognition service.
+         * Use this setting to avoid being rate-limited when using network-based recognition.
+         * Default: 50ms for network-based recognition, 15ms for on-device recognition
+         */
+        chunkDelayMillis: undefined,
       },
     });
   };
@@ -539,15 +549,23 @@ getSupportedLocales({
   /**
    * The package name of the speech recognition service to use.
    * If not provided, the default service used for on-device recognition will be used.
+   *
+   * Warning: the service package (such as Bixby) may not be able to return any results.
    */
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
-}).then((supportedLocales) => {
-  console.log("Supported locales:", supportedLocales.locales.join(", "));
-  console.log(
-    "On-device locales:",
-    supportedLocales.installedLocales.join(", "),
-  );
-});
+  androidRecognitionServicePackage: "com.google.android.as",
+})
+  .then((supportedLocales) => {
+    console.log("Supported locales:", supportedLocales.locales.join(", "));
+    console.log(
+      "On-device locales:",
+      supportedLocales.installedLocales.join(", "),
+    );
+  })
+  .catch((error) => {
+    // If the service package is not found
+    // or there was an error retrieving the supported locales
+    console.error("Error getting supported locales:", error);
+  });
 ```
 
 ### API: `getSpeechRecognitionServices` (Android only)

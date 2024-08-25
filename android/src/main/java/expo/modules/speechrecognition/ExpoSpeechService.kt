@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelFileDescriptor
 import android.speech.RecognitionListener
 import android.speech.RecognitionPart
 import android.speech.RecognitionService
@@ -50,25 +49,32 @@ class ExpoSpeechService(
 ) : RecognitionListener {
     private var speech: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    /** Audio recorder for persisting audio */
     private var audioRecorder: ExpoAudioRecorder? = null
+    /** File streamer for file-based recognition */
+    private var delayedFileStreamer: DelayedFileStreamer? = null
     private var soundState = SoundState.INACTIVE
-    private var lastTimeSoundDetected = 0L
 
     var recognitionState = RecognitionState.INACTIVE
 
-    @SuppressLint("QueryPermissionsNeeded")
-    private fun findComponentNameByPackageName(packageName: String): ComponentName {
-        val packageManager = reactContext.packageManager
-        val services: List<ResolveInfo> = packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
+    companion object {
+        @SuppressLint("QueryPermissionsNeeded")
+        fun findComponentNameByPackageName(
+            context: Context,
+            packageName: String,
+        ): ComponentName {
+            val packageManager = context.packageManager
+            val services: List<ResolveInfo> = packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
 
-        for (service in services) {
-            if (service.serviceInfo.packageName == packageName) {
-                log("Found service for package $packageName: ${service.serviceInfo.name}")
-                return ComponentName(service.serviceInfo.packageName, service.serviceInfo.name)
+            for (service in services) {
+                if (service.serviceInfo.packageName == packageName) {
+                    Log.d("ExpoSpeechService", "Found service for package $packageName: ${service.serviceInfo.name}")
+                    return ComponentName(service.serviceInfo.packageName, service.serviceInfo.name)
+                }
             }
-        }
 
-        throw Exception("No service found for package $packageName")
+            throw Exception("No service found for package $packageName")
+        }
     }
 
     private fun log(message: String) {
@@ -87,7 +93,7 @@ class ExpoSpeechService(
                 options.androidRecognitionServicePackage != null -> {
                     SpeechRecognizer.createSpeechRecognizer(
                         reactContext,
-                        findComponentNameByPackageName(options.androidRecognitionServicePackage),
+                        findComponentNameByPackageName(reactContext, options.androidRecognitionServicePackage),
                     )
                 }
                 else -> {
@@ -107,6 +113,8 @@ class ExpoSpeechService(
             speech?.destroy()
             audioRecorder?.stop()
             audioRecorder = null
+            delayedFileStreamer?.close()
+            delayedFileStreamer = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
             try {
@@ -119,6 +127,8 @@ class ExpoSpeechService(
                 // Start listening
                 speech?.setRecognitionListener(this)
                 speech?.startListening(intent)
+
+                delayedFileStreamer?.startStreaming()
 
                 sendEvent(
                     "audiostart",
@@ -133,7 +143,7 @@ class ExpoSpeechService(
                         e.message != null -> e.message
                         else -> "Unknown error"
                     }
-
+                e.printStackTrace()
                 log("Failed to create Speech Recognizer with error: $errorMessage")
                 sendEvent("error", mapOf("error" to "audio-capture", "message" to errorMessage))
                 teardownAndEnd()
@@ -216,6 +226,8 @@ class ExpoSpeechService(
             soundState = SoundState.INACTIVE
             sendEvent("end", null)
             recognitionState = state
+            delayedFileStreamer?.close()
+            delayedFileStreamer = null
         }
     }
 
@@ -302,21 +314,36 @@ class ExpoSpeechService(
                 throw Exception("File cannot be read: ${file.absolutePath}")
             }
 
-            val parcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-            intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, parcelFileDescriptor)
+            val chunkDelayMillis =
+                when {
+                    options.audioSource.chunkDelayMillis != null -> options.audioSource.chunkDelayMillis
+                    options.requiresOnDeviceRecognition == true -> 15L // On-device recognition
+                    else -> 50L // Network-based recognition
+                }
 
-            intent.putExtra(
-                RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
-                options.audioSource.audioEncoding ?: AudioFormat.ENCODING_PCM_16BIT,
-            )
-            intent.putExtra(
-                RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
-                options.audioSource.sampleRate ?: 16000,
-            )
-            intent.putExtra(
-                RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
-                options.audioSource.audioChannels ?: 1,
-            )
+            delayedFileStreamer = DelayedFileStreamer(file, chunkDelayMillis)
+
+            delayedFileStreamer?.let {
+                val descriptor = it.getParcel()
+                intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, descriptor)
+
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING,
+                    options.audioSource.audioEncoding ?: AudioFormat.ENCODING_PCM_16BIT,
+                )
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE,
+                    options.audioSource.sampleRate ?: 16000,
+                )
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
+                    options.audioSource.audioChannels ?: 1,
+                )
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_SEGMENTED_SESSION,
+                    RecognizerIntent.EXTRA_AUDIO_SOURCE,
+                )
+            }
         }
 
         val contextualStrings = options.contextualStrings

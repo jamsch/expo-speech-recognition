@@ -81,6 +81,9 @@ class AudioSourceOptions : Record {
 
     @Field
     val audioChannels: Int? = 1
+
+    @Field
+    val chunkDelayMillis: Long? = null
 }
 
 class GetSupportedLocaleOptions : Record {
