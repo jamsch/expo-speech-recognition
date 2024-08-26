@@ -520,10 +520,7 @@ function GeneralSettings(props: {
         <Text style={styles.textLabel}>Locale</Text>
         <Text style={[styles.textLabel, { color: "#999" }]}>
           Your {Platform.OS} device supports {supportedLocales.locales.length}{" "}
-          locales{" "}
-          {settings.requiresOnDeviceRecognition
-            ? `(${supportedLocales.installedLocales.length} installed)`
-            : ""}
+          locales ({supportedLocales.installedLocales.length} installed)
         </Text>
 
         <ScrollView contentContainerStyle={[styles.row, styles.flexWrap]}>
@@ -580,9 +577,29 @@ function AndroidSettings(props: {
   ) => void;
 }) {
   const { value: settings, onChange: handleChange } = props;
+  const defaultRecognitionService =
+    ExpoSpeechRecognitionModule.getDefaultRecognitionService().packageName;
+  const assistantService =
+    ExpoSpeechRecognitionModule.getAssistantService().packageName;
   return (
     <View style={styles.gap1}>
       <View>
+        <View style={[styles.card, styles.mb2]}>
+          <View style={styles.gap1}>
+            <Text style={styles.textLabel}>Device preferences</Text>
+            {defaultRecognitionService ? (
+              <Text style={styles.textSubtle}>
+                Default Recognition Service: {defaultRecognitionService}
+              </Text>
+            ) : null}
+            {assistantService ? (
+              <Text style={styles.textSubtle}>
+                Assistant Service: {assistantService}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
         <Text style={styles.textLabel}>Android Recognition Service</Text>
         <View style={[styles.row, styles.flexWrap]}>
           {speechRecognitionServices.map((service) => (
@@ -830,7 +847,7 @@ function OtherSettings(props: {
 
 function TranscribeLocalAudioFile() {
   const [busy, setBusy] = useState(false);
-  const [assets] = useAssets([require("./assets/audio/test/goty.wav")]);
+  const [assets] = useAssets([require("./assets/audio/en-us-sentence.wav")]);
 
   const localUri = assets?.[0]?.localUri;
 
@@ -1147,6 +1164,11 @@ const styles = StyleSheet.create({
   textLabel: {
     fontSize: 12,
     color: "#111",
+    fontWeight: "bold",
+  },
+  textSubtle: {
+    fontSize: 10,
+    color: "#999",
     fontWeight: "bold",
   },
   textOptionContainer: {

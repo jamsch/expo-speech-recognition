@@ -5,8 +5,6 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
 import android.os.Build
 import android.os.Handler
 import android.provider.Settings
@@ -302,30 +300,19 @@ class ExpoSpeechRecognitionModule : Module() {
     private fun getDefaultAssistantService(): ComponentName? {
         val contentResolver = appContext.reactContext?.contentResolver ?: return null
         val defaultAssistant = Settings.Secure.getString(contentResolver, "assistant")
+        if (defaultAssistant.isNullOrEmpty()) {
+            return null
+        }
         return ComponentName.unflattenFromString(defaultAssistant)
     }
 
     private fun getDefaultVoiceRecognitionService(): ComponentName? {
-        // Note: this line below returns "com.google.android.tts"
-        // Settings.Secure.getString(contentResolver, "voice_recognition_service")
-
-        // However this line from the Android Settings app returns "com.google.android.as"
-        // source: https://android.googlesource.com/platform/packages/apps/Settings/+/085028d/src/com/android/settings/applications/DefaultAssistPreference.java#116
-        val resolveInfo: ResolveInfo? =
-            appContext.reactContext?.packageManager?.resolveService(
-                Intent(RecognitionService.SERVICE_INTERFACE),
-                PackageManager.GET_META_DATA,
-            )
-
-        if (resolveInfo?.serviceInfo == null) {
-            Log.w("ExpoSpeechService", "Unable to resolve default voice recognition service.")
+        val contentResolver = appContext.reactContext?.contentResolver ?: return null
+        val defaultVoiceRecognitionService = Settings.Secure.getString(contentResolver, "voice_recognition_service")
+        if (defaultVoiceRecognitionService.isNullOrEmpty()) {
             return null
         }
-
-        return ComponentName(
-            resolveInfo.serviceInfo.packageName,
-            resolveInfo.serviceInfo.name,
-        )
+        return ComponentName.unflattenFromString(defaultVoiceRecognitionService)
     }
 
     private fun getSupportedLocales(
@@ -382,7 +369,6 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
 
             val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            val hasProvidedServiceComponent = serviceComponent != null
 
             recognizer?.checkRecognitionSupport(
                 recognizerIntent,
@@ -415,13 +401,20 @@ class ExpoSpeechRecognitionModule : Module() {
 
                     override fun onError(error: Int) {
                         Log.e("ExpoSpeechService", "getSupportedLocales.onError() called with error code: $error")
-                        if (hasProvidedServiceComponent) {
+                        // This is a workaround for when both the onSupportResult and onError callbacks are called
+                        // This occurs when providing some packages such as com.google.android.tts
+                        // com.samsung.android.bixby.agent usually errors though
+                        Handler(appContext.mainLooper).postDelayed({
+                            if (didResolve) {
+                                return@postDelayed
+                            }
                             promise.reject(
                                 "error_$error",
                                 "Failed to retrieve supported locales with error: $error",
                                 Throwable(),
                             )
-                        }
+                        }, 50)
+
                         recognizer.destroy()
                     }
                 },
