@@ -2,10 +2,12 @@ package expo.modules.speechrecognition
 
 import android.Manifest.permission.RECORD_AUDIO
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Handler
+import android.provider.Settings
 import android.speech.ModelDownloadListener
 import android.speech.RecognitionService
 import android.speech.RecognitionSupport
@@ -86,12 +88,26 @@ class ExpoSpeechRecognitionModule : Module() {
                 "results",
             )
 
+            Function("getDefaultRecognitionService") {
+                val defaultRecognitionService = getDefaultVoiceRecognitionService()?.packageName ?: ""
+                return@Function mapOf(
+                    "packageName" to defaultRecognitionService,
+                )
+            }
+
+            Function("getAssistantService") {
+                val assistantServicePackage = getDefaultAssistantService()?.packageName ?: ""
+                return@Function mapOf(
+                    "packageName" to assistantServicePackage,
+                )
+            }
+
             Function("getSpeechRecognitionServices") {
                 val packageManager = appContext.reactContext?.packageManager
                 val serviceNames = mutableListOf<String>()
 
                 if (packageManager == null) {
-                    return@Function serviceNames // Early return with an empty list
+                    return@Function serviceNames
                 }
 
                 val services =
@@ -104,7 +120,7 @@ class ExpoSpeechRecognitionModule : Module() {
                     serviceNames.add(service.serviceInfo.packageName)
                 }
 
-                serviceNames
+                return@Function serviceNames
             }
 
             AsyncFunction("requestPermissionsAsync") { promise: Promise ->
@@ -201,7 +217,7 @@ class ExpoSpeechRecognitionModule : Module() {
                     return@AsyncFunction
                 }
 
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                     promise.reject(
                         "not_supported",
                         "Android version is too old to trigger offline model download.",
@@ -209,9 +225,28 @@ class ExpoSpeechRecognitionModule : Module() {
                     )
                     return@AsyncFunction
                 }
-                isDownloadingModel = true
+
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, options.locale)
+
+                // API 33 (Android 13) -- Trigger the model download but resolve immediately
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    Handler(appContext.reactContext!!.mainLooper).post {
+                        val recognizer =
+                            SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
+                        recognizer.triggerModelDownload(intent)
+                    }
+                    promise.resolve(
+                        mapOf(
+                            "status" to "opened_dialog",
+                            "message" to "Opened the model download dialog.",
+                        ),
+                    )
+                    return@AsyncFunction
+                }
+
+                // API 34+ (Android 14+) -- Trigger the model download and listen to the progress
+                isDownloadingModel = true
                 Handler(appContext.reactContext!!.mainLooper).post {
                     val recognizer =
                         SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
@@ -225,16 +260,27 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onSuccess() {
-                                promise.resolve(true)
+                                promise.resolve(
+                                    mapOf(
+                                        "status" to "download_success",
+                                        "message" to "Offline model download completed successfully.",
+                                    ),
+                                )
                                 isDownloadingModel = false
                                 recognizer.destroy()
                             }
 
                             override fun onScheduled() {
-                                //
+                                promise.resolve(
+                                    mapOf(
+                                        "status" to "download_canceled",
+                                        "message" to "The offline model download was canceled.",
+                                    ),
+                                )
                             }
 
                             override fun onError(error: Int) {
+                                Log.e("ExpoSpeechService", "Error downloading model with code: $error")
                                 isDownloadingModel = false
                                 promise.reject(
                                     "error_$error",
@@ -251,6 +297,24 @@ class ExpoSpeechRecognitionModule : Module() {
 
     private fun hasNotGrantedRecordPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
 
+    private fun getDefaultAssistantService(): ComponentName? {
+        val contentResolver = appContext.reactContext?.contentResolver ?: return null
+        val defaultAssistant = Settings.Secure.getString(contentResolver, "assistant")
+        if (defaultAssistant.isNullOrEmpty()) {
+            return null
+        }
+        return ComponentName.unflattenFromString(defaultAssistant)
+    }
+
+    private fun getDefaultVoiceRecognitionService(): ComponentName? {
+        val contentResolver = appContext.reactContext?.contentResolver ?: return null
+        val defaultVoiceRecognitionService = Settings.Secure.getString(contentResolver, "voice_recognition_service")
+        if (defaultVoiceRecognitionService.isNullOrEmpty()) {
+            return null
+        }
+        return ComponentName.unflattenFromString(defaultVoiceRecognitionService)
+    }
+
     private fun getSupportedLocales(
         options: GetSupportedLocaleOptions,
         appContext: Context,
@@ -261,13 +325,32 @@ class ExpoSpeechRecognitionModule : Module() {
             return
         }
 
-        if (options.onDevice && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
+        if (options.androidRecognitionServicePackage == null && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
             promise.resolve(mutableListOf<String>())
             return
         }
 
-        if (!options.onDevice && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
+        if (options.androidRecognitionServicePackage != null && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
             promise.resolve(mutableListOf<String>())
+            return
+        }
+
+        var serviceComponent: ComponentName? = null
+        try {
+            if (options.androidRecognitionServicePackage != null) {
+                serviceComponent =
+                    ExpoSpeechService.findComponentNameByPackageName(
+                        appContext,
+                        options.androidRecognitionServicePackage,
+                    )
+            }
+        } catch (e: Exception) {
+            Log.e("ExpoSpeechService", "Couldn't resolve package: ${options.androidRecognitionServicePackage}")
+            promise.reject(
+                "package_not_found",
+                "Failed to retrieve recognition service package",
+                e,
+            )
             return
         }
 
@@ -276,17 +359,16 @@ class ExpoSpeechRecognitionModule : Module() {
         // Speech Recognizer can only be ran on main thread
         Handler(appContext.mainLooper).post {
             val recognizer =
-                if (options.onDevice) {
-                    SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
+                if (serviceComponent != null) {
+                    SpeechRecognizer.createSpeechRecognizer(
+                        appContext,
+                        serviceComponent,
+                    )
                 } else {
-                    SpeechRecognizer.createSpeechRecognizer(appContext)
+                    SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
                 }
 
             val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            if (!options.onDevice && options.androidRecognitionServicePackage != null) {
-                recognizerIntent.setPackage(options.androidRecognitionServicePackage)
-            }
-            Log.d("ESR", "Recognizer intent: $recognizerIntent")
 
             recognizer?.checkRecognitionSupport(
                 recognizerIntent,
@@ -294,7 +376,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
                 object : RecognitionSupportCallback {
                     override fun onSupportResult(recognitionSupport: RecognitionSupport) {
-                        // Seems to get called twice
+                        Log.d("ExpoSpeechService", "onSupportResult() called with recognitionSupport: $recognitionSupport")
+                        // Seems to get called twice when using `createSpeechRecognizer()`
                         if (didResolve) {
                             return
                         }
@@ -317,15 +400,21 @@ class ExpoSpeechRecognitionModule : Module() {
                     }
 
                     override fun onError(error: Int) {
-                        // No idea why, but onError always gets called
-                        // regardless if onSupportResult is called
-                        if (error != SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT) {
+                        Log.e("ExpoSpeechService", "getSupportedLocales.onError() called with error code: $error")
+                        // This is a workaround for when both the onSupportResult and onError callbacks are called
+                        // This occurs when providing some packages such as com.google.android.tts
+                        // com.samsung.android.bixby.agent usually errors though
+                        Handler(appContext.mainLooper).postDelayed({
+                            if (didResolve) {
+                                return@postDelayed
+                            }
                             promise.reject(
                                 "error_$error",
                                 "Failed to retrieve supported locales with error: $error",
                                 Throwable(),
                             )
-                        }
+                        }, 50)
+
                         recognizer.destroy()
                     }
                 },

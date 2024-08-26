@@ -87,6 +87,22 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     );
     return [] as string[];
   },
+  getDefaultRecognitionService: () => {
+    console.warn(
+      "getDefaultRecognitionService is not supported on web. Returning an empty object.",
+    );
+    return {
+      packageName: "",
+    };
+  },
+  getAssistantService: () => {
+    console.warn(
+      "getAssistantService is not supported on web. Returning an empty object.",
+    );
+    return {
+      packageName: "",
+    };
+  },
   supportsOnDeviceRecognition: () => {
     console.warn(
       "supportsOnDeviceRecognition is not supported on web. Returning false.",
@@ -100,7 +116,10 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     console.warn(
       "androidTriggerOfflineModelDownload is not supported on web. Returning false.",
     );
-    return Promise.resolve(false);
+    return Promise.resolve({
+      status: "opened_dialog",
+      message: "Offline model download is not supported on web.",
+    });
   },
   setCategoryIOS: () => {
     console.warn("setCategoryIOS is not supported on web.");

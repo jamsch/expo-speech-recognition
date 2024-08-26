@@ -177,7 +177,7 @@ ExpoSpeechRecognitionModule.start({
     EXTRA_MASK_OFFENSIVE_WORDS: false,
   },
   // [Default: undefined] The package name of the speech recognition service to use.
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
+  androidRecognitionServicePackage: "com.google.android.tts",
   // [Default: unspecified] The type of speech recognition being performed.
   iosTaskHint: "unspecified", // "unspecified" | "dictation" | "search" | "confirmation"
   // [Default: undefined] The audio session category and options to use.
@@ -217,6 +217,10 @@ ExpoSpeechRecognitionModule.start({
     audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
     // [Android only] Audio sampling rate in Hz.
     sampleRate: 16000,
+    // [Android only] The delay between chunks of audio to stream to the speech recognition service.
+    // Use this setting to avoid being rate-limited when using network-based recognition.
+    // Default: 50ms for network-based recognition, 15ms for on-device recognition
+    chunkDelayMillis: undefined,
   },
 });
 
@@ -269,17 +273,18 @@ const error: ExpoSpeechRecognitionErrorCode = "audio-capture";
 
 The error code is largely based on the Web Speech API error codes.
 
-| Error Code               | Description                                                            |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                  |
-| `audio-capture`          | Audio recording error.                                                 |
-| `bad-grammar`            | Provided grammar is invalid. (Note: web only)                          |
-| `language-not-supported` | Locale is not supported by the speech recognizer.                      |
-| `network`                | Network communication required for completing the recognition failed.  |
-| `no-speech`              | No final speech was detected.                                          |
-| `not-allowed`            | Permission to use speech recognition or microphone was not granted.    |
-| `service-not-allowed`    | Recognizer is unavailable.                                             |
-| `busy`                   | The recognizer is busy and cannot accept any new recognition requests. |
+| Error Code               | Description                                                                |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                      |
+| `audio-capture`          | Audio recording error.                                                     |
+| `bad-grammar`            | Provided grammar is invalid. (Note: web only)                              |
+| `language-not-supported` | Locale is not supported by the speech recognizer.                          |
+| `network`                | Network communication required for completing the recognition failed.      |
+| `no-speech`              | No final speech was detected.                                              |
+| `not-allowed`            | Permission to use speech recognition or microphone was not granted.        |
+| `service-not-allowed`    | Recognizer is unavailable.                                                 |
+| `busy`                   | The recognizer is busy and cannot accept any new recognition requests.     |
+| `client`                 | (Android) Unknown error. Corresponds with `SpeechRecognizer.ERROR_CLIENT`. |
 
 ## Persisting Audio Recordings
 
@@ -370,7 +375,33 @@ function AudioPlayer(props: { source: string }) {
 
 You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
 
-> Note: On Android, this feature is only supported on Android 13 and above. The speech recongition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support audio source transcription.
+> **Important notes**:
+>
+> - On Android, this feature is only supported on Android 13 and above. The speech recognition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support audio source transcription.
+> - On Android, this feature is only verified to work with 16000hz 16bit PCM audio files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio) for an example audio file that works for Android and the ffmpeg command used.
+> - On iOS, this feature is only verified to work with 16000hz 16bit PCM WAV files and 16000hz MP3 files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio-remote) for a list of example audio files that work for iOS (excluding the .ogg file).
+
+### Supported input audio formats
+
+#### Android
+
+The following audio formats have been verified on a Samsung Galaxy S23 Ultra on Android 14:
+
+- 16000hz 16-bit 1-channel PCM WAV
+- 16000hz MP3 1-channel
+- 16000hz MP3 2-channel
+- 16000hz ogg vorbis 1-channel
+
+#### iOS
+
+> Due to a limitation in the underlying `SFSpeechURLRecognitionRequest` API, file-based transcription will only transcribe the **first 1 minute of the audio file**.
+
+The following audio formats have been verified on an iPhone 15 Pro Max on iOS 17.5:
+
+- 16000hz 16-bit 1-channel PCM WAV
+- 16000hz MP3 1-channel
+
+### File transcription example
 
 ```tsx
 import { Button, View } from "react-native";
@@ -396,11 +427,20 @@ function TranscribeAudioFile() {
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         /** [Android only] Audio sampling rate in Hz. */
         sampleRate: 16000,
+        /**
+         * [Android only] The delay between chunks of audio to stream to the speech recognition service.
+         * Use this setting to avoid being rate-limited when using network-based recognition.
+         * If you're using on-device recognition, you may want to increase this value to avoid unprocessed audio chunks.
+         * Default: 50ms for network-based recognition, 15ms for on-device recognition
+         */
+        chunkDelayMillis: undefined,
       },
     });
   };
 
   useSpeechRecognitionEvent("result", (ev) => {
+    // Note: multiple final results will likely be returned on Android
+    // so you'll need to concatenate previous final results
     setTranscription(ev.results[0]?.transcript || "");
   });
 
@@ -450,8 +490,7 @@ recognition.addsPunctuation = true;
 recognition.androidIntentOptions = {
   EXTRA_LANGUAGE_MODEL: "quick_response",
 };
-recognition.androidRecognitionServicePackage =
-  "com.google.android.googlequicksearchbox";
+recognition.androidRecognitionServicePackage = "com.google.android.tts";
 
 // Assign an event listener (note: this overwrites all event listeners)
 recognition.onstart = (event) => console.log("started!");
@@ -531,18 +570,27 @@ import { getSupportedLocales } from "@jamsch/expo-speech-recognition";
 getSupportedLocales({
   /**
    * The package name of the speech recognition service to use.
-   * If not provided, the default service will be used.
+   * If not provided, the default service used for on-device recognition will be used.
+   *
+   * Warning: the service package (such as Bixby) may not be able to return any results.
    */
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
-  /** If true, will return the locales that are able to be used for on-device recognition. */
-  onDevice: false,
-}).then((supportedLocales) => {
-  console.log("Supported locales:", supportedLocales.locales.join(", "));
-  console.log(
-    "On-device locales:",
-    supportedLocales.installedLocales.join(", "),
-  );
-});
+  androidRecognitionServicePackage: "com.google.android.as",
+})
+  .then((supportedLocales) => {
+    console.log("Supported locales:", supportedLocales.locales.join(", "));
+
+    // The on-device locales for the provided service package.
+    // Likely will be empty if it's not "com.google.android.as"
+    console.log(
+      "On-device locales:",
+      supportedLocales.installedLocales.join(", "),
+    );
+  })
+  .catch((error) => {
+    // If the service package is not found
+    // or there was an error retrieving the supported locales
+    console.error("Error getting supported locales:", error);
+  });
 ```
 
 ### API: `getSpeechRecognitionServices` (Android only)
@@ -556,7 +604,32 @@ import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
 
 const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
 console.log("Speech recognition services:", packages.join(", "));
-// e.g. ["com.google.android.tts", "com.samsung.android.bixby.agent"]
+// e.g. ["com.google.android.as", "com.google.android.tts", "com.samsung.android.bixby.agent"]
+```
+
+### API: `getDefaultRecognitionService()` (Android only)
+
+Returns the default voice recognition service on the device.
+
+```ts
+import { getDefaultRecognitionService } from "@jamsch/expo-speech-recognition";
+
+const service = ExpoSpeechRecognitionModule.getDefaultRecognitionService();
+console.log("Default recognition service:", service.packageName);
+// Usually this is "com.google.android.as" for Android 12+ and "com.google.android.tts" for older Android versions
+```
+
+### API: `getAssistantService()` (Android only)
+
+Returns the default voice assistant service on the device.
+
+```ts
+import { getAssistantService } from "@jamsch/expo-speech-recognition";
+
+const service = ExpoSpeechRecognitionModule.getAssistantService();
+console.log("Default assistant service:", service.packageName);
+// Usually "com.google.android.googlequicksearchbox" for Google
+// or "com.samsung.android.bixby.agent" for Samsung
 ```
 
 ### API: `supportsOnDeviceRecognition()`
@@ -581,11 +654,11 @@ const available = supportsRecording();
 console.log("Recording available:", available);
 ```
 
-### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<boolean>`
+### API: `androidTriggerOfflineModelDownload({ locale: string }): Promise<{ status: "opened_dialog" | "download_success" | "download_canceled", message: string }>`
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
-You can see which locales are supported and installed on your device by running `getSupportedLocales` with the `onDevice` option set to `true`.
+You can see which locales are supported and installed on your device by running `getSupportedLocales()`.
 
 To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
 
@@ -596,8 +669,20 @@ import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
 ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
   locale: "en-US",
 })
-  .then(() => {
-    console.log("Offline model downloaded successfully!");
+  .then((result) => {
+    switch (result.status) {
+      case "opened_dialog":
+        // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+        console.log("Offline model download dialog opened.");
+        break;
+      case "download_success":
+        // On Android 14+, model was succesfully downloaded.
+        console.log("Offline model downloaded successfully!");
+        break;
+      case "download_canceled":
+        // On Android 14+, the download was canceled by a user interaction.
+        console.log("Offline model download was canceled.");
+        break;
   })
   .catch((err) => {
     console.log("Failed to download offline model!", err.message);

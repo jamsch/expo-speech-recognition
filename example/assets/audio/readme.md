@@ -7,5 +7,5 @@
 - Conversion:
 
 ```bash
-ffmpeg -i input.wav -c:a pcm_s16le -ar 16000 output.wav
+ffmpeg -i input.wav -c:a pcm_s16le -ac 1 -ar 16000 output.wav
 ```

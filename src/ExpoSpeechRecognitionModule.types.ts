@@ -32,7 +32,9 @@ export type ExpoSpeechRecognitionErrorCode =
   | "service-not-allowed"
   // Extra codes (not part of the spec)
   /** The recognizer is busy and cannot accept any new recognition requests. */
-  | "busy";
+  | "busy"
+  /** (Android only) An unknown client-side error occurred. */
+  | "client";
 
 /**
  * Events that are dispatched from the native side
@@ -143,7 +145,7 @@ export type ExpoSpeechRecognitionOptions = {
    *
    * Obtain the supported packages by running `ExpoSpeechRecognitionModule.getSpeechRecognitionServices()`
    *
-   * e.g. "com.google.android.googlequicksearchbox"
+   * e.g. "com.google.android.as" or "com.samsung.android.bixby.agent"
    */
   androidRecognitionServicePackage?: string;
   /**
@@ -267,6 +269,16 @@ export type AudioSourceOptions = {
    * Default: 16000
    */
   sampleRate?: number;
+  /**
+   * [Android only] The delay for a 4KiB chunk of audio to stream to the speech recognition service.
+   *
+   * Use this setting to avoid being rate-limited when using network-based recognition.
+   *
+   * If you're using on-device recognition, you may want to increase this value to avoid unprocessed audio chunks.
+   *
+   * Default: 50ms for network-based recognition, 15ms for on-device recognition
+   */
+  chunkDelayMillis?: number;
 };
 
 export type AudioEncodingAndroidValue =
@@ -467,12 +479,21 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * Returns the current permission status for the microphone and speech recognition.
    */
   getPermissionsAsync(): Promise<PermissionResponse>;
-  /** Returns an array of locales supported by the speech recognizer. */
+  /**
+   * Returns an array of locales supported by the speech recognizer.
+   *
+   * @throws {"package_not_found"} If the service package is not found.
+   * @throws {"error_[number]"} If there was an error retrieving the supported locales.
+   */
   getSupportedLocales(options: {
-    /** The package name of the speech recognition service to use. */
+    /**
+     * The package name of the speech recognition service to use.
+     *
+     * e.g. "com.google.android.as" or "com.samsung.android.bixby.agent"
+     *
+     * Warning: the service package (such as Bixby) may not be able to return any results.
+     */
     androidRecognitionServicePackage?: string;
-    /** If true, will return the installed locales of the on-device speech recognition service. */
-    onDevice?: boolean;
   }): Promise<{
     /**
      * All supported languages on the device. This includes both installed and supported languages.
@@ -480,16 +501,31 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     locales: string[];
     /**
      * These languages are installed on to the device for offline use.
+     *
+     * This will likely be an empty array if the service package is not "com.google.android.as"
      */
     installedLocales: string[];
   }>;
   /**
-   * Returns an array of package names of speech recognition services that are available on the device.
-   * Note: this may not return _all_ speech recognition services that are available on the device if you have not configured `androidSpeechServicePackages` in your app.json.
+   * [Android only] Returns an array of package names of speech recognition services that are available on the device.
    *
-   * e.g. `["com.google.android.googlequicksearchbox"]`
+   * List of all available services as bundle identifiers, e.g. ["com.google.android.as", "com.google.android.tts"]
    */
   getSpeechRecognitionServices(): string[];
+  /**
+   * [Android only] Returns the default voice recognition service on the device.
+   *
+   * @returns empty string if no service is found, or not Android
+   */
+  getDefaultRecognitionService(): { packageName: string };
+  /**
+   * [Android only] Returns the default voice recognition service on the device.
+   *
+   * e.g. "com.google.android.googlequicksearchbox" or "com.samsung.android.bixby.agent"
+   *
+   * @returns empty string if no service is found, or not Android
+   */
+  getAssistantService(): { packageName: string };
   /**
    * Whether the on-device speech recognition is available on the device.
    */
@@ -502,12 +538,20 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   supportsRecording(): boolean;
   /**
    * Downloads the offline model for the specified locale.
-   * Note: this is only supported on Android 12 and above.
+   * Note: this is only supported on Android 13 and above.
    */
   androidTriggerOfflineModelDownload(options: {
     /** The locale to download the model for, e.g. "en-US" */
     locale: string;
-  }): Promise<boolean>;
+  }): Promise<{
+    /**
+     * On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+     * On Android 14+, the status will be "download_success" indicating that the model download was successful.
+     * On Android 14+, "download_canceled" will be returned if the download was canceled by a user interaction.
+     */
+    status: "download_success" | "opened_dialog" | "download_canceled";
+    message: string;
+  }>;
   /**
    * [iOS only] For advanced use cases, you may use this function to set the audio session category and mode.
    *

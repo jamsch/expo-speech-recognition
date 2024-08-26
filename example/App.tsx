@@ -29,7 +29,7 @@ import {
   type AVAudioSessionModeValue,
   ExpoWebSpeechRecognition,
 } from "expo-speech-recognition";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   OptionButton,
   CheckboxButton,
@@ -40,6 +40,11 @@ import { StatusBar } from "expo-status-bar";
 import { Audio } from "expo-av";
 import { useAssets } from "expo-asset";
 import * as FileSystem from "expo-file-system";
+import {
+  AndroidAudioEncoder,
+  AndroidOutputFormat,
+  IOSOutputFormat,
+} from "expo-av/build/Audio";
 
 const speechRecognitionServices = getSpeechRecognitionServices();
 
@@ -91,7 +96,7 @@ export default function App() {
   });
 
   useSpeechRecognitionEvent("start", () => {
-    console.log("[event]: start");
+    setTranscription(null);
     setStatus("recognizing");
   });
 
@@ -140,7 +145,10 @@ export default function App() {
         </Text>
       </View>
 
-      <ScrollView style={[styles.card, { height: 140, maxHeight: 140 }]}>
+      <ScrollView
+        style={[styles.card, { padding: 0, height: 140, maxHeight: 140 }]}
+        contentContainerStyle={{ padding: 10 }}
+      >
         <View>
           <Text style={styles.text}>
             Status:{" "}
@@ -208,8 +216,17 @@ function DownloadOfflineModel(props: { locale: string }) {
     ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
       locale: props.locale,
     })
-      .then(() => {
-        Alert.alert("Offline model downloaded successfully!");
+      .then((result) => {
+        if (result.status === "opened_dialog") {
+          // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
+          Alert.alert("Offline model download dialog opened.");
+        } else if (result.status === "download_success") {
+          // On Android 14+, the status will be "download_success" indicating that the model download was successful.
+          Alert.alert("Offline model downloaded successfully!");
+        } else if (result.status === "download_canceled") {
+          // On Android 14+, the download was canceled by a user interaction.
+          Alert.alert("Offline model download was canceled.");
+        }
       })
       .catch((err) => {
         Alert.alert("Failed to download offline model!", err.message);
@@ -440,14 +457,18 @@ function GeneralSettings(props: {
 
   useEffect(() => {
     getSupportedLocales({
-      onDevice: settings.requiresOnDeviceRecognition,
       androidRecognitionServicePackage:
         settings.androidRecognitionServicePackage,
-    }).then(setSupportedLocales);
-  }, [
-    settings.requiresOnDeviceRecognition,
-    settings.androidRecognitionServicePackage,
-  ]);
+    })
+      .then(setSupportedLocales)
+      .catch((err) => {
+        console.log(
+          "Error getting supported locales for package:",
+          settings.androidRecognitionServicePackage,
+          err,
+        );
+      });
+  }, [settings.androidRecognitionServicePackage]);
 
   return (
     <View>
@@ -499,10 +520,7 @@ function GeneralSettings(props: {
         <Text style={styles.textLabel}>Locale</Text>
         <Text style={[styles.textLabel, { color: "#999" }]}>
           Your {Platform.OS} device supports {supportedLocales.locales.length}{" "}
-          locales{" "}
-          {settings.requiresOnDeviceRecognition
-            ? `(${supportedLocales.installedLocales.length} installed)`
-            : ""}
+          locales ({supportedLocales.installedLocales.length} installed)
         </Text>
 
         <ScrollView contentContainerStyle={[styles.row, styles.flexWrap]}>
@@ -559,9 +577,29 @@ function AndroidSettings(props: {
   ) => void;
 }) {
   const { value: settings, onChange: handleChange } = props;
+  const defaultRecognitionService =
+    ExpoSpeechRecognitionModule.getDefaultRecognitionService().packageName;
+  const assistantService =
+    ExpoSpeechRecognitionModule.getAssistantService().packageName;
   return (
     <View style={styles.gap1}>
       <View>
+        <View style={[styles.card, styles.mb2]}>
+          <View style={styles.gap1}>
+            <Text style={styles.textLabel}>Device preferences</Text>
+            {defaultRecognitionService ? (
+              <Text style={styles.textSubtle}>
+                Default Recognition Service: {defaultRecognitionService}
+              </Text>
+            ) : null}
+            {assistantService ? (
+              <Text style={styles.textSubtle}>
+                Assistant Service: {assistantService}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
         <Text style={styles.textLabel}>Android Recognition Service</Text>
         <View style={[styles.row, styles.flexWrap]}>
           {speechRecognitionServices.map((service) => (
@@ -752,6 +790,22 @@ function OtherSettings(props: {
                 Audio recording saved to {recordingPath}
               </Text>
               <AudioPlayer source={recordingPath} />
+              <BigButton
+                title="Transcribe the recording"
+                color="#539bf5"
+                onPress={() => {
+                  ExpoSpeechRecognitionModule.start({
+                    lang: "en-US",
+                    interimResults: true,
+                    audioSource: {
+                      uri: recordingPath,
+                      audioChannels: 1,
+                      audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+                      sampleRate: 16000,
+                    },
+                  });
+                }}
+              />
             </View>
           ) : (
             <Text style={styles.text}>
@@ -762,6 +816,8 @@ function OtherSettings(props: {
       ) : null}
 
       <WebSpeechAPIDemo />
+
+      <RecordUsingExpoAvDemo />
 
       <TranscribeLocalAudioFile />
 
@@ -776,14 +832,14 @@ function OtherSettings(props: {
         fileName="remote-en-us-sentence-16000hz.mp3"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
         audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
-        description="(May not work on Android) 16000hz MP3 1-channel audio file"
+        description="16000hz MP3 1-channel audio file"
       />
 
       <TranscribeRemoteAudioFile
         fileName="remote-en-us-sentence-16000hz.ogg"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
-        description="(May not work on iOS & Android) 16000hz opus 1-channel audio file"
+        description="(May not work on iOS) 16000hz ogg vorbis 1-channel audio file"
       />
     </View>
   );
@@ -805,6 +861,7 @@ function TranscribeLocalAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
+      requiresOnDeviceRecognition: true,
       audioSource: {
         uri: localUri,
         audioChannels: 1,
@@ -879,7 +936,11 @@ function TranscribeRemoteAudioFile(props: {
 
 function AudioPlayer(props: { source: string }) {
   const handlePlay = () => {
-    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true });
+    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true }).catch(
+      (reason) => {
+        console.log("Failed to play audio", reason);
+      },
+    );
   };
 
   return <Button title="Play back recording" onPress={handlePlay} />;
@@ -982,6 +1043,98 @@ function WebSpeechAPIDemo() {
     </View>
   );
 }
+
+function RecordUsingExpoAvDemo() {
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+
+  const handleStart = async () => {
+    setIsRecording(true);
+
+    const { recording } = await Audio.Recording.createAsync({
+      isMeteringEnabled: true,
+      android: {
+        bitRate: 32000,
+        extension: ".m4a",
+        outputFormat: AndroidOutputFormat.MPEG_4,
+        audioEncoder: AndroidAudioEncoder.AAC,
+        numberOfChannels: 1,
+        sampleRate: 16000,
+      },
+      ios: {
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
+        extension: ".wav",
+        outputFormat: IOSOutputFormat.LINEARPCM,
+      },
+      web: {
+        mimeType: "audio/wav",
+        bitsPerSecond: 128000,
+      },
+    });
+
+    recordingRef.current = recording;
+  };
+
+  const handleStop = async () => {
+    setIsRecording(false);
+    const recording = recordingRef.current;
+    if (!recording) {
+      return;
+    }
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setRecordingUri(uri);
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={[styles.text, styles.mb2]}>Record using Expo AV</Text>
+
+      <View style={styles.row}>
+        {!isRecording ? (
+          <BigButton
+            title="Start Recording"
+            color="#539bf5"
+            onPress={handleStart}
+          />
+        ) : (
+          <BigButton
+            title="Stop Recording"
+            color="#7C90DB"
+            onPress={handleStop}
+          />
+        )}
+      </View>
+
+      {recordingUri && <AudioPlayer source={recordingUri} />}
+
+      {recordingUri && (
+        <BigButton
+          title="Transcribe the recording"
+          color="#539bf5"
+          onPress={() => {
+            console.log("Transcribing recording", recordingUri);
+            ExpoSpeechRecognitionModule.start({
+              lang: "en-US",
+              interimResults: true,
+              // Switch to true for faster transcription
+              // (Make sure you downloaded the offline model first)
+              requiresOnDeviceRecognition: false,
+              audioSource: {
+                uri: recordingUri,
+                audioChannels: 1,
+                audioEncoding: AudioEncodingAndroid.ENCODING_MP3,
+                sampleRate: 16000,
+              },
+            });
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1011,6 +1164,11 @@ const styles = StyleSheet.create({
   textLabel: {
     fontSize: 12,
     color: "#111",
+    fontWeight: "bold",
+  },
+  textSubtle: {
+    fontSize: 10,
+    color: "#999",
     fontWeight: "bold",
   },
   textOptionContainer: {

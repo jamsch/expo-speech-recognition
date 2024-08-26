@@ -81,14 +81,14 @@ class AudioSourceOptions : Record {
 
     @Field
     val audioChannels: Int? = 1
+
+    @Field
+    val chunkDelayMillis: Long? = null
 }
 
 class GetSupportedLocaleOptions : Record {
     @Field
     val androidRecognitionServicePackage: String? = null
-
-    @Field
-    val onDevice: Boolean = false
 }
 
 class TriggerOfflineModelDownloadOptions : Record {
