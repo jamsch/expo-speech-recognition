@@ -839,7 +839,7 @@ function OtherSettings(props: {
         fileName="remote-en-us-sentence-16000hz.ogg"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
-        description="(May not work on iOS) 16000hz opus 1-channel audio file"
+        description="(May not work on iOS) 16000hz ogg vorbis 1-channel audio file"
       />
     </View>
   );

@@ -501,6 +501,8 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     locales: string[];
     /**
      * These languages are installed on to the device for offline use.
+     *
+     * This will likely be an empty array if the service package is not "com.google.android.as"
      */
     installedLocales: string[];
   }>;

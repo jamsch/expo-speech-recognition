@@ -177,7 +177,7 @@ ExpoSpeechRecognitionModule.start({
     EXTRA_MASK_OFFENSIVE_WORDS: false,
   },
   // [Default: undefined] The package name of the speech recognition service to use.
-  androidRecognitionServicePackage: "com.samsung.android.bixby.agent",
+  androidRecognitionServicePackage: "com.google.android.tts",
   // [Default: unspecified] The type of speech recognition being performed.
   iosTaskHint: "unspecified", // "unspecified" | "dictation" | "search" | "confirmation"
   // [Default: undefined] The audio session category and options to use.
@@ -381,7 +381,27 @@ You can use the `audioSource.sourceUri` option to transcribe audio files instead
 > - On Android, this feature is only verified to work with 16000hz 16bit PCM audio files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio) for an example audio file that works for Android and the ffmpeg command used.
 > - On iOS, this feature is only verified to work with 16000hz 16bit PCM WAV files and 16000hz MP3 files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio-remote) for a list of example audio files that work for iOS (excluding the .ogg file).
 
-Example:
+### Supported input audio formats
+
+#### Android
+
+The following audio formats have been verified on a Samsung Galaxy S23 Ultra on Android 14:
+
+- 16000hz 16-bit 1-channel PCM WAV
+- 16000hz MP3 1-channel
+- 16000hz MP3 2-channel
+- 16000hz ogg vorbis 1-channel
+
+#### iOS
+
+> Due to a limitation in the underlying `SFSpeechURLRecognitionRequest` API, file-based transcription will only transcribe the **first 1 minute of the audio file**.
+
+The following audio formats have been verified on an iPhone 15 Pro Max on iOS 17.5:
+
+- 16000hz 16-bit 1-channel PCM WAV
+- 16000hz MP3 1-channel
+
+### File transcription example
 
 ```tsx
 import { Button, View } from "react-native";
@@ -410,6 +430,7 @@ function TranscribeAudioFile() {
         /**
          * [Android only] The delay between chunks of audio to stream to the speech recognition service.
          * Use this setting to avoid being rate-limited when using network-based recognition.
+         * If you're using on-device recognition, you may want to increase this value to avoid unprocessed audio chunks.
          * Default: 50ms for network-based recognition, 15ms for on-device recognition
          */
         chunkDelayMillis: undefined,
@@ -418,6 +439,8 @@ function TranscribeAudioFile() {
   };
 
   useSpeechRecognitionEvent("result", (ev) => {
+    // Note: multiple final results will likely be returned on Android
+    // so you'll need to concatenate previous final results
     setTranscription(ev.results[0]?.transcript || "");
   });
 
@@ -467,8 +490,7 @@ recognition.addsPunctuation = true;
 recognition.androidIntentOptions = {
   EXTRA_LANGUAGE_MODEL: "quick_response",
 };
-recognition.androidRecognitionServicePackage =
-  "com.google.android.googlequicksearchbox";
+recognition.androidRecognitionServicePackage = "com.google.android.tts";
 
 // Assign an event listener (note: this overwrites all event listeners)
 recognition.onstart = (event) => console.log("started!");
@@ -556,6 +578,9 @@ getSupportedLocales({
 })
   .then((supportedLocales) => {
     console.log("Supported locales:", supportedLocales.locales.join(", "));
+
+    // The on-device locales for the provided service package.
+    // Likely will be empty if it's not "com.google.android.as"
     console.log(
       "On-device locales:",
       supportedLocales.installedLocales.join(", "),
