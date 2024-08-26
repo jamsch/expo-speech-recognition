@@ -270,7 +270,7 @@ export type AudioSourceOptions = {
    */
   sampleRate?: number;
   /**
-   * [Android only] The delay between chunks of audio to stream to the speech recognition service.
+   * [Android only] The delay for a 4KiB chunk of audio to stream to the speech recognition service.
    *
    * Use this setting to avoid being rate-limited when using network-based recognition.
    *
@@ -492,8 +492,6 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
      * Warning: the service package (such as Bixby) may not be able to return any results.
      */
     androidRecognitionServicePackage?: string;
-    /** If true, will return the installed locales of the on-device speech recognition service. */
-    onDevice?: boolean;
   }): Promise<{
     /**
      * All supported languages on the device. This includes both installed and supported languages.

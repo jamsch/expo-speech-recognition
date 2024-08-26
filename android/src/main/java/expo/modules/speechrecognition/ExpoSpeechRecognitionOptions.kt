@@ -89,9 +89,6 @@ class AudioSourceOptions : Record {
 class GetSupportedLocaleOptions : Record {
     @Field
     val androidRecognitionServicePackage: String? = null
-
-    @Field
-    val onDevice: Boolean = false
 }
 
 class TriggerOfflineModelDownloadOptions : Record {

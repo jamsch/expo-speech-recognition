@@ -468,10 +468,7 @@ function GeneralSettings(props: {
           err,
         );
       });
-  }, [
-    settings.requiresOnDeviceRecognition,
-    settings.androidRecognitionServicePackage,
-  ]);
+  }, [settings.androidRecognitionServicePackage]);
 
   return (
     <View>

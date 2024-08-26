@@ -89,9 +89,6 @@ struct AudioSourceOptions: Record {
 struct GetSupportedLocaleOptions: Record {
   @Field
   var androidRecognitionServicePackage: String? = nil
-
-  @Field
-  var onDevice: Bool = false
 }
 
 enum CategoryParam: String, Enumerable {

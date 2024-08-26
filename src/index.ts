@@ -34,7 +34,6 @@ export {
 
 export const getSupportedLocales = (options?: {
   androidRecognitionServicePackage?: string;
-  onDevice?: boolean;
 }) => ExpoSpeechRecognitionModule.getSupportedLocales(options ?? {});
 
 export const getSpeechRecognitionServices =
