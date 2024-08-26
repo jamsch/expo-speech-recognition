@@ -90,16 +90,26 @@ class ExpoSpeechRecognitionModule : Module() {
                 "results",
             )
 
+            Function("getDefaultRecognitionService") {
+                val defaultRecognitionService = getDefaultVoiceRecognitionService()?.packageName ?: ""
+                return@Function mapOf(
+                    "packageName" to defaultRecognitionService,
+                )
+            }
+
+            Function("getAssistantService") {
+                val assistantServicePackage = getDefaultAssistantService()?.packageName ?: ""
+                return@Function mapOf(
+                    "packageName" to assistantServicePackage,
+                )
+            }
+
             Function("getSpeechRecognitionServices") {
                 val packageManager = appContext.reactContext?.packageManager
                 val serviceNames = mutableListOf<String>()
 
                 if (packageManager == null) {
-                    return@Function mapOf(
-                        "packages" to serviceNames,
-                        "defaultRecognitionServicePackage" to "",
-                        "assistantServicePackage" to "",
-                    )
+                    return@Function serviceNames
                 }
 
                 val services =
@@ -111,14 +121,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 for (service in services) {
                     serviceNames.add(service.serviceInfo.packageName)
                 }
-                val defaultRecognitionService = getDefaultVoiceRecognitionService()?.packageName ?: ""
-                val assistantServicePackage = getDefaultAssistantService()?.packageName ?: ""
 
-                return@Function mapOf(
-                    "packages" to serviceNames,
-                    "defaultRecognitionServicePackage" to defaultRecognitionService,
-                    "assistantServicePackage" to assistantServicePackage,
-                )
+                return@Function serviceNames
             }
 
             AsyncFunction("requestPermissionsAsync") { promise: Promise ->
@@ -301,7 +305,6 @@ class ExpoSpeechRecognitionModule : Module() {
         return ComponentName.unflattenFromString(defaultAssistant)
     }
 
-
     private fun getDefaultVoiceRecognitionService(): ComponentName? {
         // Note: this line below returns "com.google.android.tts"
         // Settings.Secure.getString(contentResolver, "voice_recognition_service")
@@ -335,13 +338,32 @@ class ExpoSpeechRecognitionModule : Module() {
             return
         }
 
-        if (options.onDevice && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
+        if (options.androidRecognitionServicePackage == null && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
             promise.resolve(mutableListOf<String>())
             return
         }
 
-        if (!options.onDevice && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
+        if (options.androidRecognitionServicePackage != null && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
             promise.resolve(mutableListOf<String>())
+            return
+        }
+
+        var serviceComponent: ComponentName? = null
+        try {
+            if (options.androidRecognitionServicePackage != null) {
+                serviceComponent =
+                    ExpoSpeechService.findComponentNameByPackageName(
+                        appContext,
+                        options.androidRecognitionServicePackage,
+                    )
+            }
+        } catch (e: Exception) {
+            Log.e("ExpoSpeechService", "Couldn't resolve package: ${options.androidRecognitionServicePackage}")
+            promise.reject(
+                "package_not_found",
+                "Failed to retrieve recognition service package",
+                e,
+            )
             return
         }
 
@@ -350,17 +372,17 @@ class ExpoSpeechRecognitionModule : Module() {
         // Speech Recognizer can only be ran on main thread
         Handler(appContext.mainLooper).post {
             val recognizer =
-                if (options.onDevice) {
-                    SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
+                if (serviceComponent != null) {
+                    SpeechRecognizer.createSpeechRecognizer(
+                        appContext,
+                        serviceComponent,
+                    )
                 } else {
-                    SpeechRecognizer.createSpeechRecognizer(appContext)
+                    SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
                 }
 
             val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            if (!options.onDevice && options.androidRecognitionServicePackage != null) {
-                recognizerIntent.setPackage(options.androidRecognitionServicePackage)
-            }
-            Log.d("ESR", "Recognizer intent: $recognizerIntent")
+            val hasProvidedServiceComponent = serviceComponent != null
 
             recognizer?.checkRecognitionSupport(
                 recognizerIntent,
@@ -368,7 +390,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
                 object : RecognitionSupportCallback {
                     override fun onSupportResult(recognitionSupport: RecognitionSupport) {
-                        // Seems to get called twice
+                        Log.d("ExpoSpeechService", "onSupportResult() called with recognitionSupport: $recognitionSupport")
+                        // Seems to get called twice when using `createSpeechRecognizer()`
                         if (didResolve) {
                             return
                         }
@@ -391,9 +414,8 @@ class ExpoSpeechRecognitionModule : Module() {
                     }
 
                     override fun onError(error: Int) {
-                        // No idea why, but onError always gets called
-                        // regardless if onSupportResult is called
-                        if (error != SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT) {
+                        Log.e("ExpoSpeechService", "getSupportedLocales.onError() called with error code: $error")
+                        if (hasProvidedServiceComponent) {
                             promise.reject(
                                 "error_$error",
                                 "Failed to retrieve supported locales with error: $error",

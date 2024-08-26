@@ -145,7 +145,7 @@ export type ExpoSpeechRecognitionOptions = {
    *
    * Obtain the supported packages by running `ExpoSpeechRecognitionModule.getSpeechRecognitionServices()`
    *
-   * e.g. "com.google.android.googlequicksearchbox"
+   * e.g. "com.google.android.as" or "com.samsung.android.bixby.agent"
    */
   androidRecognitionServicePackage?: string;
   /**
@@ -489,6 +489,8 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     /**
      * The package name of the speech recognition service to use.
      *
+     * e.g. "com.google.android.as" or "com.samsung.android.bixby.agent"
+     *
      * Warning: the service package (such as Bixby) may not be able to return any results.
      */
     androidRecognitionServicePackage?: string;
@@ -503,16 +505,25 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
     installedLocales: string[];
   }>;
   /**
-   * Returns an array of package names of speech recognition services that are available on the device.
+   * [Android only] Returns an array of package names of speech recognition services that are available on the device.
+   *
+   * List of all available services as bundle identifiers, e.g. ["com.google.android.as", "com.google.android.tts"]
    */
-  getSpeechRecognitionServices(): {
-    /** List of all available services, e.g. ["com.google.android.as", "com.google.android.tts"] */
-    packages: string[];
-    /** Default service used for speech recognition, e.g. "com.google.android.as" */
-    defaultRecognitionServicePackage: string;
-    /** Assistant package used, e.g. "com.google.android.googlequicksearchbox" */
-    assistantServicePackage: string;
-  };
+  getSpeechRecognitionServices(): string[];
+  /**
+   * [Android only] Returns the default voice recognition service on the device.
+   *
+   * @returns empty string if no service is found, or not Android
+   */
+  getDefaultRecognitionService(): { packageName: string };
+  /**
+   * [Android only] Returns the default voice recognition service on the device.
+   *
+   * e.g. "com.google.android.googlequicksearchbox" or "com.samsung.android.bixby.agent"
+   *
+   * @returns empty string if no service is found, or not Android
+   */
+  getAssistantService(): { packageName: string };
   /**
    * Whether the on-device speech recognition is available on the device.
    */

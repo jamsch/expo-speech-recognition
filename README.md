@@ -577,18 +577,34 @@ Get list of speech recognition services available on the device.
 ```ts
 import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
 
-const result = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
-console.log("Speech recognition services:", result.packages.join(", "));
+const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
+console.log("Speech recognition services:", packages.join(", "));
 // e.g. ["com.google.android.as", "com.google.android.tts", "com.samsung.android.bixby.agent"]
+```
 
-console.log(
-  "Default speech recognition service:",
-  result.defaultRecognitionServicePackage,
-);
-// e.g. "com.google.android.tts"
+### API: `getDefaultRecognitionService()` (Android only)
 
-console.log("Configured assistant package:", result.assistantPackage);
-// e.g. "com.google.android.googlequicksearchbox" (not necessarily in the list of packages)
+Returns the default voice recognition service on the device.
+
+```ts
+import { getDefaultRecognitionService } from "@jamsch/expo-speech-recognition";
+
+const service = ExpoSpeechRecognitionModule.getDefaultRecognitionService();
+console.log("Default recognition service:", service.packageName);
+// Usually this is "com.google.android.as" for Android 12+ and "com.google.android.tts" for older Android versions
+```
+
+### API: `getAssistantService()` (Android only)
+
+Returns the default voice assistant service on the device.
+
+```ts
+import { getAssistantService } from "@jamsch/expo-speech-recognition";
+
+const service = ExpoSpeechRecognitionModule.getAssistantService();
+console.log("Default assistant service:", service.packageName);
+// Usually "com.google.android.googlequicksearchbox" for Google
+// or "com.samsung.android.bixby.agent" for Samsung
 ```
 
 ### API: `supportsOnDeviceRecognition()`

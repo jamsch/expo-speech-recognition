@@ -46,7 +46,7 @@ import {
   IOSOutputFormat,
 } from "expo-av/build/Audio";
 
-const speechRecognitionServices = getSpeechRecognitionServices().packages;
+const speechRecognitionServices = getSpeechRecognitionServices();
 
 export default function App() {
   const [error, setError] = useState<{ error: string; message: string } | null>(

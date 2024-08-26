@@ -320,6 +320,18 @@ public class ExpoSpeechRecognitionModule: Module {
         "installedLocales": installedLocales,
       ])
     }
+
+    Function("getDefaultRecognitionService") { () -> [String: Any] in
+      return [
+        "packageName": ""
+      ]
+    }
+
+    Function("getAssistantService") { () -> [String: Any] in
+      return [
+        "packageName": ""
+      ]
+    }
   }
 
   /** Normalizes the locale for compatibility between Android and iOS */
