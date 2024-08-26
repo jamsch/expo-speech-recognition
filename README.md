@@ -375,11 +375,7 @@ function AudioPlayer(props: { source: string }) {
 
 You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
 
-> **Important notes**:
->
-> - On Android, this feature is only supported on Android 13 and above. The speech recognition module will dispatch an `error` event with the code `audio-capture` if the device doesn't support audio source transcription.
-> - On Android, this feature is only verified to work with 16000hz 16bit PCM audio files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio) for an example audio file that works for Android and the ffmpeg command used.
-> - On iOS, this feature is only verified to work with 16000hz 16bit PCM WAV files and 16000hz MP3 files. See [here](https://github.com/jamsch/expo-speech-recognition/tree/main/example/assets/audio-remote) for a list of example audio files that work for iOS (excluding the .ogg file).
+> **Important note**: This feature is available on Android 13+ and iOS. If the device does not support the feature, you'll receive an `error` event with the code `audio-capture`.
 
 ### Supported input audio formats
 
@@ -387,10 +383,10 @@ You can use the `audioSource.sourceUri` option to transcribe audio files instead
 
 The following audio formats have been verified on a Samsung Galaxy S23 Ultra on Android 14:
 
-- 16000hz 16-bit 1-channel PCM WAV
-- 16000hz MP3 1-channel
+- 16000hz 16-bit 1-channel PCM WAV ([example file](https://github.com/jamsch/expo-speech-recognition/blob/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav))
+- 16000hz MP3 1-channel ([example file](https://github.com/jamsch/expo-speech-recognition/blob/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3))
 - 16000hz MP3 2-channel
-- 16000hz ogg vorbis 1-channel
+- 16000hz ogg vorbis 1-channel ([example file](https://github.com/jamsch/expo-speech-recognition/blob/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg))
 
 #### iOS
 
@@ -398,8 +394,8 @@ The following audio formats have been verified on a Samsung Galaxy S23 Ultra on 
 
 The following audio formats have been verified on an iPhone 15 Pro Max on iOS 17.5:
 
-- 16000hz 16-bit 1-channel PCM WAV
-- 16000hz MP3 1-channel
+- 16000hz 16-bit 1-channel PCM WAV ([example file](https://github.com/jamsch/expo-speech-recognition/blob/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav))
+- 16000hz MP3 1-channel ([example file](https://github.com/jamsch/expo-speech-recognition/blob/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3))
 
 ### File transcription example
 
