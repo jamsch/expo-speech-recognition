@@ -22,6 +22,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
     - [iOS](#ios)
   - [File transcription example](#file-transcription-example)
 - [Polyfilling the Web SpeechRecognition API](#polyfilling-the-web-speechrecognition-api)
+- [Muting the beep sound on Android](#muting-the-beep-sound-on-android)
 - [Improving accuracy of single-word prompts](#improving-accuracy-of-single-word-prompts)
 - [Platform Compatibility Table](#platform-compatibility-table)
 - [API Methods](#api-methods)
@@ -564,6 +565,23 @@ recognition.stop();
 // Immediately cancel speech recognition
 recognition.abort();
 ```
+
+## Muting the beep sound on Android
+
+On Android, you may notice that there's a beep sound when you start and stop speech recognition. This is due to a hardcoded behavior in the underlying SpeechRecognizer API. However, a workaround you can use is by enabling continuous recognition:
+
+```ts
+import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+
+ExpoSpeechRecognitionModule.start({
+  lang: "en-US",
+  continuous: true,
+});
+```
+
+Under the hood, this sets the `EXTRA_AUDIO_SOURCE` in the recognizer intent to a custom microphone source instead of using the default microphone setting.
+
+To maintain the same behavior as non-continuous mode, you should listen for a result event with `isFinal: true` and then immediately call `abort()` to stop the recognition.
 
 ## Improving accuracy of single-word prompts
 
