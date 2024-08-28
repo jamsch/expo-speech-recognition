@@ -48,6 +48,7 @@ class ExpoAudioRecorder(
             recordingParcel = pipe[0]
             outputStream = AutoCloseOutputStream(pipe[1])
         } catch (e: IOException) {
+            Log.e(TAG, "Failed to create pipe", e)
             e.printStackTrace()
             throw e
         }
@@ -62,6 +63,8 @@ class ExpoAudioRecorder(
     private var isRecordingAudio = false
 
     companion object {
+        private const val TAG = "ExpoAudioRecorder"
+
         private fun shortReverseBytes(s: Short): Int =
             java.lang.Short
                 .reverseBytes(s)
@@ -70,7 +73,7 @@ class ExpoAudioRecorder(
         fun appendWavHeader(
             outputFilePath: String,
             pcmFile: File,
-            sampleRateInHz: Int
+            sampleRateInHz: Int,
         ): File {
             val outputFile = File(outputFilePath)
             val audioDataLength = pcmFile.length()
@@ -104,7 +107,7 @@ class ExpoAudioRecorder(
                     out.write(pcmData)
                     pcmFile.delete()
                 } catch (e: IOException) {
-                    e.localizedMessage?.let { Log.d("ExpoSpeechService", it) }
+                    Log.e(TAG, "Failed to read PCM file", e)
                     e.printStackTrace()
                 }
             }
@@ -162,12 +165,17 @@ class ExpoAudioRecorder(
         audioRecorder = null
         recordingThread = null
         if (outputFilePath != null) {
-            outputFile =
-                appendWavHeader(
-                    outputFilePath,
-                    tempPcmFile,
-                    sampleRateInHz
-                )
+            try {
+                outputFile =
+                    appendWavHeader(
+                        outputFilePath,
+                        tempPcmFile,
+                        sampleRateInHz,
+                    )
+            } catch (e: IOException) {
+                Log.e(TAG, "Failed to append WAV header", e)
+                e.printStackTrace()
+            }
         }
         // Close the ParcelFileDescriptor
         try {
@@ -200,10 +208,10 @@ class ExpoAudioRecorder(
                     tempFileOutputStream.flush()
                 }
             } catch (e: IOException) {
+                Log.e(TAG, "Failed to write to output stream", e)
                 e.printStackTrace()
             }
         }
         tempFileOutputStream.close()
     }
-
 }

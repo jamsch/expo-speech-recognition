@@ -263,6 +263,7 @@ class ExpoSpeechService(
                 audioRecorder = ExpoAudioRecorder(reactContext, resolveFilePathFromConfig(options.recordingOptions))
             } else if (options.continuous == true) {
                 // Feature: Continuous transcription from microphone using `RecognizerIntent.EXTRA_AUDIO_SOURCE`
+                // This also has the side effect of not playing the "beep" sound when starting and stopping recognition
                 audioRecorder = ExpoAudioRecorder(reactContext, null)
             }
 
