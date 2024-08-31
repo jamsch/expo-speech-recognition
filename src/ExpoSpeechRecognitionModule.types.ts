@@ -1,5 +1,6 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
+
 import type {
   AudioEncodingAndroid,
   AVAudioSessionCategory,

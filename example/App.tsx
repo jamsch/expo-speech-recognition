@@ -86,7 +86,7 @@ export default function App() {
       // When a final result is received, any following recognized transcripts will omit the previous final result
       const transcriptTally = ev.isFinal
         ? (current?.transcriptTally ?? "") + transcript
-        : current?.transcriptTally ?? "";
+        : (current?.transcriptTally ?? "");
 
       return {
         transcriptTally,
