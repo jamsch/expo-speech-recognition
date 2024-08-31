@@ -3,3 +3,4 @@ example/ios/
 android/
 ios/
 .expo/
+build/
