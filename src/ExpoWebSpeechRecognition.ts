@@ -1,4 +1,5 @@
 import type { Subscription } from "expo-modules-core";
+
 // Import the native module. On web, it will be resolved to ExpoSpeechRecognition.web.ts
 // and on native platforms to ExpoSpeechRecognition.ts
 import {
