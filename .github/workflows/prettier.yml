@@ -1,0 +1,18 @@
+name: Prettier check
+
+on:
+  pull_request: 
+
+jobs:
+   prettier-check:
+      name: Prettier check
+      runs-on: ubuntu-latest
+      steps:
+         - name: 🏗 Setup repo
+           uses: actions/checkout@v4
+
+         - name: 📦 Install dependencies
+           run: npm install
+
+         - name: ✨ Run Prettier check
+           run: npm run prettier:check 

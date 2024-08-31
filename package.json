@@ -14,7 +14,9 @@
     "expo-module": "expo-module",
     "open:ios": "open -a \"Xcode\" example/ios",
     "open:android": "open -a \"Android Studio\" example/android",
-    "ts:check": "tsc -p . --noEmit"
+    "ts:check": "tsc -p . --noEmit",
+    "prettier:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
+    "prettier:write": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,md}\""
   },
   "keywords": [
     "react-native",
@@ -35,7 +37,8 @@
     "@types/dom-speech-recognition": "^0.0.4",
     "@types/react": "^18.3.3",
     "expo-module-scripts": "^3.5.2",
-    "expo-modules-core": "^1.12.21"
+    "expo-modules-core": "^1.12.21",
+    "prettier": "^3.3.3"
   },
   "prettier": {
     "trailingComma": "all"
