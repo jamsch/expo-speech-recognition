@@ -49,7 +49,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 1. Install the package
 
 ```
-npm install @jamsch/expo-speech-recognition
+npm install expo-speech-recognition
 ```
 
 2. Configure the config plugin.
@@ -62,7 +62,7 @@ npm install @jamsch/expo-speech-recognition
   "expo": {
     "plugins": [
       [
-        "@jamsch/expo-speech-recognition",
+        "expo-speech-recognition",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition.",
@@ -88,7 +88,7 @@ Using hooks is the easiest way to get started. The `useSpeechRecognitionEvent` h
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
-} from "@jamsch/expo-speech-recognition";
+} from "expo-speech-recognition";
 
 function App() {
   const [recognizing, setRecognizing] = useState(false);
@@ -143,7 +143,7 @@ function App() {
 You should request permissions prior to starting recognition. This library exports two functions: `getPermissionsAsync` and `requestPermissionsAsync` for this purpose. If you do not request permissions or the user has denied permissions after starting, expect an `error` event with the `error` code set to `not-allowed`.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
   console.log("Status:", result.status);
@@ -170,7 +170,7 @@ You can also use the `ExpoSpeechRecognitionModule` to use the native APIs direct
 import {
   ExpoSpeechRecognitionModule,
   addSpeechRecognitionListener,
-} from "@jamsch/expo-speech-recognition";
+} from "expo-speech-recognition";
 
 // Register event listeners
 const startListener = addSpeechRecognitionListener("start", () => {
@@ -294,7 +294,7 @@ import {
   type ExpoSpeechRecognitionErrorCode,
   addSpeechRecognitionListener,
   useSpeechRecognitionEvent,
-} from "@jamsch/expo-speech-recognition";
+} from "expo-speech-recognition";
 
 addSpeechRecognitionListener("error", (event) => {
   console.log("error code:", event.error, "error messsage:", event.message);
@@ -344,7 +344,7 @@ import { Button, View } from "react-native";
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
-} from "@jamsch/expo-speech-recognition";
+} from "expo-speech-recognition";
 
 function RecordAudio() {
   const [recording, setRecording] = useState(false);
@@ -411,7 +411,7 @@ function AudioPlayer(props: { source: string }) {
 
 ## Transcribing audio files
 
-You can use the `audioSource.sourceUri` option to transcribe audio files instead of using the microphone.
+You can use the `audioSource.uri` option to transcribe audio files instead of using the microphone.
 
 > **Important note**: This feature is available on Android 13+ and iOS. If the device does not support the feature, you'll receive an `error` event with the code `audio-capture`.
 
@@ -443,7 +443,7 @@ import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
   AudioEncodingAndroid,
-} from "@jamsch/expo-speech-recognition";
+} from "expo-speech-recognition";
 
 function TranscribeAudioFile() {
   const [transcription, setTranscription] = useState("");
@@ -500,7 +500,7 @@ Refer to the [SpeechRecognition MDN docs](https://developer.mozilla.org/en-US/do
 // "npm install -D @types/dom-speech-recognition"
 import "dom-speech-recognition";
 
-import { ExpoWebSpeechRecognition } from "@jamsch/expo-speech-recognition";
+import { ExpoWebSpeechRecognition } from "expo-speech-recognition";
 
 // Polyfill the globals for use in external libraries
 webkitSpeechRecognition = ExpoWebSpeechRecognition;
@@ -522,7 +522,7 @@ recognition.contextualStrings = ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"];
 recognition.requiresOnDeviceRecognition = true;
 recognition.addsPunctuation = true;
 recognition.androidIntentOptions = {
-  EXTRA_LANGUAGE_MODEL: "quick_response",
+  EXTRA_LANGUAGE_MODEL: "web_search",
 };
 recognition.androidRecognitionServicePackage = "com.google.android.tts";
 
@@ -571,7 +571,7 @@ recognition.abort();
 On Android, you may notice that there's a beep sound when you start and stop speech recognition. This is due to a hardcoded behavior in the underlying SpeechRecognizer API. However, a workaround you can use is by enabling continuous recognition:
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 ExpoSpeechRecognitionModule.start({
   lang: "en-US",
@@ -616,7 +616,7 @@ As of 7 Aug 2024, the following platforms are supported:
 Starts speech recognition.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 ExpoSpeechRecognitionModule.start({
   lang: "en-US",
@@ -628,7 +628,7 @@ ExpoSpeechRecognitionModule.start({
 Stops speech recognition and attempts to return a final result (through the `result` event).
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 ExpoSpeechRecognitionModule.stop();
 // Expect the following events to be emitted in order:
@@ -645,7 +645,7 @@ ExpoSpeechRecognitionModule.stop();
 Immediately cancels speech recognition (does not process the final result).
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 ExpoSpeechRecognitionModule.abort();
 // Expect an "error" event to be emitted with the code "aborted"
@@ -659,7 +659,7 @@ For iOS, once a user has granted (or denied) location permissions by responding 
 the only way that the permissions can be changed is by the user themselves using the device settings app.
 
 ```ts
-import { requestPermissionsAsync } from "@jamsch/expo-speech-recognition";
+import { requestPermissionsAsync } from "expo-speech-recognition";
 
 requestPermissionsAsync().then((result) => {
   console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
@@ -674,7 +674,7 @@ requestPermissionsAsync().then((result) => {
 Returns the current permission status for the microphone and speech recognition.
 
 ```ts
-import { getPermissionsAsync } from "@jamsch/expo-speech-recognition";
+import { getPermissionsAsync } from "expo-speech-recognition";
 
 getPermissionsAsync().then((result) => {
   console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
@@ -689,7 +689,7 @@ getPermissionsAsync().then((result) => {
 Returns the current internal state of the speech recognizer.
 
 ```ts
-import { getStateAsync } from "@jamsch/expo-speech-recognition";
+import { getStateAsync } from "expo-speech-recognition";
 
 // Note: you probably should rather rely on the events emitted by the SpeechRecognition API instead
 getStateAsync().then((state) => {
@@ -701,7 +701,7 @@ getStateAsync().then((state) => {
 ### `addSpeechRecognitionListener(eventName: string, listener: (event: any) => void): { remove: () => void }`
 
 ```ts
-import { addSpeechRecognitionListener } from "@jamsch/expo-speech-recognition";
+import { addSpeechRecognitionListener } from "expo-speech-recognition";
 
 const listener = addSpeechRecognitionListener("result", (event) => {
   console.log("result:", event.results[event.resultIndex][0].transcript);
@@ -716,7 +716,7 @@ listener.remove();
 Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
 
 ```ts
-import { getSupportedLocales } from "@jamsch/expo-speech-recognition";
+import { getSupportedLocales } from "expo-speech-recognition";
 
 getSupportedLocales({
   /**
@@ -751,7 +751,7 @@ Get list of speech recognition services available on the device.
 > Note: this only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
 
 ```ts
-import { getSpeechRecognitionServices } from "@jamsch/expo-speech-recognition";
+import { getSpeechRecognitionServices } from "expo-speech-recognition";
 
 const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
 console.log("Speech recognition services:", packages.join(", "));
@@ -763,7 +763,7 @@ console.log("Speech recognition services:", packages.join(", "));
 Returns the default voice recognition service on the device.
 
 ```ts
-import { getDefaultRecognitionService } from "@jamsch/expo-speech-recognition";
+import { getDefaultRecognitionService } from "expo-speech-recognition";
 
 const service = ExpoSpeechRecognitionModule.getDefaultRecognitionService();
 console.log("Default recognition service:", service.packageName);
@@ -775,7 +775,7 @@ console.log("Default recognition service:", service.packageName);
 Returns the default voice assistant service on the device.
 
 ```ts
-import { getAssistantService } from "@jamsch/expo-speech-recognition";
+import { getAssistantService } from "expo-speech-recognition";
 
 const service = ExpoSpeechRecognitionModule.getAssistantService();
 console.log("Default assistant service:", service.packageName);
@@ -788,7 +788,7 @@ console.log("Default assistant service:", service.packageName);
 Whether on-device speech recognition is available on the device.
 
 ```ts
-import { supportsOnDeviceRecognition } from "@jamsch/expo-speech-recognition";
+import { supportsOnDeviceRecognition } from "expo-speech-recognition";
 
 const available = supportsOnDeviceRecognition();
 console.log("OnDevice recognition available:", available);
@@ -799,7 +799,7 @@ console.log("OnDevice recognition available:", available);
 Whether audio recording is supported during speech recognition. This mostly applies to Android devices, to check if it's at least Android 13.
 
 ```ts
-import { supportsRecording } from "@jamsch/expo-speech-recognition";
+import { supportsRecording } from "expo-speech-recognition";
 
 const available = supportsRecording();
 console.log("Recording available:", available);
@@ -814,7 +814,7 @@ You can see which locales are supported and installed on your device by running 
 To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "@jamsch/expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 // Download the offline model for the specified locale
 ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
@@ -856,7 +856,7 @@ import {
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
-} from "@jamsch/expo-speech-recognition";
+} from "expo-speech-recognition";
 
 setCategoryIOS({
   category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
@@ -873,7 +873,7 @@ setCategoryIOS({
 Returns the current audio session category and options. For advanced use cases, you may want to use this function to safely configure the audio session category and mode.
 
 ```ts
-import { getAudioSessionCategoryAndOptionsIOS } from "@jamsch/expo-speech-recognition";
+import { getAudioSessionCategoryAndOptionsIOS } from "expo-speech-recognition";
 
 const values = getAudioSessionCategoryAndOptionsIOS();
 console.log(values);
@@ -885,7 +885,7 @@ console.log(values);
 Sets the audio session active state.
 
 ```ts
-import { setAudioSessionActiveIOS } from "@jamsch/expo-speech-recognition";
+import { setAudioSessionActiveIOS } from "expo-speech-recognition";
 
 setAudioSessionActiveIOS(true, {
   notifyOthersOnDeactivation: true,

@@ -1,5 +1,5 @@
 {
-  "name": "@jamsch/expo-speech-recognition",
+  "name": "expo-speech-recognition",
   "version": "0.2.15",
   "description": "Speech Recognition for React Native Expo projects",
   "main": "build/index.js",
