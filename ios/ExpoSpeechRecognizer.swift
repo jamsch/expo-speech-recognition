@@ -632,7 +632,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
     if let error: Error {
       // TODO: don't emit no-speech if there were already interim results
       Task { @MainActor in
-        errorHandler(error)
+        if await task != nil {
+          // Don't emit any errors after the task has finished
+          errorHandler(error)
+        }
       }
     }
 
@@ -676,7 +679,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
           // Stop listening when the timer fires
           // This will finish the current task and emit the final result (or a no-speech event)
           await self?.stopListening()
-
         }
       }
     }
