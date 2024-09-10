@@ -18,13 +18,13 @@ import {
   type ExpoSpeechRecognitionOptions,
   type AndroidIntentOptions,
   useSpeechRecognitionEvent,
-  AudioEncodingAndroidValue,
+  type AudioEncodingAndroidValue,
   TaskHintIOS,
   AVAudioSessionCategory,
   type AVAudioSessionCategoryValue,
   AVAudioSessionCategoryOptions,
   type AVAudioSessionCategoryOptionsValue,
-  SetCategoryOptions,
+  type SetCategoryOptions,
   AVAudioSessionMode,
   type AVAudioSessionModeValue,
   ExpoWebSpeechRecognition,
@@ -131,10 +131,6 @@ export default function App() {
     });
   };
 
-  const stopListening = () => {
-    ExpoSpeechRecognitionModule.stop();
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" translucent={false} />
@@ -191,12 +187,12 @@ export default function App() {
             <BigButton
               title="Stop"
               disabled={status !== "recognizing"}
-              onPress={stopListening}
+              onPress={ExpoSpeechRecognitionModule.stop}
             />
             <BigButton
               title="Abort"
               disabled={status !== "recognizing"}
-              onPress={() => ExpoSpeechRecognitionModule.abort()}
+              onPress={ExpoSpeechRecognitionModule.abort}
             />
           </View>
         )}
@@ -991,7 +987,7 @@ function WebSpeechAPIDemo() {
       reconizer.removeEventListener("error", handleError);
       reconizer.removeEventListener("end", handleEnd);
     };
-  }, [listening]);
+  }, [listening, reconizer]);
 
   const startListeningWeb = () => {
     setListening(true);

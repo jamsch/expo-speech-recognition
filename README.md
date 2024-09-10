@@ -37,7 +37,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
   - [getDefaultRecognitionService()](#getdefaultrecognitionservice--packagename-string--android-only)
   - [getAssistantService()](#getassistantservice--packagename-string--android-only)
-  - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean-android-only)
+  - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean)
   - [supportsRecording()](#supportsrecording-boolean-android-only)
   - [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload-locale-string--promise-status-opened_dialog--download_success--download_canceled-message-string-)
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
