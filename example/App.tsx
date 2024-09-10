@@ -952,7 +952,7 @@ function WebSpeechAPIDemo() {
     transcript: string;
   }>(null);
 
-  const reconizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
+  const recognizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
 
   useEffect(() => {
     if (!listening) {
@@ -978,16 +978,16 @@ function WebSpeechAPIDemo() {
       setListening(false);
     };
 
-    reconizer.addEventListener("result", handleResult);
-    reconizer.addEventListener("error", handleError);
-    reconizer.addEventListener("end", handleEnd);
+    recognizer.addEventListener("result", handleResult);
+    recognizer.addEventListener("error", handleError);
+    recognizer.addEventListener("end", handleEnd);
 
     return () => {
-      reconizer.removeEventListener("result", handleResult);
-      reconizer.removeEventListener("error", handleError);
-      reconizer.removeEventListener("end", handleEnd);
+      recognizer.removeEventListener("result", handleResult);
+      recognizer.removeEventListener("error", handleError);
+      recognizer.removeEventListener("end", handleEnd);
     };
-  }, [listening, reconizer]);
+  }, [listening, recognizer]);
 
   const startListeningWeb = () => {
     setListening(true);
@@ -999,10 +999,10 @@ function WebSpeechAPIDemo() {
         console.log("Permissions not granted", result);
         return;
       }
-      reconizer.lang = "en-US";
-      reconizer.continuous = true;
-      reconizer.interimResults = true;
-      reconizer.start();
+      recognizer.lang = "en-US";
+      recognizer.continuous = true;
+      recognizer.interimResults = true;
+      recognizer.start();
     });
   };
 
@@ -1019,12 +1019,12 @@ function WebSpeechAPIDemo() {
           <BigButton
             color="#B1B695"
             title="Stop Recognition"
-            onPress={() => reconizer.stop()}
+            onPress={() => recognizer.stop()}
           />
           <BigButton
             color="#B1B695"
             title="Abort Recognition"
-            onPress={() => reconizer.abort()}
+            onPress={() => recognizer.abort()}
           />
         </View>
       )}
