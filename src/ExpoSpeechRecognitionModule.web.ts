@@ -161,7 +161,7 @@ const webToNativeEventMap: {
       nativeResults.push({
         transcript: result.transcript,
         confidence: result.confidence,
-        segements: [],
+        segments: [],
       });
     }
 

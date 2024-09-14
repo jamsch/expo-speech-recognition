@@ -161,12 +161,12 @@ type SpeechListener<K extends keyof SpeechRecognitionEventMap> = (
 
 /** A compatibility wrapper that implements the web SpeechRecognition API for React Native. */
 export class ExpoWebSpeechRecognition implements SpeechRecognition {
-  lang: string = "en-US";
+  lang = "en-US";
   grammars: SpeechGrammarList = new ExpoWebSpeechGrammarList();
-  maxAlternatives: number = 1;
-  continuous: boolean = false;
+  maxAlternatives = 1;
+  continuous = false;
 
-  #interimResults: boolean = false;
+  #interimResults = false;
 
   get interimResults(): boolean {
     return this.#interimResults;

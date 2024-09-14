@@ -59,14 +59,14 @@ export type ExpoSpeechRecognitionNativeEventMap = {
        * - The segment parts are split up by words.
        * - The segments are only available for the first transcript
        */
-      segements: {
+      segments: {
         /** The start timestamp of the utterance, e.g. 1000 */
         startTimeMillis: number;
         /** The end timestamp of the utterance, e.g. 1500 */
         endTimeMillis: number;
         /** The text portion of the transcript, e.g. "Hello world" */
         segment: string;
-        /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segement */
+        /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segment */
         confidence: number;
       }[];
     }[];

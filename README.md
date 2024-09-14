@@ -97,7 +97,7 @@ function App() {
   useSpeechRecognitionEvent("start", () => setRecognizing(true));
   useSpeechRecognitionEvent("end", () => setRecognizing(false));
   useSpeechRecognitionEvent("result", (event) => {
-    setTranscript(event.results[0].transcript);
+    setTranscript(event.results[0]?.transcript);
   });
   useSpeechRecognitionEvent("error", (event) => {
     console.log("error code:", event.error, "error messsage:", event.message);
