@@ -103,14 +103,16 @@ function App() {
     console.log("error code:", event.error, "error messsage:", event.message);
   });
 
-  const handleStart = () => {
-    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
+  const handleStart = async () => {
+    try {
+      const result =
+        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
       if (!result.granted) {
         console.warn("Permissions not granted", result);
         return;
       }
       // Start speech recognition
-      ExpoSpeechRecognitionModule.start({
+      await ExpoSpeechRecognitionModule.start({
         lang: "en-US",
         interimResults: true,
         maxAlternatives: 1,
@@ -119,12 +121,14 @@ function App() {
         addsPunctuation: false,
         contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
       });
-    });
+    } catch (error) {
+      console.error("Error starting speech recognition:", error);
+    }
   };
 
   return (
     <View>
-      {recognizing ? (
+      {!recognizing ? (
         <Button title="Start" onPress={handleStart} />
       ) : (
         <Button title="Stop" onPress={ExpoSpeechRecognitionModule.stop} />
