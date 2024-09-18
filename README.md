@@ -103,22 +103,21 @@ function App() {
     console.log("error code:", event.error, "error messsage:", event.message);
   });
 
-  const handleStart = () => {
-    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
-      if (!result.granted) {
-        console.warn("Permissions not granted", result);
-        return;
-      }
-      // Start speech recognition
-      ExpoSpeechRecognitionModule.start({
-        lang: "en-US",
-        interimResults: true,
-        maxAlternatives: 1,
-        continuous: false,
-        requiresOnDeviceRecognition: false,
-        addsPunctuation: false,
-        contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
-      });
+  const handleStart = async () => {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      console.warn("Permissions not granted", result);
+      return;
+    }
+    // Start speech recognition
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+      maxAlternatives: 1,
+      continuous: false,
+      requiresOnDeviceRecognition: false,
+      addsPunctuation: false,
+      contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
     });
   };
 
