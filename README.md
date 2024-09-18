@@ -104,26 +104,21 @@ function App() {
   });
 
   const handleStart = async () => {
-    try {
-      const result =
-        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!result.granted) {
-        console.warn("Permissions not granted", result);
-        return;
-      }
-      // Start speech recognition
-      await ExpoSpeechRecognitionModule.start({
-        lang: "en-US",
-        interimResults: true,
-        maxAlternatives: 1,
-        continuous: false,
-        requiresOnDeviceRecognition: false,
-        addsPunctuation: false,
-        contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
-      });
-    } catch (error) {
-      console.error("Error starting speech recognition:", error);
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      console.warn("Permissions not granted", result);
+      return;
     }
+    // Start speech recognition
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+      maxAlternatives: 1,
+      continuous: false,
+      requiresOnDeviceRecognition: false,
+      addsPunctuation: false,
+      contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
+    });
   };
 
   return (
