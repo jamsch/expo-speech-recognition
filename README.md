@@ -124,7 +124,7 @@ function App() {
 
   return (
     <View>
-      {recognizing ? (
+      {!recognizing ? (
         <Button title="Start" onPress={handleStart} />
       ) : (
         <Button title="Stop" onPress={ExpoSpeechRecognitionModule.stop} />
