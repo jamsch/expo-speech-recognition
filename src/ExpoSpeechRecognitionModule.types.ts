@@ -56,8 +56,15 @@ export type ExpoSpeechRecognitionNativeEventMap = {
        * Notes for Android:
        *
        * - This is only available for SDK 34+ (Android 14+)
+       * - This is only verified to work with the `com.google.android.as` service (using on device speech recognition)
+       * - Segments are only available during the final result
        * - The segment parts are split up by words.
        * - The segments are only available for the first transcript
+       * - Segment confidences currently return as -1 (unavailable)
+       *
+       * Notes for iOS:
+       *
+       * - The confidence value will be 0 on partial results
        */
       segments: {
         /** The start timestamp of the utterance, e.g. 1000 */
