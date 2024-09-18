@@ -327,7 +327,8 @@ The error code is largely based on the Web Speech API error codes.
 
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit an `{ uri: string }` event object in the `audiostart` and `audioend` events with the local file path.
 
-> Note: For Android, this is only supported on Android 13 and above. Call `supportsRecording()` to see if it's available before using this feature.
+> [!IMPORTANT]
+> For Android, this is only supported on Android 13 and above. Call `supportsRecording()` to see if it's available before using this feature.
 
 Default audio output formats:
 
@@ -412,7 +413,8 @@ function AudioPlayer(props: { source: string }) {
 
 You can use the `audioSource.uri` option to transcribe audio files instead of using the microphone.
 
-> **Important note**: This feature is available on Android 13+ and iOS. If the device does not support the feature, you'll receive an `error` event with the code `audio-capture`.
+> [!IMPORTANT]
+> This feature is available on Android 13+ and iOS. If the device does not support the feature, you'll receive an `error` event with the code `audio-capture`.
 
 ### Supported input audio formats
 
@@ -747,7 +749,8 @@ getSupportedLocales({
 
 Get list of speech recognition services available on the device.
 
-> Note: this only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
+> [!NOTE]
+> This only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
 
 ```ts
 import { getSpeechRecognitionServices } from "expo-speech-recognition";
@@ -847,7 +850,8 @@ The device will display a dialog to download the model. Once the model is downlo
 
 This function is an implementation of [AVAudioSession.setCategory](https://developer.apple.com/documentation/avfaudio/avaudiosession/1771734-setcategory) for iOS. For multimedia applications, you may want to set the audio session category and mode to control the audio routing.
 
-> Note: when starting speech recognition, audio session category is changed to `playAndRecord` with option `defaultToSpeaker` and `allowBluetooth` and mode `measurement`. You can instead configure the audio session category and mode by passing the `iosCategory` option to the `start` function.
+> [!NOTE]
+> When starting speech recognition, the audio session category is changed to `playAndRecord` with option `defaultToSpeaker` and `allowBluetooth` and mode `measurement`. You can instead configure the audio session category and mode by passing the `iosCategory` option to the `start(..)` function.
 
 ```ts
 import {
