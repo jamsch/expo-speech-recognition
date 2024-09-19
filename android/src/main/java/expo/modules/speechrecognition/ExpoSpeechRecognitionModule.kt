@@ -321,17 +321,26 @@ class ExpoSpeechRecognitionModule : Module() {
         promise: Promise,
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            promise.resolve(mutableListOf<String>())
+            promise.resolve(mapOf(
+                "locales" to mutableListOf<String>(),
+                "installedLocales" to mutableListOf<String>(),
+            ))
             return
         }
 
         if (options.androidRecognitionServicePackage == null && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
-            promise.resolve(mutableListOf<String>())
+            promise.resolve(mapOf(
+                "locales" to mutableListOf<String>(),
+                "installedLocales" to mutableListOf<String>(),
+            ))
             return
         }
 
         if (options.androidRecognitionServicePackage != null && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
-            promise.resolve(mutableListOf<String>())
+            promise.resolve(mapOf(
+                "locales" to mutableListOf<String>(),
+                "installedLocales" to mutableListOf<String>(),
+            ))
             return
         }
 
