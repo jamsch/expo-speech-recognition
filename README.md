@@ -78,6 +78,34 @@ npm install expo-speech-recognition
 }
 ```
 
+<details>
+<summary>Important Note for Expo Beginners (click to expand)</summary>
+
+### Important Note for Expo Beginners
+
+If you've just created a new Expo project or have only been using the Expo SDK so far (without `ios/` and `android/` directories), you'll need to create a development build. Don't worry—this won't drastically change your workflow. For a better understanding of the differences between the React Native and Expo folder structures, check out this [video at the relevant timestamp](https://youtu.be/7J8LRpja9_o?t=611).
+
+After completing **Step 2: Configure the config plugin**, follow these steps:
+
+- To (re)-generate the native Android project, run:
+  ```bash
+  npx expo run:android
+  ```
+- To (re)-generate the native iOS project, run:
+  ```bash
+  npx expo run:ios
+  ```
+
+For more details, see [Expo's prebuild documentation](https://docs.expo.dev/workflow/prebuild/#usage-with-expo-cli-run-commands).
+
+### Best Practices for Version Control
+
+It's recommended by the [Expo team](https://youtu.be/7J8LRpja9_o?t=611) to add the `ios/` and `android/` directories to your `.gitignore` file and rely on **Continuous Native Generation**. This approach has its own benefits, as outlined in the [Expo documentation](https://docs.expo.dev/workflow/continuous-native-generation/).
+
+Now, you're ready to move on to the [Usage](#usage) section.
+
+</details>
+
 ## Usage
 
 ### Using Hooks
