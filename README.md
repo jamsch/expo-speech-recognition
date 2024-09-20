@@ -519,7 +519,7 @@ function TranscribeAudioFile() {
 ## Polyfilling the Web SpeechRecognition API
 
 > [!IMPORTANT]
-> This is intended for projects that rely on third party libraries that use the Web Speech API\*\*. If you're using this library directly, you should use the [Direct Module API](#direct-module-api) instead.
+> This is intended for projects that rely on third party libraries that use the Web Speech API. If you're using this library directly, you should use the [Direct Module API](#direct-module-api) instead.
 
 If you intend to polyfill the `webkitSpeechRecognition` or `SpeechRecognition` globals for use with external libraries, you can use the `ExpoWebSpeechRecognition` class to do so.
 
