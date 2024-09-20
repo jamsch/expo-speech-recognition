@@ -466,6 +466,11 @@ function GeneralSettings(props: {
       });
   }, [settings.androidRecognitionServicePackage]);
 
+  const locales =
+    supportedLocales.locales.length === 0
+      ? fallbackLocales
+      : supportedLocales.locales;
+
   return (
     <View>
       <View
@@ -520,10 +525,11 @@ function GeneralSettings(props: {
         </Text>
 
         <ScrollView contentContainerStyle={[styles.row, styles.flexWrap]}>
-          {supportedLocales.locales.map((locale) => {
+          {locales.map((locale) => {
             const isInstalled =
               Platform.OS === "android" &&
               supportedLocales.installedLocales.includes(locale);
+
             return (
               <OptionButton
                 key={locale}
@@ -547,6 +553,40 @@ function GeneralSettings(props: {
     </View>
   );
 }
+
+const fallbackLocales = [
+  "cmn-Hans-CN",
+  "cmn-Hant-TW",
+  "de-AT",
+  "de-BE",
+  "de-CH",
+  "de-DE",
+  "en-AU",
+  "en-CA",
+  "en-GB",
+  "en-IE",
+  "en-IN",
+  "en-SG",
+  "en-US",
+  "es-ES",
+  "es-US",
+  "fr-BE",
+  "fr-CA",
+  "fr-CH",
+  "fr-FR",
+  "hi-IN",
+  "id-ID",
+  "it-CH",
+  "it-IT",
+  "ja-JP",
+  "ko-KR",
+  "pl-PL",
+  "pt-BR",
+  "ru-RU",
+  "th-TH",
+  "tr-TR",
+  "vi-VN",
+];
 
 const androidIntentNumberInputOptions = [
   "EXTRA_LANGUAGE_SWITCH_MAX_SWITCHES",

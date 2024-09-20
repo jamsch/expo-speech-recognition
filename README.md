@@ -518,7 +518,8 @@ function TranscribeAudioFile() {
 
 ## Polyfilling the Web SpeechRecognition API
 
-> **Note: this is intended for projects that rely on third party libraries that use the Web Speech API**. If you're using this library directly, you should use the [Direct Module API](#direct-module-api) instead.
+> [!IMPORTANT]
+> This is intended for projects that rely on third party libraries that use the Web Speech API\*\*. If you're using this library directly, you should use the [Direct Module API](#direct-module-api) instead.
 
 If you intend to polyfill the `webkitSpeechRecognition` or `SpeechRecognition` globals for use with external libraries, you can use the `ExpoWebSpeechRecognition` class to do so.
 
@@ -741,6 +742,9 @@ listener.remove();
 ```
 
 ### `getSupportedLocales(): Promise<{ locales: string[]; installedLocales: string[] }>`
+
+> [!NOTE]
+> Not supported on Android 12 and below
 
 Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
 

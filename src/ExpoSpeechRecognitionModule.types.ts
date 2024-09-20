@@ -490,6 +490,8 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   /**
    * Returns an array of locales supported by the speech recognizer.
    *
+   * Not supported on Android 12 and below (API level 31), this will return an empty array of locales.
+   *
    * @throws {"package_not_found"} If the service package is not found.
    * @throws {"error_[number]"} If there was an error retrieving the supported locales.
    */
