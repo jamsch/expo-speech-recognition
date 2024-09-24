@@ -419,7 +419,7 @@ public class ExpoSpeechRecognitionModule: Module {
 
     if isFinal && results.isEmpty {
       // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
-      // The nomatch event of the Web Speech API is fired22A3351
+      // The nomatch event of the Web Speech API is fired
       // when the speech recognition service returns a final result with no significant recognition.
       sendEvent("nomatch")
       return

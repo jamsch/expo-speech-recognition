@@ -132,7 +132,13 @@ export type ExpoSpeechRecognitionOptions = {
    * On iOS, this configures [`SFSpeechRecognitionRequest.contextualStrings`](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/1649391-contextualstrings).
    */
   contextualStrings?: string[];
-  /** [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds */
+  /**
+   * [Default: false] Continuous recognition.
+   *
+   * Not supported on Android 12 and below.
+   *
+   * If false on iOS, recognition will run until no speech is detected for 3 seconds.
+   */
   continuous?: boolean;
   /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
    *
