@@ -640,8 +640,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
 
     if receivedFinalResult || receivedError {
-      //      audioEngine?.stop()
-      //      audioEngine?.inputNode.removeTap(onBus: 0)
       Task { @MainActor in
         await reset()
       }

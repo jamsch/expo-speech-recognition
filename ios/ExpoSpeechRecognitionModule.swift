@@ -36,6 +36,11 @@ public class ExpoSpeechRecognitionModule: Module {
 
   var speechRecognizer: ExpoSpeechRecognizer?
 
+  // Hack for iOS 18 to detect final results
+  // See: https://forums.developer.apple.com/forums/thread/762952 for more info
+  // This is a temporary workaround until the issue is fixed in a future iOS release
+  var hasSeenFinalResult: Bool = false
+
   public func definition() -> ModuleDefinition {
     // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
     // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
@@ -348,11 +353,13 @@ public class ExpoSpeechRecognitionModule: Module {
   }
 
   func sendErrorAndStop(error: String, message: String) {
+    hasSeenFinalResult = false
     sendEvent("error", ["error": error, "message": message])
     sendEvent("end")
   }
 
   func handleEnd() {
+    hasSeenFinalResult = false
     sendEvent("end")
   }
 
@@ -362,7 +369,25 @@ public class ExpoSpeechRecognitionModule: Module {
     // Limit the number of transcriptions to the maxAlternatives
     let transcriptionSubsequence = result.transcriptions.prefix(maxAlternatives)
 
+    var isFinal = result.isFinal
+
+    // Hack for iOS 18 to detect final results
+    // See: https://forums.developer.apple.com/forums/thread/762952 for more info
+    // This is a temporary workaround until the issue is fixed in a future iOS release
+    if #available(iOS 18.0, *), !isFinal {
+      isFinal = result.speechRecognitionMetadata?.speechDuration ?? 0 > 0
+    }
+
     for transcription in transcriptionSubsequence {
+      var transcript = transcription.formattedString
+
+      // Prepend an empty space if the hacky workaround is applied
+      // So that the user can append the transcript to the previous result,
+      // matching the behavior of Android & Web Speech API
+      if hasSeenFinalResult {
+        transcript = " " + transcription.formattedString
+      }
+
       let segments = transcription.segments.map { segment in
         return Segment(
           startTimeMillis: segment.timestamp * 1000,
@@ -377,7 +402,7 @@ public class ExpoSpeechRecognitionModule: Module {
         / Float(transcription.segments.count)
 
       let item = TranscriptionResult(
-        transcript: transcription.formattedString,
+        transcript: transcript,
         confidence: confidence,
         segments: segments
       )
@@ -386,9 +411,15 @@ public class ExpoSpeechRecognitionModule: Module {
         results.append(item)
       }
     }
-    if result.isFinal && results.count == 0 {
+
+    // Apply the "workaround"
+    if #available(iOS 18.0, *), !result.isFinal, isFinal {
+      hasSeenFinalResult = true
+    }
+
+    if isFinal && results.isEmpty {
       // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
-      // The nomatch event of the Web Speech API is fired
+      // The nomatch event of the Web Speech API is fired22A3351
       // when the speech recognition service returns a final result with no significant recognition.
       sendEvent("nomatch")
       return
@@ -397,7 +428,7 @@ public class ExpoSpeechRecognitionModule: Module {
     sendEvent(
       "result",
       [
-        "isFinal": result.isFinal,
+        "isFinal": isFinal,
         "results": results.map { $0.toDictionary() },
       ]
     )
