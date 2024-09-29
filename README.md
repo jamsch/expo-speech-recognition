@@ -33,7 +33,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [requestPermissionsAsync()](#requestpermissionsasync-promisepermissionresponse)
   - [getPermissionsAsync()](#getpermissionsasync-promisepermissionresponse)
   - [getStateAsync()](#getstateasync-promisespeechrecognitionstate)
-  - [addSpeechRecognitionListener()](#addspeechrecognitionlistenereventname-string-listener-event-any--void--remove---void-)
+  - [addSpeechRecognitionListener()](#addspeechrecognitionlistener)
   - [getSupportedLocales()](#getsupportedlocales-promise-locales-string-installedlocales-string-)
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
   - [getDefaultRecognitionService()](#getdefaultrecognitionservice--packagename-string--android-only)
@@ -229,7 +229,8 @@ ExpoSpeechRecognitionModule.start({
   interimResults: true,
   // The maximum number of alternative transcriptions to return.
   maxAlternatives: 1,
-  // Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds.
+  // [Default: false] Continuous recognition.
+  // If false on iOS, recognition will run until no speech is detected for 3 seconds.
   // Not supported on Android 12 and below.
   continuous: true,
   // [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
@@ -254,7 +255,7 @@ ExpoSpeechRecognitionModule.start({
     mode: "measurement",
   },
   // [Default: undefined] Recording options for Android & iOS
-  // For Android, this is only supported on Android 13 and above.
+  // Android 13+ and iOS only.
   recordingOptions: {
     // [Default: false] Whether to persist the audio to a local file path.
     persist: false,
@@ -358,7 +359,7 @@ The error code is largely based on the Web Speech API error codes.
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit an `{ uri: string }` event object in the `audiostart` and `audioend` events with the local file path.
 
 > [!IMPORTANT]
-> For Android, this is only supported on Android 13 and above. Call `supportsRecording()` to see if it's available before using this feature.
+> This feature is available on Android 13+ and iOS. Call `supportsRecording()` to see if it's available before using this feature.
 
 Default audio output formats:
 
@@ -441,10 +442,10 @@ function AudioPlayer(props: { source: string }) {
 
 ## Transcribing audio files
 
-You can use the `audioSource.uri` option to transcribe audio files instead of using the microphone.
-
 > [!IMPORTANT]
 > This feature is available on Android 13+ and iOS. If the device does not support the feature, you'll receive an `error` event with the code `audio-capture`.
+
+Instead of using the microphone, you can configure the `audioSource.uri` option to transcribe audio files.
 
 ### Supported input audio formats
 
@@ -775,13 +776,16 @@ ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
 });
 ```
 
-### `addSpeechRecognitionListener(eventName: string, listener: (event: any) => void): { remove: () => void }`
+### `addSpeechRecognitionListener()`
+
+Refer to [Speech Recognition Events](#speech-recognition-events) for the list of supported events.
 
 ```ts
 import { addSpeechRecognitionListener } from "expo-speech-recognition";
 
 const listener = addSpeechRecognitionListener("result", (event) => {
-  console.log("result:", event.results[event.resultIndex][0].transcript);
+  console.log("transcript:", event.results[0]?.transcript);
+  console.log("confidence:", event.results[0]?.confidence);
 });
 
 // Remove the listener when you're done
