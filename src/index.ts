@@ -71,4 +71,8 @@ export {
   type IOSTaskHintValue,
   type SetCategoryOptions,
   type ExpoSpeechRecognitionErrorCode,
+  type ExpoSpeechRecognitionErrorEvent,
+  type ExpoSpeechRecognitionResultEvent,
+  type ExpoSpeechRecognitionResult,
+  type ExpoSpeechRecognitionResultSegment,
 } from "./ExpoSpeechRecognitionModule.types";

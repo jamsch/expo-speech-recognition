@@ -14,6 +14,48 @@ import type {
 export type AVAudioSessionCategoryValue =
   (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
 
+export type ExpoSpeechRecognitionResult = {
+  transcript: string;
+  /**
+   * Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating transcript confidence.
+   */
+  confidence: number;
+  /**
+   * An array of transcription segments that represent the parts of the transcription, as identified by the speech recognizer.
+   *
+   * Notes for Android:
+   *
+   * - This is only available for SDK 34+ (Android 14+)
+   * - This is only verified to work with the `com.google.android.as` service (using on device speech recognition)
+   * - Segments are only available during the final result
+   * - The segment parts are split up by words.
+   * - The segments are only available for the first transcript
+   * - Segment confidences currently return as -1 (unavailable)
+   *
+   * Notes for iOS:
+   *
+   * - The confidence value will be 0 on partial results
+   */
+  segments: ExpoSpeechRecognitionResultSegment[];
+};
+
+export type ExpoSpeechRecognitionResultSegment = {
+  /** The start timestamp of the utterance, e.g. 1000 */
+  startTimeMillis: number;
+  /** The end timestamp of the utterance, e.g. 1500 */
+  endTimeMillis: number;
+  /** The text portion of the transcript, e.g. "Hello world" */
+  segment: string;
+  /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segment */
+  confidence: number;
+};
+
+/** Fired when there's a speech result. The result may be partial or final */
+export type ExpoSpeechRecognitionResultEvent = {
+  isFinal: boolean;
+  results: ExpoSpeechRecognitionResult[];
+};
+
 export type ExpoSpeechRecognitionErrorCode =
   /** The user called `ExpoSpeechRecognitionModule.abort()`. */
   | "aborted"
@@ -37,51 +79,17 @@ export type ExpoSpeechRecognitionErrorCode =
   /** (Android only) An unknown client-side error occurred. */
   | "client";
 
+export type ExpoSpeechRecognitionErrorEvent = {
+  error: ExpoSpeechRecognitionErrorCode;
+  message: string;
+};
+
 /**
  * Events that are dispatched from the native side
  */
 export type ExpoSpeechRecognitionNativeEventMap = {
-  /** Fired when there's a speech result. The result may be partial or final */
-  result: {
-    isFinal: boolean;
-    results: {
-      transcript: string;
-      /**
-       * Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating transcript confidence.
-       */
-      confidence: number;
-      /**
-       * An array of transcription segments that represent the parts of the transcription, as identified by the speech recognizer.
-       *
-       * Notes for Android:
-       *
-       * - This is only available for SDK 34+ (Android 14+)
-       * - This is only verified to work with the `com.google.android.as` service (using on device speech recognition)
-       * - Segments are only available during the final result
-       * - The segment parts are split up by words.
-       * - The segments are only available for the first transcript
-       * - Segment confidences currently return as -1 (unavailable)
-       *
-       * Notes for iOS:
-       *
-       * - The confidence value will be 0 on partial results
-       */
-      segments: {
-        /** The start timestamp of the utterance, e.g. 1000 */
-        startTimeMillis: number;
-        /** The end timestamp of the utterance, e.g. 1500 */
-        endTimeMillis: number;
-        /** The text portion of the transcript, e.g. "Hello world" */
-        segment: string;
-        /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segment */
-        confidence: number;
-      }[];
-    }[];
-  };
-  error: {
-    error: ExpoSpeechRecognitionErrorCode;
-    message: string;
-  };
+  result: ExpoSpeechRecognitionResultEvent;
+  error: ExpoSpeechRecognitionErrorEvent;
   start: null;
   speechstart: null;
   speechend: null;
@@ -533,7 +541,10 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    *
    * @returns empty string if no service is found, or not Android
    */
-  getDefaultRecognitionService(): { packageName: string };
+  getDefaultRecognitionService(): {
+    /** e.g. "com.google.android.tts" or "com.google.android.googlequicksearchbox" */
+    packageName: string;
+  };
   /**
    * [Android only] Returns the default voice recognition service on the device.
    *
@@ -541,7 +552,10 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    *
    * @returns empty string if no service is found, or not Android
    */
-  getAssistantService(): { packageName: string };
+  getAssistantService(): {
+    /** e.g. "com.google.android.googlequicksearchbox" or "com.samsung.android.bixby.agent" */
+    packageName: string;
+  };
   /**
    * Whether the on-device speech recognition is available on the device.
    */

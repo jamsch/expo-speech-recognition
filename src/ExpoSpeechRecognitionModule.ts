@@ -11,7 +11,7 @@ import type { ExpoSpeechRecognitionModuleType } from "./ExpoSpeechRecognitionMod
 const ExpoSpeechRecognitionNativeModule =
   requireNativeModule<ExpoSpeechRecognitionModuleType>("ExpoSpeechRecognition");
 
-export const ExpoSpeechRecognitionModule = {
+export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   ...ExpoSpeechRecognitionNativeModule,
   // Avoid any function bindings when calling the native module
   stop: () => ExpoSpeechRecognitionNativeModule.stop(),

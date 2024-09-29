@@ -368,9 +368,9 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
       ? (((ev) => {
           listener.call(this, ev);
           // remove the listeners from the map
-          this.#subscriptionMap.get(listener)?.forEach((sub) => {
+          for (const sub of this.#subscriptionMap.get(listener) ?? []) {
             sub.remove();
-          });
+          }
           this.#subscriptionMap.delete(listener);
         }) as SpeechListener<K>)
       : listener;
@@ -443,8 +443,8 @@ export class ExpoWebSpeechGrammarList implements SpeechGrammarList {
 }
 
 export class ExpoWebSpeechGrammar implements SpeechGrammar {
-  src: string = "";
-  weight: number = 1;
+  src = "";
+  weight = 1;
 
   constructor(src: string, weight?: number) {
     this.src = src;

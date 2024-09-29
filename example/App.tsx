@@ -15,19 +15,21 @@ import {
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
-  type ExpoSpeechRecognitionOptions,
-  type AndroidIntentOptions,
   useSpeechRecognitionEvent,
-  type AudioEncodingAndroidValue,
   TaskHintIOS,
   AVAudioSessionCategory,
-  type AVAudioSessionCategoryValue,
   AVAudioSessionCategoryOptions,
-  type AVAudioSessionCategoryOptionsValue,
-  type SetCategoryOptions,
   AVAudioSessionMode,
-  type AVAudioSessionModeValue,
   ExpoWebSpeechRecognition,
+} from "expo-speech-recognition";
+import type {
+  AudioEncodingAndroidValue,
+  AndroidIntentOptions,
+  AVAudioSessionCategoryValue,
+  AVAudioSessionModeValue,
+  AVAudioSessionCategoryOptionsValue,
+  ExpoSpeechRecognitionOptions,
+  SetCategoryOptions,
 } from "expo-speech-recognition";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
