@@ -82,31 +82,19 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     );
   },
   getSpeechRecognitionServices: () => {
-    console.warn(
-      "getSpeechRecognitionServices is not supported on web. Returning an empty array.",
-    );
     return [] as string[];
   },
   getDefaultRecognitionService: () => {
-    console.warn(
-      "getDefaultRecognitionService is not supported on web. Returning an empty object.",
-    );
     return {
       packageName: "",
     };
   },
   getAssistantService: () => {
-    console.warn(
-      "getAssistantService is not supported on web. Returning an empty object.",
-    );
     return {
       packageName: "",
     };
   },
   supportsOnDeviceRecognition: () => {
-    console.warn(
-      "supportsOnDeviceRecognition is not supported on web. Returning false.",
-    );
     return false;
   },
   supportsRecording: () => {
@@ -136,6 +124,13 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   },
   setAudioSessionActiveIOS: () => {
     console.warn("setAudioSessionActiveIOS is not supported on web.");
+  },
+  isRecognitionAvailable: () => {
+    const hasSpeechRecognitionAPI =
+      typeof webkitSpeechRecognition !== "undefined" ||
+      typeof SpeechRecognition !== "undefined";
+
+    return hasSpeechRecognitionAPI;
   },
 };
 
@@ -176,6 +171,7 @@ const webToNativeEventMap: {
   start: (ev) => null,
   soundend: (ev) => null,
 };
+
 export const ExpoSpeechRecognitionModuleEmitter = {
   _nativeListeners: new Map() as Map<string, Set<(event: any) => void>>,
   _clientListeners: new Map() as Map<

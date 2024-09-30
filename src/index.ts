@@ -51,6 +51,18 @@ export const getAudioSessionCategoryAndOptionsIOS =
 export const setAudioSessionActiveIOS =
   ExpoSpeechRecognitionModule.setAudioSessionActiveIOS;
 
+export const androidTriggerOfflineModelDownload =
+  ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload;
+
+export const isRecognitionAvailable =
+  ExpoSpeechRecognitionModule.isRecognitionAvailable;
+
+export const getDefaultRecognitionService =
+  ExpoSpeechRecognitionModule.getDefaultRecognitionService;
+
+export const getAssistantService =
+  ExpoSpeechRecognitionModule.getAssistantService;
+
 export const addSpeechRecognitionListener = <
   T extends keyof ExpoSpeechRecognitionNativeEventMap,
 >(

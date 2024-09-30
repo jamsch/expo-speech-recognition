@@ -38,8 +38,9 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
   - [getDefaultRecognitionService()](#getdefaultrecognitionservice--packagename-string--android-only)
   - [getAssistantService()](#getassistantservice--packagename-string--android-only)
+  - [isRecognitionAvailable()](#isrecognitionavailable-boolean)
   - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean)
-  - [supportsRecording()](#supportsrecording-boolean-android-only)
+  - [supportsRecording()](#supportsrecording-boolean)
   - [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload-locale-string--promise-status-opened_dialog--download_success--download_canceled-message-string-)
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
@@ -307,7 +308,7 @@ Events are largely based on the [Web Speech API](https://developer.mozilla.org/e
 | ------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `audiostart`  | Audio capturing has started                                                                | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
 | `audioend`    | Audio capturing has ended                                                                  | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
-| `end`         | Speech recognition service has disconnected.                                               | This should be the last event dispatched.                                                                                                                                                                                                                                                |
+| `end`         | Speech recognition service has disconnected.                                               | This should always be the last event dispatched, including after errors.                                                                                                                                                                                                                 |
 | `error`       | Fired when a speech recognition error occurs.                                              | You'll also receive an `error` event (with code "aborted") when calling `.abort()`                                                                                                                                                                                                       |
 | `nomatch`     | Speech recognition service returns a final result with no significant recognition.         | You may have non-final results recognized. This may get emitted after cancellation.                                                                                                                                                                                                      |
 | `result`      | Speech recognition service returns a word or phrase has been positively recognized.        | On Android, continous mode runs as a segmented session, meaning when a final result is reached, additional partial and final results will cover a new segment separate from the previous final result. On iOS, you should expect one final result before speech recognition has stopped. |
@@ -359,7 +360,7 @@ The error code is largely based on the Web Speech API error codes.
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit an `{ uri: string }` event object in the `audiostart` and `audioend` events with the local file path.
 
 > [!IMPORTANT]
-> This feature is available on Android 13+ and iOS. Call `supportsRecording()` to see if it's available before using this feature.
+> This feature is available on Android 13+ and iOS. Call [`supportsRecording()`](#supportsrecording-boolean) to see if it's available before using this feature.
 
 Default audio output formats:
 
@@ -836,9 +837,9 @@ Get list of speech recognition services available on the device.
 > This only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+import { getSpeechRecognitionServices } from "expo-speech-recognition";
 
-const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
+const packages = getSpeechRecognitionServices();
 console.log("Speech recognition services:", packages.join(", "));
 // e.g. ["com.google.android.as", "com.google.android.tts", "com.samsung.android.bixby.agent"]
 ```
@@ -848,9 +849,9 @@ console.log("Speech recognition services:", packages.join(", "));
 Returns the default voice recognition service on the device.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+import { getDefaultRecognitionService } from "expo-speech-recognition";
 
-const service = ExpoSpeechRecognitionModule.getDefaultRecognitionService();
+const service = getDefaultRecognitionService();
 console.log("Default recognition service:", service.packageName);
 // Usually this is "com.google.android.tts" on Android 13+ and "com.google.android.googlequicksearchbox" on Android <=12.
 // For on-device recognition, "com.google.android.as" will likely be used.
@@ -861,17 +862,32 @@ console.log("Default recognition service:", service.packageName);
 Returns the default voice assistant service on the device.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+import { getAssistantService } from "expo-speech-recognition";
 
-const service = ExpoSpeechRecognitionModule.getAssistantService();
+const service = getAssistantService();
 console.log("Default assistant service:", service.packageName);
 // Usually "com.google.android.googlequicksearchbox" for Google
 // or "com.samsung.android.bixby.agent" for Samsung
 ```
 
+### `isRecognitionAvailable(): boolean`
+
+Whether speech recognition is currently available on the device.
+
+If this method returns false, calling `start()` will fail and emit an error event with the code `service-not-allowed` or `language-not-supported`. You should also ask the user to enable speech recognition in the system settings (i.e, for iOS to enable Siri & Dictation). On Android, you should ask the user to install and enable `com.google.android.tts` (Android 13+) or `com.google.android.googlequicksearchbox` (Android <= 12) as a default voice recognition service.
+
+For Web, this method only checks if the browser has the Web SpeechRecognition API available, however keep in mind that browsers (like Brave) may still have the APIs but not have it implemented yet. Refer to [Platform Compatibility Table](#platform-compatibility-table) for more information. You may want to use a user agent parser to fill in the gaps.
+
+```ts
+import { isRecognitionAvailable } from "expo-speech-recognition";
+
+const available = isRecognitionAvailable();
+console.log("Speech recognition available:", available);
+```
+
 ### `supportsOnDeviceRecognition(): boolean`
 
-Whether on-device speech recognition is available on the device.
+Whether the device supports on-device speech recognition.
 
 ```ts
 import { supportsOnDeviceRecognition } from "expo-speech-recognition";
@@ -880,7 +896,7 @@ const available = supportsOnDeviceRecognition();
 console.log("OnDevice recognition available:", available);
 ```
 
-### `supportsRecording(): boolean` (Android only)
+### `supportsRecording(): boolean`
 
 Whether audio recording is supported during speech recognition. This mostly applies to Android devices, to check if it's at least Android 13.
 
@@ -900,10 +916,10 @@ You can see which locales are supported and installed on your device by running 
 To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+import { androidTriggerOfflineModelDownload } from "expo-speech-recognition";
 
 // Download the offline model for the specified locale
-ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
+androidTriggerOfflineModelDownload({
   locale: "en-US",
 })
   .then((result) => {

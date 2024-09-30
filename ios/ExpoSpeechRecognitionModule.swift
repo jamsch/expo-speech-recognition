@@ -279,7 +279,11 @@ public class ExpoSpeechRecognitionModule: Module {
     }
 
     Function("supportsRecording") { () -> Bool in
-      let recognizer: SFSpeechRecognizer? = SFSpeechRecognizer()
+      return true
+    }
+
+    Function("isRecognitionAvailable") { () -> Bool in
+      let recognizer = SFSpeechRecognizer()
       return recognizer?.isAvailable ?? false
     }
 

@@ -31,6 +31,8 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
     ExpoSpeechRecognitionNativeModule.supportsOnDeviceRecognition(),
   supportsRecording: () =>
     ExpoSpeechRecognitionNativeModule.supportsRecording(),
+  isRecognitionAvailable: () =>
+    ExpoSpeechRecognitionNativeModule.isRecognitionAvailable(),
 };
 
 export const ExpoSpeechRecognitionModuleEmitter = new EventEmitter(

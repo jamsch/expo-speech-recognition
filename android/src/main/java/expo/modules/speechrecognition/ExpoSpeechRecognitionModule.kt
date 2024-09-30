@@ -183,6 +183,10 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
             }
 
+            Function("isRecognitionAvailable") {
+                SpeechRecognizer.isRecognitionAvailable(appContext.reactContext!!)
+            }
+
             Function("supportsRecording") {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
             }
