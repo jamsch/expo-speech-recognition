@@ -210,7 +210,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   androidRecognitionServicePackage: ExpoSpeechRecognitionOptions["androidRecognitionServicePackage"];
 
   // keyed by listener function
-  #subscriptionMap: Map<Function, Subscription[]> = new Map();
+  #subscriptionMap: Map<SpeechListener<any>, Subscription[]> = new Map();
 
   start() {
     ExpoSpeechRecognitionModule.requestPermissionsAsync().then(() => {
@@ -354,10 +354,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
 
   addEventListener<K extends keyof SpeechRecognitionEventMap>(
     type: K,
-    listener: (
-      this: SpeechRecognition,
-      ev: SpeechRecognitionEventMap[K],
-    ) => any,
+    listener: SpeechListener<K>,
     options?: boolean | AddEventListenerOptions,
   ): void {
     const once = typeof options === "object" && options.once;

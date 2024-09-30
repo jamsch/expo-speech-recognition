@@ -49,8 +49,10 @@ class ExpoSpeechService(
 ) : RecognitionListener {
     private var speech: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+
     /** Audio recorder for persisting audio */
     private var audioRecorder: ExpoAudioRecorder? = null
+
     /** File streamer for file-based recognition */
     private var delayedFileStreamer: DelayedFileStreamer? = null
     private var soundState = SoundState.INACTIVE
@@ -641,10 +643,13 @@ class ExpoSpeechService(
                 SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network"
                 SpeechRecognizer.ERROR_NO_MATCH -> "no-speech"
                 SpeechRecognizer.ERROR_SERVER -> "network"
+                SpeechRecognizer.ERROR_SERVER_DISCONNECTED -> "network"
+                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "language-not-supported"
+                SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED -> "language-not-supported"
                 // Extra codes
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "speech-timeout"
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"
-                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "language-not-supported"
+                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "busy"
                 else -> "unknown"
             }
 
@@ -657,10 +662,14 @@ class ExpoSpeechService(
                 SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network operation timed out."
                 SpeechRecognizer.ERROR_NO_MATCH -> "No speech was detected."
                 SpeechRecognizer.ERROR_SERVER -> "Server sent error status."
+                SpeechRecognizer.ERROR_SERVER_DISCONNECTED -> "Server disconnected."
+                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "Requested language is supported, but not yet downloaded."
+                SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ->
+                    "Requested language is not available to be used with the current recognizer."
                 // Extra codes/messages
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RecognitionService busy."
+                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "Too many requests."
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input."
-                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "Requested language is supported, but not yet downloaded."
                 else -> "Unknown error"
             }
 

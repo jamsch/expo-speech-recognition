@@ -77,7 +77,11 @@ export type ExpoSpeechRecognitionErrorCode =
   /** The recognizer is busy and cannot accept any new recognition requests. */
   | "busy"
   /** (Android only) An unknown client-side error occurred. */
-  | "client";
+  | "client"
+  /** (Android) No speech input. */
+  | "speech-timeout"
+  /** (Android) Unknown error */
+  | "unknown";
 
 export type ExpoSpeechRecognitionErrorEvent = {
   error: ExpoSpeechRecognitionErrorCode;

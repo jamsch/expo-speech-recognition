@@ -339,20 +339,22 @@ useSpeechRecognitionEvent("error", (event) => {
 const error: ExpoSpeechRecognitionErrorCode = "audio-capture";
 ```
 
-The error code is largely based on the Web Speech API error codes.
+The error code is based on the [Web Speech API error codes](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognitionErrorEvent/error).
 
-| Error Code               | Description                                                                |
-| ------------------------ | -------------------------------------------------------------------------- |
-| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                      |
-| `audio-capture`          | Audio recording error.                                                     |
-| `bad-grammar`            | Provided grammar is invalid. (Note: web only)                              |
-| `language-not-supported` | Locale is not supported by the speech recognizer.                          |
-| `network`                | Network communication required for completing the recognition failed.      |
-| `no-speech`              | No final speech was detected.                                              |
-| `not-allowed`            | Permission to use speech recognition or microphone was not granted.        |
-| `service-not-allowed`    | Recognizer is unavailable.                                                 |
-| `busy`                   | The recognizer is busy and cannot accept any new recognition requests.     |
-| `client`                 | (Android) Unknown error. Corresponds with `SpeechRecognizer.ERROR_CLIENT`. |
+| Error Code               | Description                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                           |
+| `audio-capture`          | Audio recording error.                                                          |
+| `bad-grammar`            | Provided grammar is invalid. (Web only)                                         |
+| `language-not-supported` | Locale is not supported by the speech recognizer.                               |
+| `network`                | Network communication required for completing the recognition failed.           |
+| `no-speech`              | No final speech was detected.                                                   |
+| `not-allowed`            | Permission to use speech recognition or microphone was not granted.             |
+| `service-not-allowed`    | Recognizer is unavailable.                                                      |
+| `busy`                   | The recognizer is busy and cannot accept any new recognition requests.          |
+| `client`                 | An unknown client-side error. Corresponds with `SpeechRecognizer.ERROR_CLIENT`. |
+| `speech-timeout`         | (Android) No speech input.                                                      |
+| `unknown`                | (Android) Unknown error                                                         |
 
 ## Persisting Audio Recordings
 
