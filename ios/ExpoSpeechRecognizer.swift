@@ -23,7 +23,6 @@ enum RecognizerError: Error {
   }
 }
 
-/// A helper for transcribing speech to text using SFSpeechRecognizer and AVAudioEngine.
 actor ExpoSpeechRecognizer: ObservableObject {
 
   private var options: SpeechRecognitionOptions?

@@ -786,6 +786,15 @@ function OtherSettings(props: {
             });
           }}
         />
+        <BigButton
+          title="Call isRecognitionAvailable()"
+          color="#7C90DB"
+          onPress={() => {
+            const isAvailable =
+              ExpoSpeechRecognitionModule.isRecognitionAvailable();
+            Alert.alert("isRecognitionAvailable()", isAvailable.toString());
+          }}
+        />
         {Platform.OS === "ios" && (
           <BigButton
             title="Set audio session active state"
