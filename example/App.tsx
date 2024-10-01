@@ -123,10 +123,13 @@ export default function App() {
     setTranscription(null);
     setError(null);
     setStatus("starting");
+
     ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
       console.log("Permissions", result);
       if (!result.granted) {
         console.log("Permissions not granted", result);
+        setError({ error: "not-allowed", message: "Permissions not granted" });
+        setStatus("idle");
         return;
       }
       ExpoSpeechRecognitionModule.start(settings);
