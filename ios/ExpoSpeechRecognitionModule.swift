@@ -85,7 +85,9 @@ public class ExpoSpeechRecognitionModule: Module {
       // intent to recognize grammars associated with the current SpeechRecognition
       "start",
       // Called when there's results (as a string array, not API compliant)
-      "result"
+      "result",
+      // Called when the language detection (and switching) results are available.
+      "languagedetection"
     )
 
     OnCreate {
