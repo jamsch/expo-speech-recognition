@@ -88,6 +88,23 @@ export type ExpoSpeechRecognitionErrorEvent = {
   message: string;
 };
 
+export type LanguageDetectionEvent = {
+  /** The language that was detected, in BCP-47 format. e.g. "en-US", "de-DE" */
+  detectedLanguage: string;
+  /** The confidence of the detected language. A value ranging between 0.0 and 1.0.
+   *
+   * Values range from:
+   *
+   * - 1.0 (highly confident)
+   * - 0.8 (confident)
+   * - 0.5 (not confident)
+   * - 0.0 (unknown)
+   */
+  confidence: number;
+  /** The alternative locales for the same language, in BCP-47 format. e.g. ["en-US", "en-GB"] */
+  topLocaleAlternatives: string[];
+};
+
 /**
  * Events that are dispatched from the native side
  */
@@ -127,6 +144,7 @@ export type ExpoSpeechRecognitionNativeEventMap = {
   end: null;
   soundstart: null;
   soundend: null;
+  languagedetection: LanguageDetectionEvent;
 };
 
 export type ExpoSpeechRecognitionOptions = {

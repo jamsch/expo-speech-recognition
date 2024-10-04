@@ -561,6 +561,15 @@ class ExpoSpeechService(
             else -> 0.0f
         }
 
+    private fun languageDetectionConfidenceLevelToFloat(confidenceLevel: Int): Float =
+        when (confidenceLevel) {
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT -> 1.0f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT -> 0.8f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT -> 0.5f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_UNKNOWN -> 0f
+            else -> 0.0f
+        }
+
     override fun onResults(results: Bundle?) {
         val resultsList = getResults(results)
 
@@ -592,6 +601,14 @@ class ExpoSpeechService(
         if (nonEmptyStrings.isNotEmpty()) {
             sendEvent("result", mapOf("results" to nonEmptyStrings, "isFinal" to false))
         }
+    }
+
+    override fun onLanguageDetection(results: Bundle) {
+        sendEvent("languagedetection", mapOf(
+            "detectedLanguage" to results.getString(SpeechRecognizer.DETECTED_LANGUAGE),
+            "confidence" to languageDetectionConfidenceLevelToFloat(results.getInt(SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL)),
+            "topLocaleAlternatives" to results.getStringArrayList(SpeechRecognizer.TOP_LOCALE_ALTERNATIVES)
+        ))
     }
 
     /**
