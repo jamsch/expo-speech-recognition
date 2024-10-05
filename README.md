@@ -291,6 +291,13 @@ ExpoSpeechRecognitionModule.start({
     // Default: 50ms for network-based recognition, 15ms for on-device recognition
     chunkDelayMillis: undefined,
   },
+  // Settings for volume change events.
+  volumeChangeEventOptions: {
+    // [Default: false] Whether to emit the `volumechange` events when the input volume changes.
+    enabled: false,
+    // [Default: 100ms on iOS] The interval (in milliseconds) to emit `volumechange` events.
+    intervalMillis: 300,
+  },
 });
 
 // Stop capturing audio (and emit a final result if there is one)
