@@ -50,6 +50,9 @@ class ExpoSpeechService(
     private var speech: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    private lateinit var options: SpeechRecognitionOptions
+    private var lastVolumeChangeEventTime: Long = 0L
+
     /** Audio recorder for persisting audio */
     private var audioRecorder: ExpoAudioRecorder? = null
 
@@ -108,6 +111,7 @@ class ExpoSpeechService(
 
     /** Starts speech recognition */
     fun start(options: SpeechRecognitionOptions) {
+        this.options = options
         mainHandler.post {
             log("Start recognition.")
 
@@ -119,6 +123,7 @@ class ExpoSpeechService(
             delayedFileStreamer = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
+            lastVolumeChangeEventTime = 0L
             try {
                 val intent = createSpeechIntent(options)
                 speech = createSpeechRecognizer(options)
@@ -454,6 +459,21 @@ class ExpoSpeechService(
     }
 
     override fun onRmsChanged(rmsdB: Float) {
+        if (options.volumeChangeEventOptions?.enabled != true) {
+            return
+        }
+
+        val intervalMs = options.volumeChangeEventOptions?.intervalMillis
+
+        if (intervalMs == null) {
+            sendEvent("volumechange", mapOf("rmsdB" to rmsdB))
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastVolumeChangeEventTime >= intervalMs) {
+                sendEvent("volumechange", mapOf("rmsdB" to rmsdB))
+                lastVolumeChangeEventTime = currentTime
+            }
+        }
         /*
         val isSilent = rmsdB <= 0
 

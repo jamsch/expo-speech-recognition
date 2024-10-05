@@ -85,7 +85,9 @@ public class ExpoSpeechRecognitionModule: Module {
       // intent to recognize grammars associated with the current SpeechRecognition
       "start",
       // Called when there's results (as a string array, not API compliant)
-      "result"
+      "result",
+      // Fired when the input volume changes
+      "volumechange"
     )
 
     OnCreate {
@@ -182,6 +184,9 @@ public class ExpoSpeechRecognitionModule: Module {
               } else {
                 self?.sendEvent("audioend", ["uri": nil])
               }
+            },
+            volumeChangeHandler: { [weak self] rmsdB in
+                self?.sendEvent("volumechange", ["rmsdB": rmsdB])
             }
           )
         } catch {

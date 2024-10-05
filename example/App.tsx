@@ -47,6 +47,7 @@ import {
   AndroidOutputFormat,
   IOSOutputFormat,
 } from "expo-av/build/Audio";
+import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
 
 const speechRecognitionServices = getSpeechRecognitionServices();
 
@@ -72,6 +73,10 @@ export default function App() {
     requiresOnDeviceRecognition: false,
     addsPunctuation: true,
     contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
+    volumeChangeEventOptions: {
+      enabled: false,
+      intervalMillis: 300,
+    },
   });
 
   useSpeechRecognitionEvent("result", (ev) => {
@@ -139,6 +144,10 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" translucent={false} />
+
+      {settings.volumeChangeEventOptions?.enabled ? (
+        <VolumeMeteringAvatar />
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.text}>
@@ -510,6 +519,17 @@ function GeneralSettings(props: {
           checked={Boolean(settings.continuous)}
           onPress={() => handleChange("continuous", !settings.continuous)}
         />
+
+        <CheckboxButton
+          title="Volume events"
+          checked={Boolean(settings.volumeChangeEventOptions?.enabled)}
+          onPress={() =>
+            handleChange("volumeChangeEventOptions", {
+              enabled: !settings.volumeChangeEventOptions?.enabled,
+              intervalMillis: settings.volumeChangeEventOptions?.intervalMillis,
+            })
+          }
+        />
       </View>
 
       <View style={styles.textOptionContainer}>
@@ -714,7 +734,7 @@ function AndroidSettings(props: {
               onPress={() =>
                 handleChange("androidIntentOptions", {
                   ...settings.androidIntentOptions,
-                  [key]: !settings.androidIntentOptions?.[key] ?? false,
+                  [key]: !settings.androidIntentOptions?.[key],
                 })
               }
             />

@@ -50,6 +50,17 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val iosCategory: Map<String, Any>? = null
+
+    @Field
+    val volumeChangeEventOptions: VolumeChangeEventOptions? = null
+}
+
+class VolumeChangeEventOptions : Record {
+    @Field
+    val enabled: Boolean? = false
+
+    @Field
+    val intervalMillis: Int? = null
 }
 
 class RecordingOptions : Record {

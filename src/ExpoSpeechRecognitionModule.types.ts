@@ -127,6 +127,14 @@ export type ExpoSpeechRecognitionNativeEventMap = {
   end: null;
   soundstart: null;
   soundend: null;
+  volumechange: {
+    /**
+     * A value between -2 and 10 indicating the volume of the input audio
+     *
+     * Consider anything below 0 to be inaudible
+     */
+    rmsdB: number;
+  };
 };
 
 export type ExpoSpeechRecognitionOptions = {
@@ -231,6 +239,26 @@ export type ExpoSpeechRecognitionOptions = {
    * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category
    */
   iosCategory?: SetCategoryOptions;
+
+  /**
+   * Settings for volume change events.
+   */
+  volumeChangeEventOptions?: {
+    /**
+     * Whether to emit volume change events.
+     *
+     * Default: false
+     */
+    enabled?: boolean;
+    /**
+     * Specifies the interval (in milliseconds) to emit `volumechange` events.
+     *
+     * Default: 100ms on iOS
+     *
+     * Increasing this value will improve performance
+     */
+    intervalMillis?: number;
+  };
 };
 
 export type IOSTaskHintValue = (typeof TaskHintIOS)[keyof typeof TaskHintIOS];
