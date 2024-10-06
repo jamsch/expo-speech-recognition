@@ -58,23 +58,29 @@ npm install expo-speech-recognition
 
 > The config plugin updates the Android App Manifest to include package visibility filtering for `com.google.android.googlequicksearchbox` (Google's Speech Recognition) along with the required permissions for Android and iOS.
 
+To configure `androidSpeechServicePackages`, add additional speech service packages here that aren't listed under the `forceQueryable` section when running the command: `adb shell dumpsys package queries`.
+
 ```js
 // app.json
 {
   "expo": {
     "plugins": [
+      "plugin-one",
+      "plugin-two",
+
+      // no config (v0.2.22+)
+      "expo-speech-recognition",
+
+      // or with config
       [
         "expo-speech-recognition",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition.",
-          // Add additional speech service packages here that aren't listed
-          // under the `forceQueryable` section when running the command:
-          // "adb shell dumpsys package queries"
-          // default: ["com.google.android.googlequicksearchbox"]
           "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ]
+      // rest of your plugins
     ]
   }
 }
