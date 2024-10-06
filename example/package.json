@@ -13,7 +13,7 @@
     "@expo/metro-runtime": "~3.2.3",
     "@types/dom-speech-recognition": "^0.0.4",
     "babel-plugin-module-resolver": "^5.0.2",
-    "expo": "~51.0.32",
+    "expo": "~51.0.36",
     "expo-asset": "~10.0.10",
     "expo-av": "~14.0.7",
     "expo-build-properties": "~0.12.5",
