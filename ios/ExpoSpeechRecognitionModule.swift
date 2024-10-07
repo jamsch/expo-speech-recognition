@@ -185,8 +185,8 @@ public class ExpoSpeechRecognitionModule: Module {
                 self?.sendEvent("audioend", ["uri": nil])
               }
             },
-            volumeChangeHandler: { [weak self] rmsdB in
-                self?.sendEvent("volumechange", ["rmsdB": rmsdB])
+            volumeChangeHandler: { [weak self] value in
+              self?.sendEvent("volumechange", ["value": value])
             }
           )
         } catch {

@@ -466,11 +466,11 @@ class ExpoSpeechService(
         val intervalMs = options.volumeChangeEventOptions?.intervalMillis
 
         if (intervalMs == null) {
-            sendEvent("volumechange", mapOf("rmsdB" to rmsdB))
+            sendEvent("volumechange", mapOf("value" to rmsdB))
         } else {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastVolumeChangeEventTime >= intervalMs) {
-                sendEvent("volumechange", mapOf("rmsdB" to rmsdB))
+                sendEvent("volumechange", mapOf("value" to rmsdB))
                 lastVolumeChangeEventTime = currentTime
             }
         }

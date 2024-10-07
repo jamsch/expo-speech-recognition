@@ -607,23 +607,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     try audioEngine.start()
   }
 
-  //  private static func calculatePower(buffer: AVAudioPCMBuffer) -> Float? {
-  //    guard let channelData = buffer.floatChannelData?[0] else { return nil }
-  //    let frameLength = Int(buffer.frameLength)
-  //
-  //    var sumOfSquares: Float = 0.0
-  //    for i in 0..<frameLength {
-  //      let sample = channelData[i]
-  //      sumOfSquares += sample * sample
-  //    }
-  //
-  //    let meanSquare = sumOfSquares / Float(frameLength)
-  //    let rmsEpsilon: Float = 1e-7  // -160 dB
-  //    let rms = sqrt(meanSquare + rmsEpsilon)
-  //
-  //    return 20.0 * log10(rms)
-  //  }
-
   private static func calculatePower(buffer: AVAudioPCMBuffer) -> Float? {
     // let channelCount = Int(buffer.format.channelCount)
     let length = vDSP_Length(buffer.frameLength)
@@ -659,14 +642,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     if max < kMinLevel {
       max = kMinLevel
     }
-
-    var rms: Float = 0.0
-    vDSP_rmsqv(data, strideFrames, &rms, length)
-    if rms < kMinLevel {
-      rms = kMinLevel
-    }
-
-    return 20.0 * log10(rms)
+    return 20.0 * log10(max)
   }
 
   /// Downsamples the audio buffer to a file ref

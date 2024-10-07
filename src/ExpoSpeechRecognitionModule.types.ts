@@ -129,11 +129,11 @@ export type ExpoSpeechRecognitionNativeEventMap = {
   soundend: null;
   volumechange: {
     /**
-     * A value between -2 and 10 indicating the volume of the input audio
+     * A float value between -2 and 10 indicating the volume of the input audio
      *
      * Consider anything below 0 to be inaudible
      */
-    rmsdB: number;
+    value: number;
   };
 };
 

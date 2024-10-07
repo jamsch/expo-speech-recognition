@@ -44,12 +44,13 @@ export function VolumeMeteringAvatar() {
 
   useSpeechRecognitionEvent("volumechange", (event) => {
     // Don't animate anything if the volume is too low
-    if (event.rmsdB <= 1) {
+    if (event.value <= 1) {
       return;
     }
+
     const newScale = interpolate(
-      event.rmsdB,
-      [-2, 10], // The rmsDB range is between -2 and 10
+      event.value,
+      [-2, 10], // The value range is between -2 and 10
       [minScale, maxScale],
       Extrapolation.CLAMP,
     );
@@ -61,7 +62,7 @@ export function VolumeMeteringAvatar() {
         stiffness: 150,
       }),
       withTiming(minScale, {
-        duration: 1000,
+        duration: 500,
         easing: Easing.linear,
       }),
     );
@@ -74,7 +75,7 @@ export function VolumeMeteringAvatar() {
           easing: Easing.out(Easing.quad),
         }),
         withTiming(minScale, {
-          duration: 400,
+          duration: 300,
           easing: Easing.linear,
         }),
       );
