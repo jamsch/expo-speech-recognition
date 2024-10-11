@@ -448,7 +448,7 @@ public class ExpoSpeechRecognitionModule: Module {
         previousResultHadTranscriptions = !previousResult.transcriptions.isEmpty
       }
 
-    if !previousResultWasFinal || !previousResultHadTranscriptions {
+      if !previousResultWasFinal || !previousResultHadTranscriptions {
         // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
         // The nomatch event of the Web Speech API is fired
         // when the speech recognition service returns a final result with no significant recognition.
