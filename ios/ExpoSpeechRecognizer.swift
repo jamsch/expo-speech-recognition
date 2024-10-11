@@ -1,4 +1,5 @@
 import AVFoundation
+import Accelerate
 import Foundation
 import Speech
 
@@ -24,7 +25,6 @@ enum RecognizerError: Error {
 }
 
 actor ExpoSpeechRecognizer: ObservableObject {
-
   private var options: SpeechRecognitionOptions?
   private var audioEngine: AVAudioEngine?
   private var request: SFSpeechRecognitionRequest?
@@ -41,6 +41,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
   @MainActor var endHandler: (() -> Void)?
   @MainActor var audioEndHandler: ((String?) -> Void)?
+  @MainActor var volumeChangeHandler: ((Float) -> Void)?
 
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
@@ -120,6 +121,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     return recognizer?.locale.identifier
   }
 
+  // Update the start method signature to include volumeChangeHandler
   @MainActor func start(
     options: SpeechRecognitionOptions,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
@@ -128,10 +130,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
     startHandler: @escaping (() -> Void),
     speechStartHandler: @escaping (() -> Void),
     audioStartHandler: @escaping (String?) -> Void,
-    audioEndHandler: @escaping (String?) -> Void
+    audioEndHandler: @escaping (String?) -> Void,
+    volumeChangeHandler: @escaping (Float) -> Void
   ) {
     self.endHandler = endHandler
     self.audioEndHandler = audioEndHandler
+    self.volumeChangeHandler = volumeChangeHandler
     Task {
       await startRecognizer(
         options: options,
@@ -282,7 +286,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
           mixerNode: mixerNode,
           options: options,
           request: request,
-          audioFileRef: self.audioFileRef
+          audioFileRef: self.audioFileRef,
+          volumeChangeHandler: { volume in
+            Task { @MainActor in
+              self.volumeChangeHandler?(volume)
+            }
+          }
         )
       }
 
@@ -416,6 +425,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
     stoppedListening = false
     task?.cancel()
     audioEngine?.stop()
+    // map through all the attached nodes
+    // and remove the tap
+    audioEngine?.attachedNodes.forEach(
+      { $0.removeTap(onBus: 0) }
+    )
     audioEngine?.inputNode.removeTap(onBus: 0)
     audioEngine?.inputNode.reset()
     audioEngine?.reset()
@@ -515,7 +529,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     mixerNode: AVAudioMixerNode,
     options: SpeechRecognitionOptions,
     request: SFSpeechRecognitionRequest,
-    audioFileRef: ExtAudioFileRef?
+    audioFileRef: ExtAudioFileRef?,
+    volumeChangeHandler: ((Float) -> Void)?
   ) throws {
     guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
       throw RecognizerError.invalidAudioSource
@@ -564,8 +579,75 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     }
 
+    // Install separate tap with a longer buffer size to listen for volume changes
+    if options.volumeChangeEventOptions?.enabled == true {
+      let desiredDuration: TimeInterval =
+        TimeInterval(options.volumeChangeEventOptions?.intervalMillis ?? 100) / 1000.0
+      let bufferSize = AVAudioFrameCount(audioFormat.sampleRate * desiredDuration)
+
+      let volumeMixerNode = AVAudioMixerNode()
+      audioEngine.attach(volumeMixerNode)
+      audioEngine.connect(mixerNode, to: volumeMixerNode, format: audioFormat)
+
+      volumeMixerNode.installTap(
+        onBus: 0,
+        bufferSize: bufferSize,
+        format: audioFormat
+      ) { buffer, when in
+        guard let power = Self.calculatePower(buffer: buffer) else { return }
+
+        let minDb: Float = -60.0
+        let maxDb: Float = 0.0
+        let normalized: Float = (power - minDb) / (maxDb - minDb)  // Normalized to 0.0 - 1.0
+        let clampedNormalized = min(max(normalized, 0.0), 1.0)
+
+        let scaledValue = clampedNormalized * (10 - (-2)) + (-2)  // Scaled to -2 - 10
+
+        // Send the volume change event
+        volumeChangeHandler?(scaledValue)
+      }
+    }
+
     audioEngine.prepare()
     try audioEngine.start()
+  }
+
+  private static func calculatePower(buffer: AVAudioPCMBuffer) -> Float? {
+    // let channelCount = Int(buffer.format.channelCount)
+    let length = vDSP_Length(buffer.frameLength)
+    let channel = 0
+
+    if let floatData = buffer.floatChannelData {
+      return calculatePowers(data: floatData[channel], strideFrames: buffer.stride, length: length)
+    } else if let int16Data = buffer.int16ChannelData {
+      // Convert the data from int16 to float values before calculating the power values.
+      var floatChannelData: [Float] = Array(repeating: Float(0.0), count: Int(buffer.frameLength))
+      vDSP_vflt16(int16Data[channel], buffer.stride, &floatChannelData, buffer.stride, length)
+      var scalar = Float(INT16_MAX)
+      vDSP_vsdiv(floatChannelData, buffer.stride, &scalar, &floatChannelData, buffer.stride, length)
+      return calculatePowers(data: floatChannelData, strideFrames: buffer.stride, length: length)
+    } else if let int32Data = buffer.int32ChannelData {
+      // Convert the data from int32 to float values before calculating the power values.
+      var floatChannelData: [Float] = Array(repeating: Float(0.0), count: Int(buffer.frameLength))
+      vDSP_vflt32(int32Data[channel], buffer.stride, &floatChannelData, buffer.stride, length)
+      var scalar = Float(INT32_MAX)
+      vDSP_vsdiv(floatChannelData, buffer.stride, &scalar, &floatChannelData, buffer.stride, length)
+      return calculatePowers(data: floatChannelData, strideFrames: buffer.stride, length: length)
+    }
+
+    return nil
+  }
+
+  private static func calculatePowers(
+    data: UnsafePointer<Float>, strideFrames: Int, length: vDSP_Length
+  ) -> Float? {
+    let kMinLevel: Float = 1e-7  // -160 dB
+    var max: Float = 0.0
+    vDSP_maxv(data, strideFrames, &max, length)
+    if max < kMinLevel {
+      max = kMinLevel
+    }
+    return 20.0 * log10(max)
   }
 
   /// Downsamples the audio buffer to a file ref

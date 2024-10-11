@@ -13,17 +13,18 @@
     "@expo/metro-runtime": "~3.2.3",
     "@types/dom-speech-recognition": "^0.0.4",
     "babel-plugin-module-resolver": "^5.0.2",
-    "expo": "~51.0.36",
+    "expo": "~51.0.37",
     "expo-asset": "~10.0.10",
     "expo-av": "~14.0.7",
     "expo-build-properties": "~0.12.5",
     "expo-file-system": "~17.0.1",
-    "expo-splash-screen": "~0.27.5",
+    "expo-splash-screen": "~0.27.6",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-web": "~0.19.10"
+    "react-native-web": "~0.19.10",
+    "react-native-reanimated": "~3.10.1"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",

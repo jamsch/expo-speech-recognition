@@ -93,7 +93,9 @@ public class ExpoSpeechRecognitionModule: Module {
       // intent to recognize grammars associated with the current SpeechRecognition
       "start",
       // Called when there's results (as a string array, not API compliant)
-      "result"
+      "result",
+      // Fired when the input volume changes
+      "volumechange"
     )
 
     OnCreate {
@@ -193,6 +195,9 @@ public class ExpoSpeechRecognitionModule: Module {
               } else {
                 self?.sendEvent("audioend", ["uri": nil])
               }
+            },
+            volumeChangeHandler: { [weak self] value in
+              self?.sendEvent("volumechange", ["value": value])
             }
           )
         } catch {
@@ -443,7 +448,7 @@ public class ExpoSpeechRecognitionModule: Module {
         previousResultHadTranscriptions = !previousResult.transcriptions.isEmpty
       }
 
-    if !previousResultWasFinal || !previousResultHadTranscriptions {
+      if !previousResultWasFinal || !previousResultHadTranscriptions {
         // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
         // The nomatch event of the Web Speech API is fired
         // when the speech recognition service returns a final result with no significant recognition.

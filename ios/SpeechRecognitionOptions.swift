@@ -34,6 +34,17 @@ struct SpeechRecognitionOptions: Record {
 
   @Field
   var iosCategory: SetCategoryOptions? = nil
+
+  @Field
+  var volumeChangeEventOptions: VolumeChangeEventOptions? = nil
+}
+
+struct VolumeChangeEventOptions: Record {
+  @Field
+  var enabled: Bool? = false
+
+  @Field
+  var intervalMillis: Int? = nil
 }
 
 enum IOSTaskHint: String, Enumerable {
