@@ -548,13 +548,12 @@ You can use the `volumeChangeEventOptions.enabled` option to enable volume meter
 
 ![Volume metering example](./images/volume-metering.gif)
 
-See: (link) for a complete example that involves using `react-native-reanimated` to animate the volume metering.
+See: [VolumeMeteringAvatar.tsx](https://github.com/jamsch/expo-speech-recognition/tree/main/example/components/VolumeMeteringAvatar.tsx) for a complete example that involves using `react-native-reanimated` to animate the volume metering.
 
-````tsx
+```tsx
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 function VolumeMeteringAvatar() {
-
   useSpeechRecognitionEvent("volumechange", (event) => {
     console.log("Volume changed to:", event.value);
   });
@@ -576,6 +575,7 @@ function VolumeMeteringAvatar() {
     </View>
   );
 }
+```
 
 ## Polyfilling the Web SpeechRecognition API
 
@@ -655,7 +655,7 @@ recognition.stop();
 
 // Immediately cancel speech recognition
 recognition.abort();
-````
+```
 
 ## Muting the beep sound on Android
 

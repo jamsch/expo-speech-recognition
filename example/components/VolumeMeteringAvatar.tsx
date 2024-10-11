@@ -13,18 +13,18 @@ import Animated, {
 const avatar = require("../assets/avatar.png");
 
 const MIN_SCALE = 1;
-const MAX_SCALE = 1.5;
+const MAX_SCALE = 2;
 
 /**
  * This is an example component that uses the `volumechange` event to animate the volume metering of a user's voice.
  */
 export function VolumeMeteringAvatar() {
-  const haloScale = useSharedValue(MIN_SCALE);
+  const volumeScale = useSharedValue(MIN_SCALE);
   const pulseScale = useSharedValue(MIN_SCALE);
   const pulseOpacity = useSharedValue(0);
 
   const reset = () => {
-    haloScale.value = MIN_SCALE;
+    volumeScale.value = MIN_SCALE;
     pulseScale.value = MIN_SCALE;
     pulseOpacity.value = 0;
   };
@@ -45,16 +45,14 @@ export function VolumeMeteringAvatar() {
       Extrapolation.CLAMP,
     );
 
-    // Animate the halo scaling
-    haloScale.value = withSequence(
+    // Animate the volume scaling
+    volumeScale.value = withSequence(
       withSpring(newScale, {
-        damping: 15,
+        damping: 10,
         stiffness: 150,
       }),
-      withTiming(MIN_SCALE, {
-        duration: 500,
-        easing: Easing.linear,
-      }),
+      // Scale back down, unless the volume changes again
+      withTiming(MIN_SCALE, { duration: 500 }),
     );
 
     // Animate the pulse (scale and fade out)
@@ -69,22 +67,22 @@ export function VolumeMeteringAvatar() {
     }
   });
 
-  const haloAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: haloScale.value }],
+  const volumeScaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: volumeScale.value }],
   }));
 
-  const pulseAnimatedStyle = useAnimatedStyle(() => ({
+  const pulseStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
     transform: [{ scale: pulseScale.value }],
   }));
 
   return (
     <View style={styles.container}>
-      <View style={styles.pulseContainer}>
-        <Animated.View style={[styles.halo, haloAnimatedStyle]} />
+      <View style={styles.absoluteCenteredContainer}>
+        <Animated.View style={[styles.circularBorder, volumeScaleStyle]} />
       </View>
-      <View style={styles.pulseContainer}>
-        <Animated.View style={[styles.pulse, pulseAnimatedStyle]} />
+      <View style={styles.absoluteCenteredContainer}>
+        <Animated.View style={[styles.pulse, pulseStyle]} />
       </View>
       <View style={[styles.centered]}>
         <Image source={avatar} style={styles.avatar} />
@@ -98,7 +96,7 @@ const styles = StyleSheet.create({
     position: "relative",
     marginVertical: 20,
   },
-  pulseContainer: {
+  absoluteCenteredContainer: {
     position: "absolute",
     top: 0,
     bottom: 0,
@@ -114,7 +112,7 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 96,
   },
-  halo: {
+  circularBorder: {
     backgroundColor: "#6b7280",
     width: 96,
     height: 96,

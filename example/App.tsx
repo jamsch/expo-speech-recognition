@@ -80,7 +80,7 @@ export default function App() {
     ],
     volumeChangeEventOptions: {
       enabled: false,
-      intervalMillis: 100,
+      intervalMillis: 300,
     },
   });
 
