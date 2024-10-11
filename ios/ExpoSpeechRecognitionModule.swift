@@ -41,6 +41,14 @@ public class ExpoSpeechRecognitionModule: Module {
   // This is a temporary workaround until the issue is fixed in a future iOS release
   var hasSeenFinalResult: Bool = false
 
+  // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
+  // Example event order emitted in iOS 18:
+  // [
+  //   { isFinal: false, transcripts: ["actually", "final", "results"], metadata: { duration: 1500 } },
+  //   { isFinal: true, transcripts: [] }
+  // ]
+  var previousResult: SFSpeechRecognitionResult?
+
   public func definition() -> ModuleDefinition {
     // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
     // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
@@ -129,6 +137,9 @@ public class ExpoSpeechRecognitionModule: Module {
       Task {
         do {
           let currentLocale = await speechRecognizer?.getLocale()
+
+          // Reset the previous result
+          self.previousResult = nil
 
           // Re-create the speech recognizer when locales change
           if self.speechRecognizer == nil || currentLocale != options.lang {
@@ -358,12 +369,14 @@ public class ExpoSpeechRecognitionModule: Module {
 
   func sendErrorAndStop(error: String, message: String) {
     hasSeenFinalResult = false
+    previousResult = nil
     sendEvent("error", ["error": error, "message": message])
     sendEvent("end")
   }
 
   func handleEnd() {
     hasSeenFinalResult = false
+    previousResult = nil
     sendEvent("end")
   }
 
@@ -422,11 +435,21 @@ public class ExpoSpeechRecognitionModule: Module {
     }
 
     if isFinal && results.isEmpty {
-      // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
-      // The nomatch event of the Web Speech API is fired
-      // when the speech recognition service returns a final result with no significant recognition.
-      sendEvent("nomatch")
-      return
+      // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
+      var previousResultWasFinal = false
+      var previousResultHadTranscriptions = false
+      if #available(iOS 18.0, *), let previousResult = previousResult {
+        previousResultWasFinal = previousResult.speechRecognitionMetadata?.speechDuration ?? 0 > 0
+        previousResultHadTranscriptions = !previousResult.transcriptions.isEmpty
+      }
+
+    if !previousResultWasFinal || !previousResultHadTranscriptions {
+        // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
+        // The nomatch event of the Web Speech API is fired
+        // when the speech recognition service returns a final result with no significant recognition.
+        sendEvent("nomatch")
+        return
+      }
     }
 
     sendEvent(
@@ -436,6 +459,8 @@ public class ExpoSpeechRecognitionModule: Module {
         "results": results.map { $0.toDictionary() },
       ]
     )
+
+    previousResult = result
   }
 
   func handleRecognitionError(_ error: Error) {
