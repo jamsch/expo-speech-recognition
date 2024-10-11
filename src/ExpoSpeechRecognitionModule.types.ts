@@ -157,7 +157,10 @@ export type ExpoSpeechRecognitionOptions = {
    *
    * Not supported on Android 12 and below.
    *
-   * If false on iOS, recognition will run until no speech is detected for 3 seconds.
+   * If false, the behaviors are the following:
+   *
+   *   - on iOS 17-, recognition will run until no speech is detected for 3 seconds.
+   *   - on iOS 18+ and Android, recognition will run until a result with `isFinal: true` is received.
    */
   continuous?: boolean;
   /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
