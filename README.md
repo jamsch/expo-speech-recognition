@@ -551,10 +551,15 @@ You can use the `volumeChangeEventOptions.enabled` option to enable volume meter
 See: [VolumeMeteringAvatar.tsx](https://github.com/jamsch/expo-speech-recognition/tree/main/example/components/VolumeMeteringAvatar.tsx) for a complete example that involves using `react-native-reanimated` to animate the volume metering.
 
 ```tsx
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+import { Button } from "react-native";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 
-function VolumeMeteringAvatar() {
+function VolumeMeteringExample() {
   useSpeechRecognitionEvent("volumechange", (event) => {
+    // a value between -2 and 10. <= 0 is inaudible
     console.log("Volume changed to:", event.value);
   });
 
@@ -563,17 +568,13 @@ function VolumeMeteringAvatar() {
       lang: "en-US",
       volumeChangeEventOptions: {
         enabled: true,
+        // how often you want to receive the volumechange event
         intervalMillis: 300,
       },
     });
   };
 
-  return (
-    <View>
-      <Button title="Start" onPress={handleStart} />
-      <Text>Volume: {volume}</Text>
-    </View>
-  );
+  return <Button title="Start" onPress={handleStart} />;
 }
 ```
 
