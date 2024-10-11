@@ -139,7 +139,7 @@ public class ExpoSpeechRecognitionModule: Module {
           let currentLocale = await speechRecognizer?.getLocale()
 
           // Reset the previous result
-          self?.previousResult = nil
+          self.previousResult = nil
 
           // Re-create the speech recognizer when locales change
           if self.speechRecognizer == nil || currentLocale != options.lang {
@@ -437,11 +437,13 @@ public class ExpoSpeechRecognitionModule: Module {
     if isFinal && results.isEmpty {
       // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
       var previousResultWasFinal = false
+      var previousResultHadTranscriptions = false
       if #available(iOS 18.0, *), let previousResult = previousResult {
         previousResultWasFinal = previousResult.speechRecognitionMetadata?.speechDuration ?? 0 > 0
+        previousResultHadTranscriptions = !previousResult.transcriptions.isEmpty
       }
 
-      if !previousResultWasFinal || previousResult?.transcriptions.isEmpty {
+    if !previousResultWasFinal || !previousResultHadTranscriptions {
         // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
         // The nomatch event of the Web Speech API is fired
         // when the speech recognition service returns a final result with no significant recognition.
