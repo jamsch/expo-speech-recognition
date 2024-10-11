@@ -237,7 +237,9 @@ ExpoSpeechRecognitionModule.start({
   // The maximum number of alternative transcriptions to return.
   maxAlternatives: 1,
   // [Default: false] Continuous recognition.
-  // If false on iOS, recognition will run until no speech is detected for 3 seconds.
+  // If false:
+  //    - on iOS 17-, recognition will run until no speech is detected for 3 seconds.
+  //    - on iOS 18+ and Android, recognition will run until a final result is received.
   // Not supported on Android 12 and below.
   continuous: true,
   // [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
