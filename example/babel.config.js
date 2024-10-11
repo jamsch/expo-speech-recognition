@@ -1,5 +1,5 @@
 const path = require("path");
-module.exports = function (api) {
+module.exports = (api) => {
   api.cache(true);
   return {
     presets: ["babel-preset-expo"],

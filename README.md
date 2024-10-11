@@ -19,6 +19,8 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 - [Transcribing audio files](#transcribing-audio-files)
   - [Supported input audio formats](#supported-input-audio-formats)
   - [File transcription example](#file-transcription-example)
+- [Volume metering](#volume-metering)
+  - [Volume metering example](#volume-metering-example)
 - [Polyfilling the Web SpeechRecognition API](#polyfilling-the-web-speechrecognition-api)
 - [Muting the beep sound on Android](#muting-the-beep-sound-on-android)
 - [Improving accuracy of single-word prompts](#improving-accuracy-of-single-word-prompts)
@@ -538,6 +540,43 @@ function TranscribeAudioFile() {
 }
 ```
 
+## Volume metering
+
+You can use the `volumeChangeEventOptions.enabled` option to enable volume metering. This will emit a `volumechange` event with the current volume level (between -2 and 10) as a value. You can use this value to animate the volume metering of a user's voice, or to provide feedback to the user about the volume level.
+
+### Volume metering example
+
+![Volume metering example](./images/volume-metering.gif)
+
+See: (link) for a complete example that involves using `react-native-reanimated` to animate the volume metering.
+
+````tsx
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
+function VolumeMeteringAvatar() {
+
+  useSpeechRecognitionEvent("volumechange", (event) => {
+    console.log("Volume changed to:", event.value);
+  });
+
+  const handleStart = () => {
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      volumeChangeEventOptions: {
+        enabled: true,
+        intervalMillis: 300,
+      },
+    });
+  };
+
+  return (
+    <View>
+      <Button title="Start" onPress={handleStart} />
+      <Text>Volume: {volume}</Text>
+    </View>
+  );
+}
+
 ## Polyfilling the Web SpeechRecognition API
 
 > [!IMPORTANT]
@@ -616,7 +655,7 @@ recognition.stop();
 
 // Immediately cancel speech recognition
 recognition.abort();
-```
+````
 
 ## Muting the beep sound on Android
 

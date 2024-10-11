@@ -72,10 +72,15 @@ export default function App() {
     continuous: true,
     requiresOnDeviceRecognition: false,
     addsPunctuation: true,
-    contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
+    contextualStrings: [
+      "expo-speech-recognition",
+      "Carlsen",
+      "Ian Nepomniachtchi",
+      "Praggnanandhaa",
+    ],
     volumeChangeEventOptions: {
       enabled: false,
-      intervalMillis: 300,
+      intervalMillis: 100,
     },
   });
 

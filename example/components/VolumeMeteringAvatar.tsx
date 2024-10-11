@@ -8,34 +8,24 @@ import Animated, {
   withTiming,
   Easing,
   withSpring,
-  withDelay,
   withSequence,
 } from "react-native-reanimated";
 const avatar = require("../assets/avatar.png");
 
-const minScale = 1;
-const maxScale = 1.5;
+const MIN_SCALE = 1;
+const MAX_SCALE = 1.5;
 
 /**
  * This is an example component that uses the `volumechange` event to animate the volume metering of a user's voice.
  */
 export function VolumeMeteringAvatar() {
-  const haloScale = useSharedValue(minScale);
-  const pulseScale = useSharedValue(minScale);
+  const haloScale = useSharedValue(MIN_SCALE);
+  const pulseScale = useSharedValue(MIN_SCALE);
   const pulseOpacity = useSharedValue(0);
 
-  const haloAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: haloScale.value }],
-  }));
-
-  const pulseAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-    transform: [{ scale: pulseScale.value }],
-  }));
-
   const reset = () => {
-    haloScale.value = minScale;
-    pulseScale.value = minScale;
+    haloScale.value = MIN_SCALE;
+    pulseScale.value = MIN_SCALE;
     pulseOpacity.value = 0;
   };
 
@@ -51,7 +41,7 @@ export function VolumeMeteringAvatar() {
     const newScale = interpolate(
       event.value,
       [-2, 10], // The value range is between -2 and 10
-      [minScale, maxScale],
+      [MIN_SCALE, MAX_SCALE],
       Extrapolation.CLAMP,
     );
 
@@ -61,38 +51,40 @@ export function VolumeMeteringAvatar() {
         damping: 15,
         stiffness: 150,
       }),
-      withTiming(minScale, {
+      withTiming(MIN_SCALE, {
         duration: 500,
         easing: Easing.linear,
       }),
     );
 
     // Animate the pulse (scale and fade out)
-    if (pulseScale.value < newScale) {
-      pulseScale.value = withSequence(
-        withTiming(maxScale, {
-          duration: 1000,
-          easing: Easing.out(Easing.quad),
-        }),
-        withTiming(minScale, {
-          duration: 300,
-          easing: Easing.linear,
-        }),
-      );
-      pulseOpacity.value = withSequence(
-        withTiming(1, { duration: 800 }),
-        withDelay(300, withTiming(0, { duration: 200 })),
-      );
+    if (pulseOpacity.value <= 0) {
+      pulseScale.value = MIN_SCALE;
+      pulseOpacity.value = 1;
+      pulseScale.value = withTiming(MAX_SCALE, {
+        duration: 1000,
+        easing: Easing.out(Easing.quad),
+      });
+      pulseOpacity.value = withTiming(0, { duration: 1000 });
     }
   });
+
+  const haloAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: haloScale.value }],
+  }));
+
+  const pulseAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: pulseOpacity.value,
+    transform: [{ scale: pulseScale.value }],
+  }));
 
   return (
     <View style={styles.container}>
       <View style={styles.pulseContainer}>
-        <Animated.View style={[styles.pulse, pulseAnimatedStyle]} />
+        <Animated.View style={[styles.halo, haloAnimatedStyle]} />
       </View>
       <View style={styles.pulseContainer}>
-        <Animated.View style={[styles.halo, haloAnimatedStyle]} />
+        <Animated.View style={[styles.pulse, pulseAnimatedStyle]} />
       </View>
       <View style={[styles.centered]}>
         <Image source={avatar} style={styles.avatar} />
