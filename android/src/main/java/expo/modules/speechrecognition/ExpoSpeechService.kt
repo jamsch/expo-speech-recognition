@@ -433,11 +433,11 @@ class ExpoSpeechService(
      */
     private fun resolveSourceUri(sourceUri: String): File =
         when {
-            // Local file path without URI scheme
-            !sourceUri.startsWith("https://") && !sourceUri.startsWith("file://") -> File(sourceUri)
-
             // File URI
             sourceUri.startsWith("file://") -> File(URI(sourceUri))
+            
+            // Local file path without URI scheme
+            !sourceUri.startsWith("https://") -> File(sourceUri)
 
             // HTTP URI - throw an error
             else -> {
