@@ -171,7 +171,9 @@ export type ExpoSpeechRecognitionOptions = {
   /**
    * [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
    *
-   * On Android, this configures [`EXTRA_ENABLE_FORMATTING`](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING) in the recognizer intent (API level 33+).
+   * On Android, this configures [`EXTRA_ENABLE_FORMATTING`](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING) in the recognizer intent (Android 13+, API level 33+).
+   *
+   * Note for Android: This feature is only verified to work on Android 13+ with on-device speech recognition enabled (i.e. enabling `requiresOnDeviceRecognition` or using the `com.google.android.as` service package)
    *
    * On iOS, this configures [`SFSpeechRecognitionRequest.addsPunctuation`](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/3930023-addspunctuation).
    */
@@ -372,6 +374,15 @@ export type AndroidIntentOptions = {
    * Depending on the recognizer implementation, this value may have no effect.
    */
   EXTRA_ENABLE_LANGUAGE_SWITCH: (typeof RecognizerIntentEnableLanguageSwitch)[keyof typeof RecognizerIntentEnableLanguageSwitch];
+  /**
+   * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING
+   *
+   * NOTE: This is also configurable through `addsPunctuation` (which sets `EXTRA_ENABLE_FORMATTING` to "quality")
+   *
+   * [API level 33] Optional string to enable text formatting (e.g. unspoken punctuation (examples: question mark, comma, period, etc.), capitalization, etc.) and specify the optimization strategy. If set, the partial and final result texts will be formatted. Each result list will contain two hypotheses in the order of 1) formatted text 2) raw text.
+   *
+   */
+  EXTRA_ENABLE_FORMATTING: "latency" | "quality";
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION
    *

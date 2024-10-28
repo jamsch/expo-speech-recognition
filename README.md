@@ -247,6 +247,7 @@ ExpoSpeechRecognitionModule.start({
   // [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
   requiresOnDeviceRecognition: false,
   // [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
+  // Not supported on Android 12 and below. On Android 13+, only supported when on-device recognition is enabled.
   addsPunctuation: false,
   // [Default: undefined] Short custom phrases that are unique to your app.
   contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
