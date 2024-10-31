@@ -19,6 +19,8 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 - [Transcribing audio files](#transcribing-audio-files)
   - [Supported input audio formats](#supported-input-audio-formats)
   - [File transcription example](#file-transcription-example)
+- [Volume metering](#volume-metering)
+  - [Volume metering example](#volume-metering-example)
 - [Polyfilling the Web SpeechRecognition API](#polyfilling-the-web-speechrecognition-api)
 - [Muting the beep sound on Android](#muting-the-beep-sound-on-android)
 - [Improving accuracy of single-word prompts](#improving-accuracy-of-single-word-prompts)
@@ -237,12 +239,15 @@ ExpoSpeechRecognitionModule.start({
   // The maximum number of alternative transcriptions to return.
   maxAlternatives: 1,
   // [Default: false] Continuous recognition.
-  // If false on iOS, recognition will run until no speech is detected for 3 seconds.
+  // If false:
+  //    - on iOS 17-, recognition will run until no speech is detected for 3 seconds.
+  //    - on iOS 18+ and Android, recognition will run until a final result is received.
   // Not supported on Android 12 and below.
   continuous: true,
   // [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
   requiresOnDeviceRecognition: false,
   // [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
+  // Not supported on Android 12 and below. On Android 13+, only supported when on-device recognition is enabled.
   addsPunctuation: false,
   // [Default: undefined] Short custom phrases that are unique to your app.
   contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
@@ -297,6 +302,13 @@ ExpoSpeechRecognitionModule.start({
     // Default: 50ms for network-based recognition, 15ms for on-device recognition
     chunkDelayMillis: undefined,
   },
+  // Settings for volume change events.
+  volumeChangeEventOptions: {
+    // [Default: false] Whether to emit the `volumechange` events when the input volume changes.
+    enabled: false,
+    // [Default: 100ms on iOS] The interval (in milliseconds) to emit `volumechange` events.
+    intervalMillis: 300,
+  },
 });
 
 // Stop capturing audio (and emit a final result if there is one)
@@ -310,17 +322,18 @@ ExpoSpeechRecognitionModule.abort();
 
 Events are largely based on the [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition). The following events are supported:
 
-| Event Name    | Description                                                                                | Notes                                                                                                                                                                                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `audiostart`  | Audio capturing has started                                                                | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
-| `audioend`    | Audio capturing has ended                                                                  | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
-| `end`         | Speech recognition service has disconnected.                                               | This should always be the last event dispatched, including after errors.                                                                                                                                                                                                                 |
-| `error`       | Fired when a speech recognition error occurs.                                              | You'll also receive an `error` event (with code "aborted") when calling `.abort()`                                                                                                                                                                                                       |
-| `nomatch`     | Speech recognition service returns a final result with no significant recognition.         | You may have non-final results recognized. This may get emitted after cancellation.                                                                                                                                                                                                      |
-| `result`      | Speech recognition service returns a word or phrase has been positively recognized.        | On Android, continous mode runs as a segmented session, meaning when a final result is reached, additional partial and final results will cover a new segment separate from the previous final result. On iOS, you should expect one final result before speech recognition has stopped. |
-| `speechstart` | Fired when any sound — recognizable speech or not — has been detected                      | On iOS, this will fire once in the session after a result has occurred                                                                                                                                                                                                                   |
-| `speechend`   | Fired when speech recognized by the speech recognition service has stopped being detected. | Not supported yet on iOS                                                                                                                                                                                                                                                                 |
-| `start`       | Speech recognition has started                                                             | Use this event to indicate to the user when to speak.                                                                                                                                                                                                                                    |
+| Event Name     | Description                                                                                | Notes                                                                                                                                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audiostart`   | Audio capturing has started                                                                | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
+| `audioend`     | Audio capturing has ended                                                                  | Includes the `uri` if `recordingOptions.persist` is enabled.                                                                                                                                                                                                                             |
+| `end`          | Speech recognition service has disconnected.                                               | This should always be the last event dispatched, including after errors.                                                                                                                                                                                                                 |
+| `error`        | Fired when a speech recognition error occurs.                                              | You'll also receive an `error` event (with code "aborted") when calling `.abort()`                                                                                                                                                                                                       |
+| `nomatch`      | Speech recognition service returns a final result with no significant recognition.         | You may have non-final results recognized. This may get emitted after cancellation.                                                                                                                                                                                                      |
+| `result`       | Speech recognition service returns a word or phrase has been positively recognized.        | On Android, continous mode runs as a segmented session, meaning when a final result is reached, additional partial and final results will cover a new segment separate from the previous final result. On iOS, you should expect one final result before speech recognition has stopped. |
+| `speechstart`  | Fired when any sound — recognizable speech or not — has been detected                      | On iOS, this will fire once in the session after a result has occurred                                                                                                                                                                                                                   |
+| `speechend`    | Fired when speech recognized by the speech recognition service has stopped being detected. | Not supported yet on iOS                                                                                                                                                                                                                                                                 |
+| `start`        | Speech recognition has started                                                             | Use this event to indicate to the user when to speak.                                                                                                                                                                                                                                    |
+| `volumechange` | Fired when the input volume changes.                                                       | Returns a value between -2 and 10 indicating the volume of the input audio. Consider anything below 0 to be inaudible.                                                                                                                                                                   |
 
 ## Handling Errors
 
@@ -525,6 +538,44 @@ function TranscribeAudioFile() {
       <Text>{transcription}</Text>
     </View>
   );
+}
+```
+
+## Volume metering
+
+You can use the `volumeChangeEventOptions.enabled` option to enable volume metering. This will emit a `volumechange` event with the current volume level (between -2 and 10) as a value. You can use this value to animate the volume metering of a user's voice, or to provide feedback to the user about the volume level.
+
+### Volume metering example
+
+![Volume metering example](./images/volume-metering.gif)
+
+See: [VolumeMeteringAvatar.tsx](https://github.com/jamsch/expo-speech-recognition/tree/main/example/components/VolumeMeteringAvatar.tsx) for a complete example that involves using `react-native-reanimated` to animate the volume metering.
+
+```tsx
+import { Button } from "react-native";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+
+function VolumeMeteringExample() {
+  useSpeechRecognitionEvent("volumechange", (event) => {
+    // a value between -2 and 10. <= 0 is inaudible
+    console.log("Volume changed to:", event.value);
+  });
+
+  const handleStart = () => {
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      volumeChangeEventOptions: {
+        enabled: true,
+        // how often you want to receive the volumechange event
+        intervalMillis: 300,
+      },
+    });
+  };
+
+  return <Button title="Start" onPress={handleStart} />;
 }
 ```
 

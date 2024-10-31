@@ -86,6 +86,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 "start",
                 // Called when there's results (as a string array, not API compliant)
                 "results",
+                // Fired when the input volume changes
+                "volumechange",
             )
 
             Function("getDefaultRecognitionService") {
@@ -325,26 +327,32 @@ class ExpoSpeechRecognitionModule : Module() {
         promise: Promise,
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            promise.resolve(mapOf(
-                "locales" to mutableListOf<String>(),
-                "installedLocales" to mutableListOf<String>(),
-            ))
+            promise.resolve(
+                mapOf(
+                    "locales" to mutableListOf<String>(),
+                    "installedLocales" to mutableListOf<String>(),
+                ),
+            )
             return
         }
 
         if (options.androidRecognitionServicePackage == null && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
-            promise.resolve(mapOf(
-                "locales" to mutableListOf<String>(),
-                "installedLocales" to mutableListOf<String>(),
-            ))
+            promise.resolve(
+                mapOf(
+                    "locales" to mutableListOf<String>(),
+                    "installedLocales" to mutableListOf<String>(),
+                ),
+            )
             return
         }
 
         if (options.androidRecognitionServicePackage != null && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
-            promise.resolve(mapOf(
-                "locales" to mutableListOf<String>(),
-                "installedLocales" to mutableListOf<String>(),
-            ))
+            promise.resolve(
+                mapOf(
+                    "locales" to mutableListOf<String>(),
+                    "installedLocales" to mutableListOf<String>(),
+                ),
+            )
             return
         }
 
