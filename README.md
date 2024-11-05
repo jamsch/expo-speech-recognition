@@ -24,6 +24,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 - [Polyfilling the Web SpeechRecognition API](#polyfilling-the-web-speechrecognition-api)
 - [Muting the beep sound on Android](#muting-the-beep-sound-on-android)
 - [Improving accuracy of single-word prompts](#improving-accuracy-of-single-word-prompts)
+- [Language Detection](#language-detection)
 - [Platform Compatibility Table](#platform-compatibility-table)
 - [Common Troubleshooting issues](#common-troubleshooting-issues)
   - [Android issues](#android-issues)
@@ -36,14 +37,14 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [getPermissionsAsync()](#getpermissionsasync-promisepermissionresponse)
   - [getStateAsync()](#getstateasync-promisespeechrecognitionstate)
   - [addSpeechRecognitionListener()](#addspeechrecognitionlistener)
-  - [getSupportedLocales()](#getsupportedlocales-promise-locales-string-installedlocales-string-)
+  - [getSupportedLocales()](#getsupportedlocales)
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
   - [getDefaultRecognitionService()](#getdefaultrecognitionservice--packagename-string--android-only)
   - [getAssistantService()](#getassistantservice--packagename-string--android-only)
   - [isRecognitionAvailable()](#isrecognitionavailable-boolean)
   - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean)
   - [supportsRecording()](#supportsrecording-boolean)
-  - [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload-locale-string--promise-status-opened_dialog--download_success--download_canceled-message-string-)
+  - [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload)
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
   - [setAudioSessionActiveIOS()](#setaudiosessionactiveiosvalue-boolean-options--notifyothersondeactivation-boolean--void)
@@ -334,7 +335,7 @@ Events are largely based on the [Web Speech API](https://developer.mozilla.org/e
 | `speechend`         | Fired when speech recognized by the speech recognition service has stopped being detected. | Not supported yet on iOS                                                                                                                                                                                                                                                                 |
 | `start`             | Speech recognition has started                                                             | Use this event to indicate to the user when to speak.                                                                                                                                                                                                                                    |
 | `volumechange`      | Fired when the input volume changes.                                                       | Returns a value between -2 and 10 indicating the volume of the input audio. Consider anything below 0 to be inaudible.                                                                                                                                                                   |
-| `languagedetection` | Called when the language detection (and switching) results are available.                  | Android 14+ only. Enabled with `EXTRA_ENABLE_LANGUAGE_DETECTION` in the `androidIntent` option when starting. Also can be called multiple times by enabling `EXTRA_ENABLE_LANGUAGE_SWITCH`.                                                                                              |
+| `languagedetection` | Called when the language detection (and switching) results are available.                  | Android 14+ only with `com.google.android.as`. Enabled with `EXTRA_ENABLE_LANGUAGE_DETECTION` in the `androidIntent` option when starting. Also can be called multiple times by enabling `EXTRA_ENABLE_LANGUAGE_SWITCH`.                                                                 |
 
 ## Handling Errors
 
@@ -697,6 +698,39 @@ You may notice that after saying short syllables, words, letters, or numbers (e.
 - For both platforms, you also may want to consider using on-device recognition. On Android this seems to work well for single-word prompts.
 - Alternatively, you may want to consider recording the recognized audio and sending it to an external service for further processing. See [Persisting Audio Recordings](#persisting-audio-recordings) for more information. Note that some services (such as the Google Speech API) may require an audio file with a duration of at least 3 seconds.
 
+## Language Detection
+
+> [!NOTE]
+> This feature is currently only available on Android 14+ using the `com.google.android.as` service package.
+
+You can use the `languagedetection` event to get the detected language and confidence level. This feature has a few requirements:
+
+- Android 14+ only.
+- The `com.google.android.as` (on-device recognition) service package must be selected. This seems to be the only service that supports language detection as of writing this.
+- You must enable `EXTRA_ENABLE_LANGUAGE_DETECTION` in the `androidIntentOptions` when starting the recognition.
+- Optional: You can enable `EXTRA_ENABLE_LANGUAGE_SWITCH` to allow the user to switch languages, however **keep in mind that you need the language model to be downloaded for this to work**. Refer to [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload) to download a model, and [getSupportedLocales()](#getsupportedlocales) to get the list of downloaded on-device locales.
+
+Example:
+
+```tsx
+import { useSpeechRecognitionEvent } from "expo-speech-recognition";
+
+useSpeechRecognitionEvent("languagedetection", (event) => {
+  console.log("Language detected:", event.detectedLanguage); // e.g. "en-us"
+  console.log("Confidence:", event.confidence); // A value between 0.0 and 1.0
+  console.log("Top locale alternatives:", event.topLocaleAlternatives); // e.g. ["en-au", "en-gb"]
+});
+
+// Start recognition
+ExpoSpeechRecognitionModule.start({
+  androidIntentOptions: {
+    EXTRA_ENABLE_LANGUAGE_DETECTION: true,
+    EXTRA_ENABLE_LANGUAGE_SWITCH: true,
+  },
+  androidRecognitionServicePackage: "com.google.android.as", // or set "requiresOnDeviceRecognition" to true
+});
+```
+
 ## Platform Compatibility Table
 
 As of 7 Aug 2024, the following platforms are supported:
@@ -853,7 +887,7 @@ const listener = addSpeechRecognitionListener("result", (event) => {
 listener.remove();
 ```
 
-### `getSupportedLocales(): Promise<{ locales: string[]; installedLocales: string[] }>`
+### `getSupportedLocales()`
 
 > [!NOTE]
 > Not supported on Android 12 and below
@@ -967,7 +1001,7 @@ const available = supportsRecording();
 console.log("Recording available:", available);
 ```
 
-### `androidTriggerOfflineModelDownload({ locale: string }): Promise<{ status: "opened_dialog" | "download_success" | "download_canceled", message: string }>`
+### `androidTriggerOfflineModelDownload()`
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
