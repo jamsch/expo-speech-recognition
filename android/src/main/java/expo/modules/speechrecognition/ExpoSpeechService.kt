@@ -60,6 +60,9 @@ class ExpoSpeechService(
     private var delayedFileStreamer: DelayedFileStreamer? = null
     private var soundState = SoundState.INACTIVE
 
+    private var lastDetectedLanguage: String? = null
+    private var lastLanguageConfidence: Float? = null
+
     var recognitionState = RecognitionState.INACTIVE
 
     companion object {
@@ -121,6 +124,8 @@ class ExpoSpeechService(
             audioRecorder = null
             delayedFileStreamer?.close()
             delayedFileStreamer = null
+            lastDetectedLanguage = null
+            lastLanguageConfidence = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
             lastVolumeChangeEventTime = 0L
@@ -435,7 +440,7 @@ class ExpoSpeechService(
         when {
             // File URI
             sourceUri.startsWith("file://") -> File(URI(sourceUri))
-            
+
             // Local file path without URI scheme
             !sourceUri.startsWith("https://") -> File(sourceUri)
 
@@ -624,11 +629,23 @@ class ExpoSpeechService(
     }
 
     override fun onLanguageDetection(results: Bundle) {
-        sendEvent("languagedetection", mapOf(
-            "detectedLanguage" to results.getString(SpeechRecognizer.DETECTED_LANGUAGE),
-            "confidence" to languageDetectionConfidenceLevelToFloat(results.getInt(SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL)),
-            "topLocaleAlternatives" to results.getStringArrayList(SpeechRecognizer.TOP_LOCALE_ALTERNATIVES)
-        ))
+        val detectedLanguage = results.getString(SpeechRecognizer.DETECTED_LANGUAGE)
+        val confidence = languageDetectionConfidenceLevelToFloat(results.getInt(SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL))
+
+        // Only send event if language or confidence has changed
+        if (detectedLanguage != lastDetectedLanguage || confidence != lastLanguageConfidence) {
+            lastDetectedLanguage = detectedLanguage
+            lastLanguageConfidence = confidence
+
+            sendEvent(
+                "languagedetection",
+                mapOf(
+                    "detectedLanguage" to detectedLanguage,
+                    "confidence" to confidence,
+                    "topLocaleAlternatives" to results.getStringArrayList(SpeechRecognizer.TOP_LOCALE_ALTERNATIVES),
+                ),
+            )
+        }
     }
 
     /**
