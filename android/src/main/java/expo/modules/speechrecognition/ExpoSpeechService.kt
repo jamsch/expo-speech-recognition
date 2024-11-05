@@ -60,6 +60,9 @@ class ExpoSpeechService(
     private var delayedFileStreamer: DelayedFileStreamer? = null
     private var soundState = SoundState.INACTIVE
 
+    private var lastDetectedLanguage: String? = null
+    private var lastLanguageConfidence: Float? = null
+
     var recognitionState = RecognitionState.INACTIVE
 
     companion object {
@@ -121,6 +124,8 @@ class ExpoSpeechService(
             audioRecorder = null
             delayedFileStreamer?.close()
             delayedFileStreamer = null
+            lastDetectedLanguage = null
+            lastLanguageConfidence = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
             lastVolumeChangeEventTime = 0L
@@ -435,7 +440,7 @@ class ExpoSpeechService(
         when {
             // File URI
             sourceUri.startsWith("file://") -> File(URI(sourceUri))
-            
+
             // Local file path without URI scheme
             !sourceUri.startsWith("https://") -> File(sourceUri)
 
@@ -581,6 +586,15 @@ class ExpoSpeechService(
             else -> 0.0f
         }
 
+    private fun languageDetectionConfidenceLevelToFloat(confidenceLevel: Int): Float =
+        when (confidenceLevel) {
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT -> 1.0f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT -> 0.8f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT -> 0.5f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_UNKNOWN -> 0f
+            else -> 0.0f
+        }
+
     override fun onResults(results: Bundle?) {
         val resultsList = getResults(results)
 
@@ -611,6 +625,26 @@ class ExpoSpeechService(
         log("onPartialResults(), results: $nonEmptyStrings")
         if (nonEmptyStrings.isNotEmpty()) {
             sendEvent("result", mapOf("results" to nonEmptyStrings, "isFinal" to false))
+        }
+    }
+
+    override fun onLanguageDetection(results: Bundle) {
+        val detectedLanguage = results.getString(SpeechRecognizer.DETECTED_LANGUAGE)
+        val confidence = languageDetectionConfidenceLevelToFloat(results.getInt(SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL))
+
+        // Only send event if language or confidence has changed
+        if (detectedLanguage != lastDetectedLanguage || confidence != lastLanguageConfidence) {
+            lastDetectedLanguage = detectedLanguage
+            lastLanguageConfidence = confidence
+
+            sendEvent(
+                "languagedetection",
+                mapOf(
+                    "detectedLanguage" to detectedLanguage,
+                    "confidence" to confidence,
+                    "topLocaleAlternatives" to results.getStringArrayList(SpeechRecognizer.TOP_LOCALE_ALTERNATIVES),
+                ),
+            )
         }
     }
 

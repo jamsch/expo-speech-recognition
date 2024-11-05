@@ -94,6 +94,8 @@ public class ExpoSpeechRecognitionModule: Module {
       "start",
       // Called when there's results (as a string array, not API compliant)
       "result",
+      // Called when the language detection (and switching) results are available.
+      "languagedetection",
       // Fired when the input volume changes
       "volumechange"
     )

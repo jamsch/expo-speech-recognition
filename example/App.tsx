@@ -93,8 +93,6 @@ export default function App() {
     const transcript = ev.results[0]?.transcript || "";
 
     setTranscription((current) => {
-      // When a final result comes in, we need to update the base transcript to build off from
-      // Because on Android and Web, multiple final results can be returned within a continuous session
       // When a final result is received, any following recognized transcripts will omit the previous final result
       const transcriptTally = ev.isFinal
         ? (current?.transcriptTally ?? "") + transcript
@@ -124,6 +122,10 @@ export default function App() {
 
   useSpeechRecognitionEvent("nomatch", (ev) => {
     console.log("[event]: nomatch");
+  });
+
+  useSpeechRecognitionEvent("languagedetection", (ev) => {
+    console.log("[event]: languagedetection", ev);
   });
 
   const startListening = () => {
@@ -574,7 +576,12 @@ function GeneralSettings(props: {
                     : locale
                 }
                 active={settings.lang === locale}
-                onPress={() => handleChange("lang", locale)}
+                onPress={() =>
+                  handleChange(
+                    "lang",
+                    settings.lang === locale ? undefined : locale,
+                  )
+                }
               />
             );
           })}
