@@ -88,6 +88,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 "results",
                 // Called when the language detection (and switching) results are available.
                 "languagedetection",
+                // Fired when the input volume changes
+                "volumechange",
             )
 
             Function("getDefaultRecognitionService") {

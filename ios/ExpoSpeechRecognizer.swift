@@ -1,4 +1,5 @@
 import AVFoundation
+import Accelerate
 import Foundation
 import Speech
 
@@ -24,7 +25,6 @@ enum RecognizerError: Error {
 }
 
 actor ExpoSpeechRecognizer: ObservableObject {
-
   private var options: SpeechRecognitionOptions?
   private var audioEngine: AVAudioEngine?
   private var request: SFSpeechRecognitionRequest?
@@ -41,6 +41,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
   @MainActor var endHandler: (() -> Void)?
   @MainActor var audioEndHandler: ((String?) -> Void)?
+  @MainActor var volumeChangeHandler: ((Float) -> Void)?
 
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
@@ -120,6 +121,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     return recognizer?.locale.identifier
   }
 
+  // Update the start method signature to include volumeChangeHandler
   @MainActor func start(
     options: SpeechRecognitionOptions,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
@@ -128,10 +130,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
     startHandler: @escaping (() -> Void),
     speechStartHandler: @escaping (() -> Void),
     audioStartHandler: @escaping (String?) -> Void,
-    audioEndHandler: @escaping (String?) -> Void
+    audioEndHandler: @escaping (String?) -> Void,
+    volumeChangeHandler: @escaping (Float) -> Void
   ) {
     self.endHandler = endHandler
     self.audioEndHandler = audioEndHandler
+    self.volumeChangeHandler = volumeChangeHandler
     Task {
       await startRecognizer(
         options: options,
@@ -282,12 +286,17 @@ actor ExpoSpeechRecognizer: ObservableObject {
           mixerNode: mixerNode,
           options: options,
           request: request,
-          audioFileRef: self.audioFileRef
+          audioFileRef: self.audioFileRef,
+          volumeChangeHandler: { volume in
+            Task { @MainActor in
+              self.volumeChangeHandler?(volume)
+            }
+          }
         )
       }
 
-      // Don't run any timers if the audio source is from a file
-      let continuous = options.continuous || isSourcedFromFile
+      // Run timers on non-continuous mode, as long as the audio source is the mic
+      let shouldRunTimers = !options.continuous && !isSourcedFromFile
       let audioEngine = self.audioEngine
 
       self.task = recognizer.recognitionTask(
@@ -300,18 +309,20 @@ actor ExpoSpeechRecognizer: ObservableObject {
             }
           }
 
-          // Result handler
+          // Handle the result
           self?.recognitionHandler(
             audioEngine: audioEngine,
             result: result,
             error: error,
             resultHandler: resultHandler,
             errorHandler: errorHandler,
-            continuous: continuous
+            continuous: options.continuous,
+            shouldRunTimers: shouldRunTimers,
+            canEmitInterimResults: options.interimResults
           )
         })
 
-      if !continuous {
+      if shouldRunTimers {
         invalidateAndScheduleTimer()
       }
 
@@ -414,6 +425,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
     stoppedListening = false
     task?.cancel()
     audioEngine?.stop()
+    // map through all the attached nodes
+    // and remove the tap
+    audioEngine?.attachedNodes.forEach(
+      { $0.removeTap(onBus: 0) }
+    )
     audioEngine?.inputNode.removeTap(onBus: 0)
     audioEngine?.inputNode.reset()
     audioEngine?.reset()
@@ -449,7 +465,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
       request = SFSpeechAudioBufferRecognitionRequest()
     }
 
-    request.shouldReportPartialResults = options.interimResults
+    // We also force-enable partial results on non-continuous mode,
+    // which will allow us to re-schedule timers when text is detected
+    // These won't get emitted to the user, however
+    request.shouldReportPartialResults = options.interimResults || !options.continuous
 
     if recognizer.supportsOnDeviceRecognition {
       request.requiresOnDeviceRecognition = options.requiresOnDeviceRecognition
@@ -510,7 +529,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     mixerNode: AVAudioMixerNode,
     options: SpeechRecognitionOptions,
     request: SFSpeechRecognitionRequest,
-    audioFileRef: ExtAudioFileRef?
+    audioFileRef: ExtAudioFileRef?,
+    volumeChangeHandler: ((Float) -> Void)?
   ) throws {
     guard let audioBufferRequest = request as? SFSpeechAudioBufferRecognitionRequest else {
       throw RecognizerError.invalidAudioSource
@@ -559,8 +579,75 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     }
 
+    // Install separate tap with a longer buffer size to listen for volume changes
+    if options.volumeChangeEventOptions?.enabled == true {
+      let desiredDuration: TimeInterval =
+        TimeInterval(options.volumeChangeEventOptions?.intervalMillis ?? 100) / 1000.0
+      let bufferSize = AVAudioFrameCount(audioFormat.sampleRate * desiredDuration)
+
+      let volumeMixerNode = AVAudioMixerNode()
+      audioEngine.attach(volumeMixerNode)
+      audioEngine.connect(mixerNode, to: volumeMixerNode, format: audioFormat)
+
+      volumeMixerNode.installTap(
+        onBus: 0,
+        bufferSize: bufferSize,
+        format: audioFormat
+      ) { buffer, when in
+        guard let power = Self.calculatePower(buffer: buffer) else { return }
+
+        let minDb: Float = -60.0
+        let maxDb: Float = 0.0
+        let normalized: Float = (power - minDb) / (maxDb - minDb)  // Normalized to 0.0 - 1.0
+        let clampedNormalized = min(max(normalized, 0.0), 1.0)
+
+        let scaledValue = clampedNormalized * (10 - (-2)) + (-2)  // Scaled to -2 - 10
+
+        // Send the volume change event
+        volumeChangeHandler?(scaledValue)
+      }
+    }
+
     audioEngine.prepare()
     try audioEngine.start()
+  }
+
+  private static func calculatePower(buffer: AVAudioPCMBuffer) -> Float? {
+    // let channelCount = Int(buffer.format.channelCount)
+    let length = vDSP_Length(buffer.frameLength)
+    let channel = 0
+
+    if let floatData = buffer.floatChannelData {
+      return calculatePowers(data: floatData[channel], strideFrames: buffer.stride, length: length)
+    } else if let int16Data = buffer.int16ChannelData {
+      // Convert the data from int16 to float values before calculating the power values.
+      var floatChannelData: [Float] = Array(repeating: Float(0.0), count: Int(buffer.frameLength))
+      vDSP_vflt16(int16Data[channel], buffer.stride, &floatChannelData, buffer.stride, length)
+      var scalar = Float(INT16_MAX)
+      vDSP_vsdiv(floatChannelData, buffer.stride, &scalar, &floatChannelData, buffer.stride, length)
+      return calculatePowers(data: floatChannelData, strideFrames: buffer.stride, length: length)
+    } else if let int32Data = buffer.int32ChannelData {
+      // Convert the data from int32 to float values before calculating the power values.
+      var floatChannelData: [Float] = Array(repeating: Float(0.0), count: Int(buffer.frameLength))
+      vDSP_vflt32(int32Data[channel], buffer.stride, &floatChannelData, buffer.stride, length)
+      var scalar = Float(INT32_MAX)
+      vDSP_vsdiv(floatChannelData, buffer.stride, &scalar, &floatChannelData, buffer.stride, length)
+      return calculatePowers(data: floatChannelData, strideFrames: buffer.stride, length: length)
+    }
+
+    return nil
+  }
+
+  private static func calculatePowers(
+    data: UnsafePointer<Float>, strideFrames: Int, length: vDSP_Length
+  ) -> Float? {
+    let kMinLevel: Float = 1e-7  // -160 dB
+    var max: Float = 0.0
+    vDSP_maxv(data, strideFrames, &max, length)
+    if max < kMinLevel {
+      max = kMinLevel
+    }
+    return 20.0 * log10(max)
   }
 
   /// Downsamples the audio buffer to a file ref
@@ -613,12 +700,25 @@ actor ExpoSpeechRecognizer: ObservableObject {
     error: Error?,
     resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
     errorHandler: @escaping (Error) -> Void,
-    continuous: Bool
+    continuous: Bool,
+    shouldRunTimers: Bool,
+    canEmitInterimResults: Bool
   ) {
+    // When a final result is returned, we should expect the task to be idle or stopping
     let receivedFinalResult = result?.isFinal ?? false
     let receivedError = error != nil
 
-    if let result: SFSpeechRecognitionResult {
+    // Hack for iOS 18 to detect final results
+    // See: https://forums.developer.apple.com/forums/thread/762952 for more info
+    // This can be emitted multiple times during a continuous session, unlike `result.isFinal` which is only emitted once
+    var receivedFinalLikeResult: Bool = receivedFinalResult
+    if #available(iOS 18.0, *), !receivedFinalLikeResult {
+      receivedFinalLikeResult = result?.speechRecognitionMetadata?.speechDuration ?? 0 > 0
+    }
+
+    let shouldEmitResult = receivedFinalResult || canEmitInterimResults || receivedFinalLikeResult
+
+    if let result: SFSpeechRecognitionResult, shouldEmitResult {
       Task { @MainActor in
         let taskState = await task?.state
         // Make sure the task is running before emitting the result
@@ -638,15 +738,16 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     }
 
-    if receivedFinalResult || receivedError {
+    if (receivedFinalLikeResult && !continuous) || receivedError || receivedFinalResult {
       Task { @MainActor in
         await reset()
       }
+      return
     }
 
     // Non-continuous speech recognition
     // Stop the speech recognizer if the timer fires after not receiving a result for 3 seconds
-    if !continuous && !receivedError {
+    if shouldRunTimers && !receivedError {
       invalidateAndScheduleTimer()
     }
   }
