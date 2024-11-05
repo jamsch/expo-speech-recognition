@@ -264,6 +264,32 @@ export type ExpoSpeechRecognitionOptions = {
      */
     intervalMillis?: number;
   };
+  /**
+   * Speech timer configuration options for non-continous recognition.
+   */
+  timerOptions?: {
+    /**
+     * Default: 1000ms on iOS, unset on Android
+     *
+     * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
+     *
+     * The amount of time that it should take after the recognizer stops hearing speech to consider the input complete hence end the recognition session.
+     *
+     * Note that it is extremely rare you'd want to specify this value. Note also that certain values may cause undesired or unexpected results - use judiciously!
+     */
+    completeSilenceLengthMillis: number;
+
+    /**
+     * Default: 2000ms on iOS, unset on Android
+     *
+     * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS
+     *
+     * Optional integer to indicate the minimum length of the recognition session. The recognizer will not stop recognizing speech before this amount of time.
+     *
+     * Note that it is extremely rare you'd want to specify this value. Note also that certain values may cause undesired or unexpected results - use judiciously!
+     */
+    minimumLengthMillis: number;
+  };
 };
 
 export type IOSTaskHintValue = (typeof TaskHintIOS)[keyof typeof TaskHintIOS];
