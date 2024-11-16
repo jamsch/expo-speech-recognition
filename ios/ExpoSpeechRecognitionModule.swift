@@ -160,7 +160,8 @@ public class ExpoSpeechRecognitionModule: Module {
             }
 
             self.speechRecognizer = try await ExpoSpeechRecognizer(
-              locale: locale
+              locale: locale,
+              requiresOnDeviceRecognition: options.requiresOnDeviceRecognition
             )
           }
 

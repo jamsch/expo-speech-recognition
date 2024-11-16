@@ -46,7 +46,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
   init(
-    locale: Locale
+    locale: Locale,
+    requiresOnDeviceRecognition: Bool
   ) async throws {
 
     recognizer = SFSpeechRecognizer(
@@ -57,8 +58,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
       throw RecognizerError.nilRecognizer
     }
 
-    guard await SFSpeechRecognizer.hasAuthorizationToRecognize() else {
-      throw RecognizerError.notAuthorizedToRecognize
+    if !requiresOnDeviceRecognition {
+        guard await SFSpeechRecognizer.hasAuthorizationToRecognize() else {
+          throw RecognizerError.notAuthorizedToRecognize
+        }
     }
 
     guard await AVAudioSession.sharedInstance().hasPermissionToRecord() else {
