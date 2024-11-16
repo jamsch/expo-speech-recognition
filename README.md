@@ -99,10 +99,13 @@ If you've just created a new Expo project or have only been using the Expo SDK s
 After completing **Step 2: Configure the config plugin**, follow these steps:
 
 - To (re)-generate the native Android project, run:
+
   ```bash
   npx expo run:android
   ```
+
 - To (re)-generate the native iOS project, run:
+
   ```bash
   npx expo run:ios
   ```
@@ -826,10 +829,9 @@ ExpoSpeechRecognitionModule.abort();
 
 ### `requestPermissionsAsync(): Promise<PermissionResponse>`
 
-Presents a dialog to the user to request permissions for using speech recognition and the microphone.
+Presents a dialog to the user to request the necessary permissions.
 
-For iOS, once a user has granted (or denied) location permissions by responding to the original permission request dialog,
-the only way that the permissions can be changed is by the user themselves using the device settings app.
+For iOS, this requests two permissions: record permissions (to access the microphone), and speech recognition permissions. Once a user has granted (or denied) permissions by responding to the original permission request dialog, the only way that the permissions can be changed is by the user themselves using the device settings app.
 
 ```ts
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
