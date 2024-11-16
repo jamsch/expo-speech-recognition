@@ -168,7 +168,10 @@ function App() {
       {!recognizing ? (
         <Button title="Start" onPress={handleStart} />
       ) : (
-        <Button title="Stop" onPress={ExpoSpeechRecognitionModule.stop} />
+        <Button
+          title="Stop"
+          onPress={() => ExpoSpeechRecognitionModule.stop()}
+        />
       )}
 
       <ScrollView>
