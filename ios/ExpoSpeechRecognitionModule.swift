@@ -36,6 +36,19 @@ public class ExpoSpeechRecognitionModule: Module {
 
   var speechRecognizer: ExpoSpeechRecognizer?
 
+  // Hack for iOS 18 to detect final results
+  // See: https://forums.developer.apple.com/forums/thread/762952 for more info
+  // This is a temporary workaround until the issue is fixed in a future iOS release
+  var hasSeenFinalResult: Bool = false
+
+  // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
+  // Example event order emitted in iOS 18:
+  // [
+  //   { isFinal: false, transcripts: ["actually", "final", "results"], metadata: { duration: 1500 } },
+  //   { isFinal: true, transcripts: [] }
+  // ]
+  var previousResult: SFSpeechRecognitionResult?
+
   public func definition() -> ModuleDefinition {
     // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
     // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
@@ -80,7 +93,11 @@ public class ExpoSpeechRecognitionModule: Module {
       // intent to recognize grammars associated with the current SpeechRecognition
       "start",
       // Called when there's results (as a string array, not API compliant)
-      "result"
+      "result",
+      // Called when the language detection (and switching) results are available.
+      "languagedetection",
+      // Fired when the input volume changes
+      "volumechange"
     )
 
     OnCreate {
@@ -124,6 +141,9 @@ public class ExpoSpeechRecognitionModule: Module {
       Task {
         do {
           let currentLocale = await speechRecognizer?.getLocale()
+
+          // Reset the previous result
+          self.previousResult = nil
 
           // Re-create the speech recognizer when locales change
           if self.speechRecognizer == nil || currentLocale != options.lang {
@@ -177,6 +197,9 @@ public class ExpoSpeechRecognitionModule: Module {
               } else {
                 self?.sendEvent("audioend", ["uri": nil])
               }
+            },
+            volumeChangeHandler: { [weak self] value in
+              self?.sendEvent("volumechange", ["value": value])
             }
           )
         } catch {
@@ -274,7 +297,11 @@ public class ExpoSpeechRecognitionModule: Module {
     }
 
     Function("supportsRecording") { () -> Bool in
-      let recognizer: SFSpeechRecognizer? = SFSpeechRecognizer()
+      return true
+    }
+
+    Function("isRecognitionAvailable") { () -> Bool in
+      let recognizer = SFSpeechRecognizer()
       return recognizer?.isAvailable ?? false
     }
 
@@ -348,11 +375,15 @@ public class ExpoSpeechRecognitionModule: Module {
   }
 
   func sendErrorAndStop(error: String, message: String) {
+    hasSeenFinalResult = false
+    previousResult = nil
     sendEvent("error", ["error": error, "message": message])
     sendEvent("end")
   }
 
   func handleEnd() {
+    hasSeenFinalResult = false
+    previousResult = nil
     sendEvent("end")
   }
 
@@ -362,7 +393,25 @@ public class ExpoSpeechRecognitionModule: Module {
     // Limit the number of transcriptions to the maxAlternatives
     let transcriptionSubsequence = result.transcriptions.prefix(maxAlternatives)
 
+    var isFinal = result.isFinal
+
+    // Hack for iOS 18 to detect final results
+    // See: https://forums.developer.apple.com/forums/thread/762952 for more info
+    // This is a temporary workaround until the issue is fixed in a future iOS release
+    if #available(iOS 18.0, *), !isFinal {
+      isFinal = result.speechRecognitionMetadata?.speechDuration ?? 0 > 0
+    }
+
     for transcription in transcriptionSubsequence {
+      var transcript = transcription.formattedString
+
+      // Prepend an empty space if the hacky workaround is applied
+      // So that the user can append the transcript to the previous result,
+      // matching the behavior of Android & Web Speech API
+      if hasSeenFinalResult {
+        transcript = " " + transcription.formattedString
+      }
+
       let segments = transcription.segments.map { segment in
         return Segment(
           startTimeMillis: segment.timestamp * 1000,
@@ -377,7 +426,7 @@ public class ExpoSpeechRecognitionModule: Module {
         / Float(transcription.segments.count)
 
       let item = TranscriptionResult(
-        transcript: transcription.formattedString,
+        transcript: transcript,
         confidence: confidence,
         segments: segments
       )
@@ -386,21 +435,39 @@ public class ExpoSpeechRecognitionModule: Module {
         results.append(item)
       }
     }
-    if result.isFinal && results.count == 0 {
-      // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
-      // The nomatch event of the Web Speech API is fired
-      // when the speech recognition service returns a final result with no significant recognition.
-      sendEvent("nomatch")
-      return
+
+    // Apply the "workaround"
+    if #available(iOS 18.0, *), !result.isFinal, isFinal {
+      hasSeenFinalResult = true
+    }
+
+    if isFinal && results.isEmpty {
+      // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
+      var previousResultWasFinal = false
+      var previousResultHadTranscriptions = false
+      if #available(iOS 18.0, *), let previousResult = previousResult {
+        previousResultWasFinal = previousResult.speechRecognitionMetadata?.speechDuration ?? 0 > 0
+        previousResultHadTranscriptions = !previousResult.transcriptions.isEmpty
+      }
+
+      if !previousResultWasFinal || !previousResultHadTranscriptions {
+        // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
+        // The nomatch event of the Web Speech API is fired
+        // when the speech recognition service returns a final result with no significant recognition.
+        sendEvent("nomatch")
+        return
+      }
     }
 
     sendEvent(
       "result",
       [
-        "isFinal": result.isFinal,
+        "isFinal": isFinal,
         "results": results.map { $0.toDictionary() },
       ]
     )
+
+    previousResult = result
   }
 
   func handleRecognitionError(_ error: Error) {

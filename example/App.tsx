@@ -15,19 +15,21 @@ import {
   ExpoSpeechRecognitionModule,
   getSpeechRecognitionServices,
   getSupportedLocales,
-  type ExpoSpeechRecognitionOptions,
-  type AndroidIntentOptions,
   useSpeechRecognitionEvent,
-  AudioEncodingAndroidValue,
   TaskHintIOS,
   AVAudioSessionCategory,
-  type AVAudioSessionCategoryValue,
   AVAudioSessionCategoryOptions,
-  type AVAudioSessionCategoryOptionsValue,
-  SetCategoryOptions,
   AVAudioSessionMode,
-  type AVAudioSessionModeValue,
   ExpoWebSpeechRecognition,
+} from "expo-speech-recognition";
+import type {
+  AudioEncodingAndroidValue,
+  AndroidIntentOptions,
+  AVAudioSessionCategoryValue,
+  AVAudioSessionModeValue,
+  AVAudioSessionCategoryOptionsValue,
+  ExpoSpeechRecognitionOptions,
+  SetCategoryOptions,
 } from "expo-speech-recognition";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -45,6 +47,7 @@ import {
   AndroidOutputFormat,
   IOSOutputFormat,
 } from "expo-av/build/Audio";
+import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
 
 const speechRecognitionServices = getSpeechRecognitionServices();
 
@@ -69,7 +72,16 @@ export default function App() {
     continuous: true,
     requiresOnDeviceRecognition: false,
     addsPunctuation: true,
-    contextualStrings: ["Carlsen", "Ian Nepomniachtchi", "Praggnanandhaa"],
+    contextualStrings: [
+      "expo-speech-recognition",
+      "Carlsen",
+      "Ian Nepomniachtchi",
+      "Praggnanandhaa",
+    ],
+    volumeChangeEventOptions: {
+      enabled: false,
+      intervalMillis: 300,
+    },
   });
 
   useSpeechRecognitionEvent("result", (ev) => {
@@ -81,12 +93,10 @@ export default function App() {
     const transcript = ev.results[0]?.transcript || "";
 
     setTranscription((current) => {
-      // When a final result comes in, we need to update the base transcript to build off from
-      // Because on Android and Web, multiple final results can be returned within a continuous session
       // When a final result is received, any following recognized transcripts will omit the previous final result
       const transcriptTally = ev.isFinal
         ? (current?.transcriptTally ?? "") + transcript
-        : current?.transcriptTally ?? "";
+        : (current?.transcriptTally ?? "");
 
       return {
         transcriptTally,
@@ -114,6 +124,10 @@ export default function App() {
     console.log("[event]: nomatch");
   });
 
+  useSpeechRecognitionEvent("languagedetection", (ev) => {
+    console.log("[event]: languagedetection", ev);
+  });
+
   const startListening = () => {
     if (status !== "idle") {
       return;
@@ -121,23 +135,26 @@ export default function App() {
     setTranscription(null);
     setError(null);
     setStatus("starting");
+
     ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
       console.log("Permissions", result);
       if (!result.granted) {
         console.log("Permissions not granted", result);
+        setError({ error: "not-allowed", message: "Permissions not granted" });
+        setStatus("idle");
         return;
       }
       ExpoSpeechRecognitionModule.start(settings);
     });
   };
 
-  const stopListening = () => {
-    ExpoSpeechRecognitionModule.stop();
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" translucent={false} />
+
+      {settings.volumeChangeEventOptions?.enabled ? (
+        <VolumeMeteringAvatar />
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.text}>
@@ -191,12 +208,12 @@ export default function App() {
             <BigButton
               title="Stop"
               disabled={status !== "recognizing"}
-              onPress={stopListening}
+              onPress={ExpoSpeechRecognitionModule.stop}
             />
             <BigButton
               title="Abort"
               disabled={status !== "recognizing"}
-              onPress={() => ExpoSpeechRecognitionModule.abort()}
+              onPress={ExpoSpeechRecognitionModule.abort}
             />
           </View>
         )}
@@ -470,6 +487,11 @@ function GeneralSettings(props: {
       });
   }, [settings.androidRecognitionServicePackage]);
 
+  const locales =
+    supportedLocales.locales.length === 0
+      ? fallbackLocales
+      : supportedLocales.locales;
+
   return (
     <View>
       <View
@@ -504,6 +526,17 @@ function GeneralSettings(props: {
           checked={Boolean(settings.continuous)}
           onPress={() => handleChange("continuous", !settings.continuous)}
         />
+
+        <CheckboxButton
+          title="Volume events"
+          checked={Boolean(settings.volumeChangeEventOptions?.enabled)}
+          onPress={() =>
+            handleChange("volumeChangeEventOptions", {
+              enabled: !settings.volumeChangeEventOptions?.enabled,
+              intervalMillis: settings.volumeChangeEventOptions?.intervalMillis,
+            })
+          }
+        />
       </View>
 
       <View style={styles.textOptionContainer}>
@@ -524,10 +557,11 @@ function GeneralSettings(props: {
         </Text>
 
         <ScrollView contentContainerStyle={[styles.row, styles.flexWrap]}>
-          {supportedLocales.locales.map((locale) => {
+          {locales.map((locale) => {
             const isInstalled =
               Platform.OS === "android" &&
               supportedLocales.installedLocales.includes(locale);
+
             return (
               <OptionButton
                 key={locale}
@@ -542,7 +576,12 @@ function GeneralSettings(props: {
                     : locale
                 }
                 active={settings.lang === locale}
-                onPress={() => handleChange("lang", locale)}
+                onPress={() =>
+                  handleChange(
+                    "lang",
+                    settings.lang === locale ? undefined : locale,
+                  )
+                }
               />
             );
           })}
@@ -551,6 +590,40 @@ function GeneralSettings(props: {
     </View>
   );
 }
+
+const fallbackLocales = [
+  "cmn-Hans-CN",
+  "cmn-Hant-TW",
+  "de-AT",
+  "de-BE",
+  "de-CH",
+  "de-DE",
+  "en-AU",
+  "en-CA",
+  "en-GB",
+  "en-IE",
+  "en-IN",
+  "en-SG",
+  "en-US",
+  "es-ES",
+  "es-US",
+  "fr-BE",
+  "fr-CA",
+  "fr-CH",
+  "fr-FR",
+  "hi-IN",
+  "id-ID",
+  "it-CH",
+  "it-IT",
+  "ja-JP",
+  "ko-KR",
+  "pl-PL",
+  "pt-BR",
+  "ru-RU",
+  "th-TH",
+  "tr-TR",
+  "vi-VN",
+];
 
 const androidIntentNumberInputOptions = [
   "EXTRA_LANGUAGE_SWITCH_MAX_SWITCHES",
@@ -673,7 +746,7 @@ function AndroidSettings(props: {
               onPress={() =>
                 handleChange("androidIntentOptions", {
                   ...settings.androidIntentOptions,
-                  [key]: !settings.androidIntentOptions?.[key] ?? false,
+                  [key]: !settings.androidIntentOptions?.[key],
                 })
               }
             />
@@ -746,6 +819,15 @@ function OtherSettings(props: {
               console.log("Current state:", state);
               Alert.alert("Current state", state);
             });
+          }}
+        />
+        <BigButton
+          title="Call isRecognitionAvailable()"
+          color="#7C90DB"
+          onPress={() => {
+            const isAvailable =
+              ExpoSpeechRecognitionModule.isRecognitionAvailable();
+            Alert.alert("isRecognitionAvailable()", isAvailable.toString());
           }}
         />
         {Platform.OS === "ios" && (
@@ -956,7 +1038,7 @@ function WebSpeechAPIDemo() {
     transcript: string;
   }>(null);
 
-  const reconizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
+  const recognizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
 
   useEffect(() => {
     if (!listening) {
@@ -982,16 +1064,16 @@ function WebSpeechAPIDemo() {
       setListening(false);
     };
 
-    reconizer.addEventListener("result", handleResult);
-    reconizer.addEventListener("error", handleError);
-    reconizer.addEventListener("end", handleEnd);
+    recognizer.addEventListener("result", handleResult);
+    recognizer.addEventListener("error", handleError);
+    recognizer.addEventListener("end", handleEnd);
 
     return () => {
-      reconizer.removeEventListener("result", handleResult);
-      reconizer.removeEventListener("error", handleError);
-      reconizer.removeEventListener("end", handleEnd);
+      recognizer.removeEventListener("result", handleResult);
+      recognizer.removeEventListener("error", handleError);
+      recognizer.removeEventListener("end", handleEnd);
     };
-  }, [listening]);
+  }, [listening, recognizer]);
 
   const startListeningWeb = () => {
     setListening(true);
@@ -1003,10 +1085,10 @@ function WebSpeechAPIDemo() {
         console.log("Permissions not granted", result);
         return;
       }
-      reconizer.lang = "en-US";
-      reconizer.continuous = true;
-      reconizer.interimResults = true;
-      reconizer.start();
+      recognizer.lang = "en-US";
+      recognizer.continuous = true;
+      recognizer.interimResults = true;
+      recognizer.start();
     });
   };
 
@@ -1023,12 +1105,12 @@ function WebSpeechAPIDemo() {
           <BigButton
             color="#B1B695"
             title="Stop Recognition"
-            onPress={() => reconizer.stop()}
+            onPress={() => recognizer.stop()}
           />
           <BigButton
             color="#B1B695"
             title="Abort Recognition"
-            onPress={() => reconizer.abort()}
+            onPress={() => recognizer.abort()}
           />
         </View>
       )}

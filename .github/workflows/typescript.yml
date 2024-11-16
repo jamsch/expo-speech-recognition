@@ -1,0 +1,21 @@
+name: Run Typescript
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  typescript-check:
+    name: Typescript check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🔍 Run Typescript check
+        run: npm run ts:check

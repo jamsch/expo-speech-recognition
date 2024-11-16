@@ -49,11 +49,19 @@ class ExpoSpeechService(
 ) : RecognitionListener {
     private var speech: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    private lateinit var options: SpeechRecognitionOptions
+    private var lastVolumeChangeEventTime: Long = 0L
+
     /** Audio recorder for persisting audio */
     private var audioRecorder: ExpoAudioRecorder? = null
+
     /** File streamer for file-based recognition */
     private var delayedFileStreamer: DelayedFileStreamer? = null
     private var soundState = SoundState.INACTIVE
+
+    private var lastDetectedLanguage: String? = null
+    private var lastLanguageConfidence: Float? = null
 
     var recognitionState = RecognitionState.INACTIVE
 
@@ -106,6 +114,7 @@ class ExpoSpeechService(
 
     /** Starts speech recognition */
     fun start(options: SpeechRecognitionOptions) {
+        this.options = options
         mainHandler.post {
             log("Start recognition.")
 
@@ -115,8 +124,11 @@ class ExpoSpeechService(
             audioRecorder = null
             delayedFileStreamer?.close()
             delayedFileStreamer = null
+            lastDetectedLanguage = null
+            lastLanguageConfidence = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
+            lastVolumeChangeEventTime = 0L
             try {
                 val intent = createSpeechIntent(options)
                 speech = createSpeechRecognizer(options)
@@ -263,6 +275,7 @@ class ExpoSpeechService(
                 audioRecorder = ExpoAudioRecorder(reactContext, resolveFilePathFromConfig(options.recordingOptions))
             } else if (options.continuous == true) {
                 // Feature: Continuous transcription from microphone using `RecognizerIntent.EXTRA_AUDIO_SOURCE`
+                // This also has the side effect of not playing the "beep" sound when starting and stopping recognition
                 audioRecorder = ExpoAudioRecorder(reactContext, null)
             }
 
@@ -425,11 +438,11 @@ class ExpoSpeechService(
      */
     private fun resolveSourceUri(sourceUri: String): File =
         when {
-            // Local file path without URI scheme
-            !sourceUri.startsWith("https://") && !sourceUri.startsWith("file://") -> File(sourceUri)
-
             // File URI
             sourceUri.startsWith("file://") -> File(URI(sourceUri))
+
+            // Local file path without URI scheme
+            !sourceUri.startsWith("https://") -> File(sourceUri)
 
             // HTTP URI - throw an error
             else -> {
@@ -451,6 +464,21 @@ class ExpoSpeechService(
     }
 
     override fun onRmsChanged(rmsdB: Float) {
+        if (options.volumeChangeEventOptions?.enabled != true) {
+            return
+        }
+
+        val intervalMs = options.volumeChangeEventOptions?.intervalMillis
+
+        if (intervalMs == null) {
+            sendEvent("volumechange", mapOf("value" to rmsdB))
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastVolumeChangeEventTime >= intervalMs) {
+                sendEvent("volumechange", mapOf("value" to rmsdB))
+                lastVolumeChangeEventTime = currentTime
+            }
+        }
         /*
         val isSilent = rmsdB <= 0
 
@@ -558,6 +586,15 @@ class ExpoSpeechService(
             else -> 0.0f
         }
 
+    private fun languageDetectionConfidenceLevelToFloat(confidenceLevel: Int): Float =
+        when (confidenceLevel) {
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT -> 1.0f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT -> 0.8f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT -> 0.5f
+            SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_UNKNOWN -> 0f
+            else -> 0.0f
+        }
+
     override fun onResults(results: Bundle?) {
         val resultsList = getResults(results)
 
@@ -588,6 +625,26 @@ class ExpoSpeechService(
         log("onPartialResults(), results: $nonEmptyStrings")
         if (nonEmptyStrings.isNotEmpty()) {
             sendEvent("result", mapOf("results" to nonEmptyStrings, "isFinal" to false))
+        }
+    }
+
+    override fun onLanguageDetection(results: Bundle) {
+        val detectedLanguage = results.getString(SpeechRecognizer.DETECTED_LANGUAGE)
+        val confidence = languageDetectionConfidenceLevelToFloat(results.getInt(SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL))
+
+        // Only send event if language or confidence has changed
+        if (detectedLanguage != lastDetectedLanguage || confidence != lastLanguageConfidence) {
+            lastDetectedLanguage = detectedLanguage
+            lastLanguageConfidence = confidence
+
+            sendEvent(
+                "languagedetection",
+                mapOf(
+                    "detectedLanguage" to detectedLanguage,
+                    "confidence" to confidence,
+                    "topLocaleAlternatives" to results.getStringArrayList(SpeechRecognizer.TOP_LOCALE_ALTERNATIVES),
+                ),
+            )
         }
     }
 
@@ -640,10 +697,13 @@ class ExpoSpeechService(
                 SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network"
                 SpeechRecognizer.ERROR_NO_MATCH -> "no-speech"
                 SpeechRecognizer.ERROR_SERVER -> "network"
+                SpeechRecognizer.ERROR_SERVER_DISCONNECTED -> "network"
+                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "language-not-supported"
+                SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED -> "language-not-supported"
                 // Extra codes
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "speech-timeout"
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"
-                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "language-not-supported"
+                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "busy"
                 else -> "unknown"
             }
 
@@ -656,10 +716,14 @@ class ExpoSpeechService(
                 SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network operation timed out."
                 SpeechRecognizer.ERROR_NO_MATCH -> "No speech was detected."
                 SpeechRecognizer.ERROR_SERVER -> "Server sent error status."
+                SpeechRecognizer.ERROR_SERVER_DISCONNECTED -> "Server disconnected."
+                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "Requested language is supported, but not yet downloaded."
+                SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ->
+                    "Requested language is not available to be used with the current recognizer."
                 // Extra codes/messages
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RecognitionService busy."
+                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "Too many requests."
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input."
-                SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "Requested language is supported, but not yet downloaded."
                 else -> "Unknown error"
             }
 

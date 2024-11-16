@@ -1,5 +1,6 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "react-native";
+
 import type {
   AudioEncodingAndroid,
   AVAudioSessionCategory,
@@ -12,6 +13,48 @@ import type {
 
 export type AVAudioSessionCategoryValue =
   (typeof AVAudioSessionCategory)[keyof typeof AVAudioSessionCategory];
+
+export type ExpoSpeechRecognitionResult = {
+  transcript: string;
+  /**
+   * Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating transcript confidence.
+   */
+  confidence: number;
+  /**
+   * An array of transcription segments that represent the parts of the transcription, as identified by the speech recognizer.
+   *
+   * Notes for Android:
+   *
+   * - This is only available for SDK 34+ (Android 14+)
+   * - This is only verified to work with the `com.google.android.as` service (using on device speech recognition)
+   * - Segments are only available during the final result
+   * - The segment parts are split up by words.
+   * - The segments are only available for the first transcript
+   * - Segment confidences currently return as -1 (unavailable)
+   *
+   * Notes for iOS:
+   *
+   * - The confidence value will be 0 on partial results
+   */
+  segments: ExpoSpeechRecognitionResultSegment[];
+};
+
+export type ExpoSpeechRecognitionResultSegment = {
+  /** The start timestamp of the utterance, e.g. 1000 */
+  startTimeMillis: number;
+  /** The end timestamp of the utterance, e.g. 1500 */
+  endTimeMillis: number;
+  /** The text portion of the transcript, e.g. "Hello world" */
+  segment: string;
+  /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segment */
+  confidence: number;
+};
+
+/** Fired when there's a speech result. The result may be partial or final */
+export type ExpoSpeechRecognitionResultEvent = {
+  isFinal: boolean;
+  results: ExpoSpeechRecognitionResult[];
+};
 
 export type ExpoSpeechRecognitionErrorCode =
   /** The user called `ExpoSpeechRecognitionModule.abort()`. */
@@ -34,46 +77,40 @@ export type ExpoSpeechRecognitionErrorCode =
   /** The recognizer is busy and cannot accept any new recognition requests. */
   | "busy"
   /** (Android only) An unknown client-side error occurred. */
-  | "client";
+  | "client"
+  /** (Android) No speech input. */
+  | "speech-timeout"
+  /** (Android) Unknown error */
+  | "unknown";
+
+export type ExpoSpeechRecognitionErrorEvent = {
+  error: ExpoSpeechRecognitionErrorCode;
+  message: string;
+};
+
+export type LanguageDetectionEvent = {
+  /** The language that was detected, in BCP-47 format. e.g. "en-US", "de-DE" */
+  detectedLanguage: string;
+  /** The confidence of the detected language. A value ranging between 0.0 and 1.0.
+   *
+   * Values range from:
+   *
+   * - 1.0 (highly confident)
+   * - 0.8 (confident)
+   * - 0.5 (not confident)
+   * - 0.0 (unknown)
+   */
+  confidence: number;
+  /** The alternative locales for the same language, in BCP-47 format. e.g. ["en-US", "en-GB"] */
+  topLocaleAlternatives: string[];
+};
 
 /**
  * Events that are dispatched from the native side
  */
 export type ExpoSpeechRecognitionNativeEventMap = {
-  /** Fired when there's a speech result. The result may be partial or final */
-  result: {
-    isFinal: boolean;
-    results: {
-      transcript: string;
-      /**
-       * Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating transcript confidence.
-       */
-      confidence: number;
-      /**
-       * An array of transcription segments that represent the parts of the transcription, as identified by the speech recognizer.
-       *
-       * Notes for Android:
-       *
-       * - This is only available for SDK 34+ (Android 14+)
-       * - The segment parts are split up by words.
-       * - The segments are only available for the first transcript
-       */
-      segements: {
-        /** The start timestamp of the utterance, e.g. 1000 */
-        startTimeMillis: number;
-        /** The end timestamp of the utterance, e.g. 1500 */
-        endTimeMillis: number;
-        /** The text portion of the transcript, e.g. "Hello world" */
-        segment: string;
-        /** Value ranging between between 0.0, 1.0, and -1 (unavailable) indicating the confidence of the specific segement */
-        confidence: number;
-      }[];
-    }[];
-  };
-  error: {
-    error: ExpoSpeechRecognitionErrorCode;
-    message: string;
-  };
+  result: ExpoSpeechRecognitionResultEvent;
+  error: ExpoSpeechRecognitionErrorEvent;
   start: null;
   speechstart: null;
   speechend: null;
@@ -107,6 +144,15 @@ export type ExpoSpeechRecognitionNativeEventMap = {
   end: null;
   soundstart: null;
   soundend: null;
+  languagedetection: LanguageDetectionEvent;
+  volumechange: {
+    /**
+     * A float value between -2 and 10 indicating the volume of the input audio
+     *
+     * Consider anything below 0 to be inaudible
+     */
+    value: number;
+  };
 };
 
 export type ExpoSpeechRecognitionOptions = {
@@ -124,7 +170,16 @@ export type ExpoSpeechRecognitionOptions = {
    * On iOS, this configures [`SFSpeechRecognitionRequest.contextualStrings`](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/1649391-contextualstrings).
    */
   contextualStrings?: string[];
-  /** [Default: false] Continuous recognition. Note: if false on iOS, recognition will run until no speech is detected for 3 seconds */
+  /**
+   * [Default: false] Continuous recognition.
+   *
+   * Not supported on Android 12 and below.
+   *
+   * If false, the behaviors are the following:
+   *
+   *   - on iOS 17-, recognition will run until no speech is detected for 3 seconds.
+   *   - on iOS 18+ and Android, recognition will run until a result with `isFinal: true` is received.
+   */
   continuous?: boolean;
   /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
    *
@@ -134,7 +189,9 @@ export type ExpoSpeechRecognitionOptions = {
   /**
    * [Default: false] Include punctuation in the recognition results. This applies to full stops and commas.
    *
-   * On Android, this configures [`EXTRA_ENABLE_FORMATTING`](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING) in the recognizer intent (API level 33+).
+   * On Android, this configures [`EXTRA_ENABLE_FORMATTING`](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING) in the recognizer intent (Android 13+, API level 33+).
+   *
+   * Note for Android: This feature is only verified to work on Android 13+ with on-device speech recognition enabled (i.e. enabling `requiresOnDeviceRecognition` or using the `com.google.android.as` service package)
    *
    * On iOS, this configures [`SFSpeechRecognitionRequest.addsPunctuation`](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/3930023-addspunctuation).
    */
@@ -205,6 +262,26 @@ export type ExpoSpeechRecognitionOptions = {
    * Docs: https://developer.apple.com/documentation/avfaudio/avaudiosession/category
    */
   iosCategory?: SetCategoryOptions;
+
+  /**
+   * Settings for volume change events.
+   */
+  volumeChangeEventOptions?: {
+    /**
+     * Whether to emit volume change events.
+     *
+     * Default: false
+     */
+    enabled?: boolean;
+    /**
+     * Specifies the interval (in milliseconds) to emit `volumechange` events.
+     *
+     * Default: 100ms on iOS
+     *
+     * Increasing this value will improve performance
+     */
+    intervalMillis?: number;
+  };
 };
 
 export type IOSTaskHintValue = (typeof TaskHintIOS)[keyof typeof TaskHintIOS];
@@ -315,6 +392,15 @@ export type AndroidIntentOptions = {
    * Depending on the recognizer implementation, this value may have no effect.
    */
   EXTRA_ENABLE_LANGUAGE_SWITCH: (typeof RecognizerIntentEnableLanguageSwitch)[keyof typeof RecognizerIntentEnableLanguageSwitch];
+  /**
+   * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_ENABLE_FORMATTING
+   *
+   * NOTE: This is also configurable through `addsPunctuation` (which sets `EXTRA_ENABLE_FORMATTING` to "quality")
+   *
+   * [API level 33] Optional string to enable text formatting (e.g. unspoken punctuation (examples: question mark, comma, period, etc.), capitalization, etc.) and specify the optimization strategy. If set, the partial and final result texts will be formatted. Each result list will contain two hypotheses in the order of 1) formatted text 2) raw text.
+   *
+   */
+  EXTRA_ENABLE_FORMATTING: "latency" | "quality";
   /**
    * https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION
    *
@@ -482,6 +568,8 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   /**
    * Returns an array of locales supported by the speech recognizer.
    *
+   * Not supported on Android 12 and below (API level 31), this will return an empty array of locales.
+   *
    * @throws {"package_not_found"} If the service package is not found.
    * @throws {"error_[number]"} If there was an error retrieving the supported locales.
    */
@@ -517,7 +605,10 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    *
    * @returns empty string if no service is found, or not Android
    */
-  getDefaultRecognitionService(): { packageName: string };
+  getDefaultRecognitionService(): {
+    /** e.g. "com.google.android.tts" or "com.google.android.googlequicksearchbox" */
+    packageName: string;
+  };
   /**
    * [Android only] Returns the default voice recognition service on the device.
    *
@@ -525,7 +616,10 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    *
    * @returns empty string if no service is found, or not Android
    */
-  getAssistantService(): { packageName: string };
+  getAssistantService(): {
+    /** e.g. "com.google.android.googlequicksearchbox" or "com.samsung.android.bixby.agent" */
+    packageName: string;
+  };
   /**
    * Whether the on-device speech recognition is available on the device.
    */
@@ -536,6 +630,13 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    * This mostly applies to Android devices, to check if it's greater than Android 13.
    */
   supportsRecording(): boolean;
+  /**
+   * Whether on-device speech recognition is available.
+   *
+   * If this method returns false, `start()` will fail and emit an error event with the code `service-not-allowed` or `language-not-supported`.
+   */
+  isRecognitionAvailable(): boolean;
+
   /**
    * Downloads the offline model for the specified locale.
    * Note: this is only supported on Android 13 and above.

@@ -1,4 +1,5 @@
 import type { Subscription } from "expo-modules-core";
+
 // Import the native module. On web, it will be resolved to ExpoSpeechRecognition.web.ts
 // and on native platforms to ExpoSpeechRecognition.ts
 import {
@@ -160,12 +161,12 @@ type SpeechListener<K extends keyof SpeechRecognitionEventMap> = (
 
 /** A compatibility wrapper that implements the web SpeechRecognition API for React Native. */
 export class ExpoWebSpeechRecognition implements SpeechRecognition {
-  lang: string = "en-US";
+  lang = "en-US";
   grammars: SpeechGrammarList = new ExpoWebSpeechGrammarList();
-  maxAlternatives: number = 1;
-  continuous: boolean = false;
+  maxAlternatives = 1;
+  continuous = false;
 
-  #interimResults: boolean = false;
+  #interimResults = false;
 
   get interimResults(): boolean {
     return this.#interimResults;
@@ -209,7 +210,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   androidRecognitionServicePackage: ExpoSpeechRecognitionOptions["androidRecognitionServicePackage"];
 
   // keyed by listener function
-  #subscriptionMap: Map<Function, Subscription[]> = new Map();
+  #subscriptionMap: Map<SpeechListener<any>, Subscription[]> = new Map();
 
   start() {
     ExpoSpeechRecognitionModule.requestPermissionsAsync().then(() => {
@@ -353,10 +354,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
 
   addEventListener<K extends keyof SpeechRecognitionEventMap>(
     type: K,
-    listener: (
-      this: SpeechRecognition,
-      ev: SpeechRecognitionEventMap[K],
-    ) => any,
+    listener: SpeechListener<K>,
     options?: boolean | AddEventListenerOptions,
   ): void {
     const once = typeof options === "object" && options.once;
@@ -367,9 +365,9 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
       ? (((ev) => {
           listener.call(this, ev);
           // remove the listeners from the map
-          this.#subscriptionMap.get(listener)?.forEach((sub) => {
+          for (const sub of this.#subscriptionMap.get(listener) ?? []) {
             sub.remove();
-          });
+          }
           this.#subscriptionMap.delete(listener);
         }) as SpeechListener<K>)
       : listener;
@@ -442,8 +440,8 @@ export class ExpoWebSpeechGrammarList implements SpeechGrammarList {
 }
 
 export class ExpoWebSpeechGrammar implements SpeechGrammar {
-  src: string = "";
-  weight: number = 1;
+  src = "";
+  weight = 1;
 
   constructor(src: string, weight?: number) {
     this.src = src;

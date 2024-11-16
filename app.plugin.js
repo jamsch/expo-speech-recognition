@@ -1,3 +1,4 @@
+// @ts-check
 const {
   withAndroidManifest,
   AndroidConfig,
@@ -6,7 +7,7 @@ const {
 } = require("expo/config-plugins");
 
 /**
- * @type {import("expo/config-plugins").ConfigPlugin<{ packages: string[] }>}
+ * @type {import("expo/config-plugins").ConfigPlugin<{ packages?: string[] }>}
  */
 const withAndroidPackageVisibilityFiltering = (config, { packages = [] }) => {
   return withAndroidManifest(config, (config) => {
@@ -35,22 +36,27 @@ const withAndroidPackageVisibilityFiltering = (config, { packages = [] }) => {
           </intent>
       </queries>
        */
-    allPackages.forEach((pkg) => {
+
+    for (const pkg of allPackages) {
       if (
         !config.modResults.manifest.queries.some(
           (query) => query.package?.[0]?.$?.["android:name"] === pkg,
         )
       ) {
         config.modResults.manifest.queries.push({
-          package: { $: { "android:name": pkg } },
-          intent: {
-            action: {
-              $: { "android:name": "android.speech.RecognitionService" },
+          package: [{ $: { "android:name": pkg } }],
+          intent: [
+            {
+              action: [
+                {
+                  $: { "android:name": "android.speech.RecognitionService" },
+                },
+              ],
             },
-          },
+          ],
         });
       }
-    });
+    }
 
     return config;
   });
@@ -61,7 +67,7 @@ const withAndroidPackageVisibilityFiltering = (config, { packages = [] }) => {
  * microphonePermission?: string;
  * speechRecognitionPermission?: string;
  * androidSpeechServicePackages?: string[];
- * }>}
+ * }|undefined>}
  */
 const withExpoSpeechRecognition = (config, props) => {
   if (!config.ios) {
@@ -73,12 +79,12 @@ const withExpoSpeechRecognition = (config, props) => {
   }
 
   config.ios.infoPlist.NSSpeechRecognitionUsageDescription =
-    props.speechRecognitionPermission ||
+    props?.speechRecognitionPermission ||
     config.ios.infoPlist.NSSpeechRecognitionUsageDescription ||
     "Allow $(PRODUCT_NAME) to use speech recognition.";
 
   config.ios.infoPlist.NSMicrophoneUsageDescription =
-    props.microphonePermission ||
+    props?.microphonePermission ||
     config.ios.infoPlist.NSMicrophoneUsageDescription ||
     "Allow $(PRODUCT_NAME) to use the microphone.";
 
@@ -92,7 +98,7 @@ const withExpoSpeechRecognition = (config, props) => {
     [
       withAndroidPackageVisibilityFiltering,
       {
-        packages: props.androidSpeechServicePackages,
+        packages: props?.androidSpeechServicePackages,
       },
     ],
   ]);

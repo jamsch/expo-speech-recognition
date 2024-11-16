@@ -26,7 +26,7 @@ language-not-supported
 The user agent does not support the language specified in the value of lang attribute of the SpeechRecognition object. The set of supported languages is browser-dependent, and from frontend code there is no way to programmatically determine what languages a user's browser supports for speech recognition.
 */
 
-internal class NilRecognizerException: Exception {
+internal final class NilRecognizerException: Exception {
   override var code: String {
     "audio-capture"
   }
@@ -36,7 +36,7 @@ internal class NilRecognizerException: Exception {
   }
 }
 
-internal class PermissionException: Exception {
+internal final class PermissionException: Exception {
   override var code: String {
     "not-allowed"
   }
@@ -45,7 +45,7 @@ internal class PermissionException: Exception {
   }
 }
 
-internal class NotAuthorizedException: Exception {
+internal final class NotAuthorizedException: Exception {
   override var code: String {
     "not-allowed"
   }
@@ -55,7 +55,7 @@ internal class NotAuthorizedException: Exception {
   }
 }
 
-internal class NotPermittedToRecordException: Exception {
+internal final class NotPermittedToRecordException: Exception {
   override var code: String {
     "not-allowed"
   }
@@ -64,7 +64,7 @@ internal class NotPermittedToRecordException: Exception {
   }
 }
 
-internal class InvalidAudioModeException: GenericException<String> {
+internal final class InvalidAudioModeException: GenericException<String> {
   override var code: String {
     "audio-capture"
   }
@@ -73,7 +73,7 @@ internal class InvalidAudioModeException: GenericException<String> {
   }
 }
 
-internal class RecognizerUnavilableException: Exception {
+internal final class RecognizerUnavilableException: Exception {
   override var code: String {
     "service-not-allowed"
   }
