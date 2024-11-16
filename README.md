@@ -142,7 +142,7 @@ function App() {
     setTranscript(event.results[0]?.transcript);
   });
   useSpeechRecognitionEvent("error", (event) => {
-    console.log("error code:", event.error, "error messsage:", event.message);
+    console.log("error code:", event.error, "error message:", event.message);
   });
 
   const handleStart = async () => {
@@ -232,7 +232,7 @@ const resultListener = addSpeechRecognitionListener("result", (event) => {
 });
 
 const errorListener = addSpeechRecognitionListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
+  console.log("error code:", event.error, "error message:", event.message);
 });
 
 // Start speech recognition
@@ -352,12 +352,12 @@ import {
 } from "expo-speech-recognition";
 
 addSpeechRecognitionListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
+  console.log("error code:", event.error, "error message:", event.message);
 });
 
 // or through the `useSpeechRecognitionEvent` hook
 useSpeechRecognitionEvent("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
+  console.log("error code:", event.error, "error message:", event.message);
 });
 
 // or through the `ExpoSpeechRecognitionErrorCode` type
@@ -649,7 +649,7 @@ const handleResult = (event: SpeechRecognitionEvent) => {
 recognition.registerEventListener("result", handleResult);
 
 recognition.registerEventListener("error", (event) => {
-  console.log("error code:", event.error, "error messsage:", event.message);
+  console.log("error code:", event.error, "error message:", event.message);
 });
 
 recognition.registerEventListener("end", (event) => console.log("ended!"));
