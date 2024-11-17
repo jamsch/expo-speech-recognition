@@ -1,5 +1,15 @@
 # expo-speech-recognition
 
+## 1.0.0
+
+### Major Changes
+
+- 8a3f597: Support for SDK 52.
+
+  ### Breaking Changes:
+
+  - Removed `ExpoSpeechRecognitionModuleEmitter`. Use `ExpoSpeechRecognitionModule.addListener` instead.
+
 ## 0.2.25
 
 ### Patch Changes
