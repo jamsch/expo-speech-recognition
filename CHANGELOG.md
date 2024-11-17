@@ -6,9 +6,9 @@
 
 - 8a3f597: Support for SDK 52.
 
-  ### Breaking Changes:
+### Breaking Changes:
 
-  - Removed `ExpoSpeechRecognitionModuleEmitter`. Use `ExpoSpeechRecognitionModule.addListener` instead.
+- Removed `ExpoSpeechRecognitionModuleEmitter`. Use `ExpoSpeechRecognitionModule.addListener` instead.
 
 ## 0.2.25
 
