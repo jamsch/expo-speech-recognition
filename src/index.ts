@@ -1,5 +1,4 @@
 import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
-import type { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitionModule.types";
 
 // Export the SpeechRecognition APIs
 export {
