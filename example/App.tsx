@@ -812,6 +812,50 @@ function OtherSettings(props: {
           }}
         />
         <BigButton
+          title="Get microphone permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Request microphone permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Get speech recognizer permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Request speech recognizer permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
           title="Get speech recognizer state"
           color="#7C90DB"
           onPress={() => {
