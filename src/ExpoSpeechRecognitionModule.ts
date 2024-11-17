@@ -6,3 +6,9 @@ import type { ExpoSpeechRecognitionModuleType } from "./ExpoSpeechRecognitionMod
 // the bridge module (from NativeModulesProxy) if the remote debugger is on.
 export const ExpoSpeechRecognitionModule =
   requireNativeModule<ExpoSpeechRecognitionModuleType>("ExpoSpeechRecognition");
+
+const stop = ExpoSpeechRecognitionModule.stop;
+const abort = ExpoSpeechRecognitionModule.abort;
+
+ExpoSpeechRecognitionModule.abort = () => abort();
+ExpoSpeechRecognitionModule.stop = () => stop();
