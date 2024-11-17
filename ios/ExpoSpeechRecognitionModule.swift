@@ -196,9 +196,26 @@ public class ExpoSpeechRecognitionModule: Module {
             }
 
             self.speechRecognizer = try await ExpoSpeechRecognizer(
-              locale: locale,
-              requiresOnDeviceRecognition: options.requiresOnDeviceRecognition
+              locale: locale
             )
+          }
+          
+          if !options.requiresOnDeviceRecognition {
+            guard await SFSpeechRecognizer.hasAuthorizationToRecognize() else {
+              sendErrorAndStop(
+                error: "not-allowed",
+                message: RecognizerError.notAuthorizedToRecognize.message
+              )
+              return
+            }
+          }
+          
+          guard await AVAudioSession.sharedInstance().hasPermissionToRecord() else {
+            sendErrorAndStop(
+              error: "not-allowed",
+              message: RecognizerError.notPermittedToRecord.message
+            )
+            return
           }
 
           // Start recognition!
