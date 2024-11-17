@@ -104,26 +104,19 @@ public class ExpoSpeechRecognitionModule: Module {
       guard let permissionsManager = appContext?.permissions else {
         return
       }
-      permissionsManager.register([AudioRecordingRequester(), SpeechRecognizerRequester()])
+      permissionsManager.register([
+        EXSpeechRecognitionPermissionRequester(),
+        MicrophoneRequester(),
+        SpeechRecognizerRequester()
+      ])
     }
 
-    AsyncFunction("requestAudioRecordingPermissionsAsync") { (promise: Promise) in
+    AsyncFunction("requestPermissionsAsync") { (promise: Promise) in
       guard let permissions = appContext?.permissions else {
         throw Exceptions.PermissionsModuleNotFound()
       }
       permissions.askForPermission(
-        usingRequesterClass: AudioRecordingRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
-
-    AsyncFunction("requestSpeechRecognizerPermissionsAsync") { (promise: Promise) in
-      guard let permissions = appContext?.permissions else {
-        throw Exceptions.PermissionsModuleNotFound()
-      }
-      permissions.askForPermission(
-        usingRequesterClass: SpeechRecognizerRequester.self,
+        usingRequesterClass: EXSpeechRecognitionPermissionRequester.self,
         resolve: promise.resolver,
         reject: promise.legacyRejecter
       )
@@ -135,6 +128,38 @@ public class ExpoSpeechRecognitionModule: Module {
       }
       permissions.getPermissionUsingRequesterClass(
         EXSpeechRecognitionPermissionRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+
+    AsyncFunction("getMicrophonePermissionsAsync") { (promise: Promise) in
+      appContext?.permissions?.getPermissionUsingRequesterClass(
+        MicrophoneRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+
+    AsyncFunction("requestMicrophonePermissionsAsync") { (promise: Promise) in
+      appContext?.permissions?.askForPermission(
+        usingRequesterClass: MicrophoneRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+
+    AsyncFunction("getSpeechRecognizerPermissionsAsync") { (promise: Promise) in
+      appContext?.permissions?.getPermissionUsingRequesterClass(
+        SpeechRecognizerRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+
+    AsyncFunction("requestSpeechRecognizerPermissionsAsync") { (promise: Promise) in
+      appContext?.permissions?.askForPermission(
+        usingRequesterClass: SpeechRecognizerRequester.self,
         resolve: promise.resolver,
         reject: promise.legacyRejecter
       )

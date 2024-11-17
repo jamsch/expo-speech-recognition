@@ -62,6 +62,18 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       status: "denied",
     } as PermissionResponse);
   },
+  getMicrophonePermissionsAsync: () => {
+    return Promise.reject(Error("Not implemented"));
+  },
+  requestMicrophonePermissionsAsync: () => {
+    return Promise.reject(Error("Not implemented"));
+  },
+  getSpeechRecognizerPermissionsAsync: () => {
+    return Promise.reject(Error("Not implemented"));
+  },
+  requestSpeechRecognizerPermissionsAsync: () => {
+    return Promise.reject(Error("Not implemented"));
+  },
   getSupportedLocales: async () => {
     console.warn(
       "getSupportedLocales is not supported on web. Returning an empty array.",

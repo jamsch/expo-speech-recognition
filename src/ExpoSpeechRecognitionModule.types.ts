@@ -562,17 +562,15 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    */
   requestPermissionsAsync(): Promise<PermissionResponse>;
   /**
-   * Presents a dialog to the user to request permissions for using the microphone.
-   */
-  requestAudioRecordingPermissionsAsync(): Promise<PermissionResponse>;
-  /**
-   * Presents a dialog to the user to request permissions for using speech recognition.
-   */
-  requestSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
-  /**
    * Returns the current permission status for the microphone and speech recognition.
    */
   getPermissionsAsync(): Promise<PermissionResponse>;
+
+  getMicrophonePermissionsAsync(): Promise<PermissionResponse>;
+  requestMicrophonePermissionsAsync(): Promise<PermissionResponse>;
+  getSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
+  requestSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
+
   /**
    * Returns an array of locales supported by the speech recognizer.
    *

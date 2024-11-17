@@ -1,8 +1,8 @@
 import ExpoModulesCore
 
-public class AudioRecordingRequester: NSObject, EXPermissionsRequester {
+public class MicrophoneRequester: NSObject, EXPermissionsRequester {
   static public func permissionType() -> String {
-    return "audioRecording"
+    return "microphone"
   }
 
   public func requestPermissions(

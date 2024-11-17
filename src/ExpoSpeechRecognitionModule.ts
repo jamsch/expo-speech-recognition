@@ -16,20 +16,18 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   // Avoid any function bindings when calling the native module
   stop: () => ExpoSpeechRecognitionNativeModule.stop(),
   abort: () => ExpoSpeechRecognitionNativeModule.abort(),
-  requestPermissionsAsync: async () => {
-    const microphonePermissions =
-      await ExpoSpeechRecognitionNativeModule.requestAudioRecordingPermissionsAsync();
-    if (microphonePermissions.status === "granted") {
-      return await ExpoSpeechRecognitionNativeModule.requestSpeechRecognizerPermissionsAsync();
-    }
-    return microphonePermissions;
-  },
-  requestAudioRecordingPermissionsAsync: () =>
-    ExpoSpeechRecognitionNativeModule.requestAudioRecordingPermissionsAsync(),
-  requestSpeechRecognizerPermissionsAsync: () =>
-    ExpoSpeechRecognitionNativeModule.requestSpeechRecognizerPermissionsAsync(),
+  requestPermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.requestPermissionsAsync(),
   getPermissionsAsync: () =>
     ExpoSpeechRecognitionNativeModule.getPermissionsAsync(),
+  getMicrophonePermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.getMicrophonePermissionsAsync(),
+  requestMicrophonePermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.requestMicrophonePermissionsAsync(),
+  getSpeechRecognizerPermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.getSpeechRecognizerPermissionsAsync(),
+  requestSpeechRecognizerPermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.requestSpeechRecognizerPermissionsAsync(),
   getStateAsync: () => ExpoSpeechRecognitionNativeModule.getStateAsync(),
   getAssistantService: () =>
     ExpoSpeechRecognitionNativeModule.getAssistantService(),
