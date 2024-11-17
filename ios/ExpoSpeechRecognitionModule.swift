@@ -104,15 +104,26 @@ public class ExpoSpeechRecognitionModule: Module {
       guard let permissionsManager = appContext?.permissions else {
         return
       }
-      permissionsManager.register([EXSpeechRecognitionPermissionRequester()])
+      permissionsManager.register([AudioRecordingRequester(), SpeechRecognizerRequester()])
     }
 
-    AsyncFunction("requestPermissionsAsync") { (promise: Promise) in
+    AsyncFunction("requestAudioRecordingPermissionsAsync") { (promise: Promise) in
       guard let permissions = appContext?.permissions else {
         throw Exceptions.PermissionsModuleNotFound()
       }
       permissions.askForPermission(
-        usingRequesterClass: EXSpeechRecognitionPermissionRequester.self,
+        usingRequesterClass: AudioRecordingRequester.self,
+        resolve: promise.resolver,
+        reject: promise.legacyRejecter
+      )
+    }
+
+    AsyncFunction("requestSpeechRecognizerPermissionsAsync") { (promise: Promise) in
+      guard let permissions = appContext?.permissions else {
+        throw Exceptions.PermissionsModuleNotFound()
+      }
+      permissions.askForPermission(
+        usingRequesterClass: SpeechRecognizerRequester.self,
         resolve: promise.resolver,
         reject: promise.legacyRejecter
       )

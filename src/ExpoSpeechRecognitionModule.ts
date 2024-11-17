@@ -16,8 +16,18 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
   // Avoid any function bindings when calling the native module
   stop: () => ExpoSpeechRecognitionNativeModule.stop(),
   abort: () => ExpoSpeechRecognitionNativeModule.abort(),
-  requestPermissionsAsync: () =>
-    ExpoSpeechRecognitionNativeModule.requestPermissionsAsync(),
+  requestPermissionsAsync: async () => {
+    const microphonePermissions =
+      await ExpoSpeechRecognitionNativeModule.requestAudioRecordingPermissionsAsync();
+    if (microphonePermissions.status === "granted") {
+      return await ExpoSpeechRecognitionNativeModule.requestSpeechRecognizerPermissionsAsync();
+    }
+    return microphonePermissions;
+  },
+  requestAudioRecordingPermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.requestAudioRecordingPermissionsAsync(),
+  requestSpeechRecognizerPermissionsAsync: () =>
+    ExpoSpeechRecognitionNativeModule.requestSpeechRecognizerPermissionsAsync(),
   getPermissionsAsync: () =>
     ExpoSpeechRecognitionNativeModule.getPermissionsAsync(),
   getStateAsync: () => ExpoSpeechRecognitionNativeModule.getStateAsync(),

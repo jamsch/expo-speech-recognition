@@ -1,35 +1,27 @@
-import AppTrackingTransparency
 import ExpoModulesCore
 import Speech
 
-public class EXSpeechRecognitionPermissionRequester: NSObject, EXPermissionsRequester {
+public class SpeechRecognizerRequester: NSObject, EXPermissionsRequester {
   static public func permissionType() -> String {
-    return "speechrecognition"
+    return "speechRecognizer"
   }
 
   public func requestPermissions(
     resolver resolve: @escaping EXPromiseResolveBlock, rejecter reject: EXPromiseRejectBlock
   ) {
     SFSpeechRecognizer.requestAuthorization { status in
-      if status != .authorized {
-        resolve(self.getPermissions())
-        return
-      }
-      AVAudioSession.sharedInstance().requestRecordPermission { authorized in
-        resolve(self.getPermissions())
-      }
+      resolve(self.getPermissions())
     }
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
     var status: EXPermissionStatus
 
-    let recordPermission = AVAudioSession.sharedInstance().recordPermission
     let speechPermission = SFSpeechRecognizer.authorizationStatus()
 
-    if speechPermission == .authorized && recordPermission == .granted {
+    if speechPermission == .authorized {
       status = EXPermissionStatusGranted
-    } else if speechPermission == .denied || recordPermission == .denied {
+    } else if speechPermission == .denied {
       status = EXPermissionStatusDenied
     } else {
       status = EXPermissionStatusUndetermined
