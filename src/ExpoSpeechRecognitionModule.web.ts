@@ -1,15 +1,118 @@
-import type { PermissionResponse } from "expo-modules-core";
+import type { EventSubscription, PermissionResponse } from "expo-modules-core";
+import { registerWebModule, NativeModule } from "expo";
 import type {
-  ExpoSpeechRecognitionModuleType,
   ExpoSpeechRecognitionNativeEventMap,
+  ExpoSpeechRecognitionNativeEvents,
+  ExpoSpeechRecognitionOptions,
 } from "./ExpoSpeechRecognitionModule.types";
 
 let _speechRecognitionRef: SpeechRecognition | null = null;
 
+type NativeEventListener = (
+  event: SpeechRecognitionEventMap[keyof SpeechRecognitionEventMap],
+) => void;
+
 // It loads the native module object from the JSI or falls back to
 // the bridge module (from NativeModulesProxy) if the remote debugger is on.
-export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
-  start: (options) => {
+class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionNativeEvents> {
+  _clientListeners: Map<
+    // Original listener
+    ExpoSpeechRecognitionNativeEvents[keyof ExpoSpeechRecognitionNativeEvents],
+    // Native listener
+    NativeEventListener
+  > = new Map();
+
+  _nativeListeners: Map<string, Set<NativeEventListener>> = new Map();
+
+  // Convert the web event to the native event
+  bindEventListener = <T extends keyof SpeechRecognitionEventMap>(
+    eventName: T,
+    ev: SpeechRecognitionEventMap[T],
+  ) => {
+    const eventPayload = webToNativeEventMap[eventName]?.(ev);
+
+    this.emit(
+      eventName,
+      // @ts-expect-error payload typings are incorrect
+      eventPayload,
+    );
+  };
+
+  addListener<EventName extends keyof ExpoSpeechRecognitionNativeEventMap>(
+    eventName: EventName,
+    listener: ExpoSpeechRecognitionNativeEvents[EventName],
+  ): EventSubscription {
+    // Convert the web event to the native event
+
+    // @ts-expect-error Not all events are covered here
+    const nativeListener = (ev: SpeechRecognitionEventMap[EventName]) => {
+      const handler =
+        eventName in webToNativeEventMap
+          ? webToNativeEventMap[eventName as keyof SpeechRecognitionEventMap]
+          : null;
+
+      // @ts-expect-error payload typings are incorrect
+      const eventPayload = handler?.(ev);
+
+      // @ts-expect-error
+      listener(eventPayload);
+    };
+
+    // @ts-expect-error
+    _speechRecognitionRef?.addEventListener(eventName, nativeListener);
+    if (!this._nativeListeners.has(eventName)) {
+      this._nativeListeners.set(eventName, new Set());
+    }
+    // Add the original listener to the enhanced listeners
+    // @ts-expect-error
+    this._nativeListeners.get(eventName)?.add(nativeListener);
+    // Map the original listener to the enhanced listener
+    // @ts-expect-error
+    this._clientListeners.set(listener, nativeListener);
+
+    const handle = super.addListener(eventName, listener);
+
+    return {
+      remove: () => {
+        // @ts-expect-error
+        this._nativeListeners.get(eventName)?.delete(nativeListener);
+        this._clientListeners.delete(listener);
+        handle.remove();
+      },
+    };
+  }
+
+  removeAllListeners(
+    eventName: keyof ExpoSpeechRecognitionNativeEventMap,
+  ): void {
+    // Go through _listeners and remove all listeners for this event
+    if (this._nativeListeners.has(eventName)) {
+      const nativeListeners = this._nativeListeners.get(eventName);
+      if (!nativeListeners) {
+        return;
+      }
+
+      // Remove the enhanced listeners
+      for (const [listener, nativeListener] of this._clientListeners) {
+        // if nativeListener in listeners, remove it
+        if (nativeListeners.has(nativeListener)) {
+          // Remove the enhanced listener
+          this.removeListener(eventName, listener);
+        }
+      }
+
+      // ...and the native listeners
+      for (const listener of nativeListeners) {
+        // @ts-expect-error
+        this.removeListener(eventName, listener);
+      }
+
+      // Clean up
+      this._nativeListeners.delete(eventName);
+    }
+  }
+
+  start(options: ExpoSpeechRecognitionOptions) {
     const SpeechRecognitionClass =
       typeof webkitSpeechRecognition !== "undefined"
         ? webkitSpeechRecognition
@@ -22,36 +125,42 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
 
     // Re-subscribe to events so that we don't lose them
     // This covers the case where the user has already subscribed to an event prior to calling `start()`
-    ExpoSpeechRecognitionModuleEmitter._nativeListeners.forEach(
-      (listeners, eventName) => {
-        for (const listener of listeners) {
-          // May already be subscribed
-          _speechRecognitionRef?.removeEventListener(eventName, listener);
-          _speechRecognitionRef?.addEventListener(eventName, listener);
-        }
-      },
-    );
+    this._nativeListeners.forEach((listeners, eventName) => {
+      for (const listener of listeners) {
+        // May already be subscribed
+        _speechRecognitionRef?.removeEventListener(eventName, listener);
+        _speechRecognitionRef?.addEventListener(eventName, listener);
+      }
+    });
 
     // Start the speech recognition!
     _speechRecognitionRef.start();
-  },
-  getStateAsync: () => {
+  }
+
+  getStateAsync() {
     console.warn(
       "getStateAsync is not supported on web. Returning 'inactive'.",
     );
     return Promise.resolve("inactive");
-  },
-  stop: () => _speechRecognitionRef?.stop(),
-  abort: () => _speechRecognitionRef?.abort(),
-  requestPermissionsAsync: () => {
+  }
+
+  stop() {
+    _speechRecognitionRef?.stop();
+  }
+  abort() {
+    _speechRecognitionRef?.abort();
+  }
+
+  requestPermissionsAsync() {
     return Promise.resolve({
       granted: true,
       canAskAgain: false,
       expires: "never",
       status: "granted",
     } as PermissionResponse);
-  },
-  getPermissionsAsync: () => {
+  }
+
+  getPermissionsAsync() {
     console.warn(
       "getPermissionsAsync is not supported on web. Returning a denied permission response.",
     );
@@ -61,8 +170,9 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       expires: "never",
       status: "denied",
     } as PermissionResponse);
-  },
-  getSupportedLocales: async () => {
+  }
+
+  async getSupportedLocales() {
     console.warn(
       "getSupportedLocales is not supported on web. Returning an empty array.",
     );
@@ -70,37 +180,37 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       locales: [] as string[],
       installedLocales: [] as string[],
     };
-  },
-  addListener: () => {
-    console.warn(
-      "addListener is not supported. Use ExpoSpeechRecognitionModuleEmitter(eventName, listener) instead.",
-    );
-  },
-  removeListeners: () => {
-    console.warn(
-      "removeListeners is not supported. Use ExpoSpeechRecognitionModuleEmitter.removeListener(eventName, listener) instead.",
-    );
-  },
-  getSpeechRecognitionServices: () => {
+  }
+
+  // addListener() {}
+
+  // removeListeners() {}
+
+  getSpeechRecognitionServices() {
     return [] as string[];
-  },
-  getDefaultRecognitionService: () => {
+  }
+
+  getDefaultRecognitionService() {
     return {
       packageName: "",
     };
-  },
-  getAssistantService: () => {
+  }
+
+  getAssistantService() {
     return {
       packageName: "",
     };
-  },
-  supportsOnDeviceRecognition: () => {
+  }
+
+  supportsOnDeviceRecognition() {
     return false;
-  },
-  supportsRecording: () => {
+  }
+
+  supportsRecording() {
     return false;
-  },
-  androidTriggerOfflineModelDownload: () => {
+  }
+
+  androidTriggerOfflineModelDownload() {
     console.warn(
       "androidTriggerOfflineModelDownload is not supported on web. Returning false.",
     );
@@ -108,11 +218,13 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       status: "opened_dialog",
       message: "Offline model download is not supported on web.",
     });
-  },
-  setCategoryIOS: () => {
+  }
+
+  setCategoryIOS() {
     console.warn("setCategoryIOS is not supported on web.");
-  },
-  getAudioSessionCategoryAndOptionsIOS: () => {
+  }
+
+  getAudioSessionCategoryAndOptionsIOS() {
     console.warn(
       "getAudioSessionCategoryAndOptionsIOS is not supported on web.",
     );
@@ -121,18 +233,20 @@ export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
       categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
       mode: "measurement",
     };
-  },
-  setAudioSessionActiveIOS: () => {
+  }
+
+  setAudioSessionActiveIOS() {
     console.warn("setAudioSessionActiveIOS is not supported on web.");
-  },
-  isRecognitionAvailable: () => {
+  }
+
+  isRecognitionAvailable() {
     const hasSpeechRecognitionAPI =
       typeof webkitSpeechRecognition !== "undefined" ||
       typeof SpeechRecognition !== "undefined";
 
     return hasSpeechRecognitionAPI;
-  },
-};
+  }
+}
 
 /**
  * Convert the web SpeechRecognitionEventMap to the native event map for compatibility
@@ -172,93 +286,6 @@ const webToNativeEventMap: {
   soundend: (ev) => null,
 };
 
-export const ExpoSpeechRecognitionModuleEmitter = {
-  _nativeListeners: new Map() as Map<string, Set<(event: any) => void>>,
-  _clientListeners: new Map() as Map<
-    // Original listener
-    (event: any) => void,
-    // Native listener
-    (event: any) => void
-  >,
-  addListener<T extends keyof SpeechRecognitionEventMap>(
-    eventName: T,
-    listener: (ev: ExpoSpeechRecognitionNativeEventMap[T]) => void,
-  ) {
-    // Convert the web event to the native event
-    const nativeListener = (ev: SpeechRecognitionEventMap[T]) => {
-      const eventPayload = webToNativeEventMap[eventName]?.(ev);
-      listener(eventPayload);
-    };
-
-    _speechRecognitionRef?.addEventListener(eventName, nativeListener);
-    if (!ExpoSpeechRecognitionModuleEmitter._nativeListeners.has(eventName)) {
-      ExpoSpeechRecognitionModuleEmitter._nativeListeners.set(
-        eventName,
-        new Set(),
-      );
-    }
-    // Add the original listener to the enhanced listeners
-    ExpoSpeechRecognitionModuleEmitter._nativeListeners
-      .get(eventName)
-      ?.add(nativeListener);
-
-    // Map the original listener to the enhanced listener
-    ExpoSpeechRecognitionModuleEmitter._clientListeners.set(
-      listener,
-      nativeListener,
-    );
-
-    return {
-      remove: () => {
-        _speechRecognitionRef?.removeEventListener(eventName, nativeListener);
-        ExpoSpeechRecognitionModuleEmitter._nativeListeners
-          .get(eventName)
-          ?.delete(nativeListener);
-        ExpoSpeechRecognitionModuleEmitter._clientListeners.delete(listener);
-      },
-    };
-  },
-  removeListener: (eventName: string, listener: (event: any) => void) => {
-    const resolvedListener =
-      ExpoSpeechRecognitionModuleEmitter._clientListeners.get(listener) ??
-      listener;
-
-    _speechRecognitionRef?.removeEventListener(eventName, resolvedListener);
-    if (ExpoSpeechRecognitionModuleEmitter._nativeListeners.has(eventName)) {
-      ExpoSpeechRecognitionModuleEmitter._nativeListeners
-        .get(eventName)
-        ?.delete(listener);
-    }
-    ExpoSpeechRecognitionModuleEmitter._clientListeners.delete(listener);
-  },
-  removeAllListeners: (eventName: string) => {
-    // Go through _listeners and remove all listeners for this event
-    if (ExpoSpeechRecognitionModuleEmitter._nativeListeners.has(eventName)) {
-      const nativeListeners =
-        ExpoSpeechRecognitionModuleEmitter._nativeListeners.get(eventName);
-      if (!nativeListeners) {
-        return;
-      }
-
-      // Remove the enhanced listeners
-      for (const [
-        listener,
-        nativeListener,
-      ] of ExpoSpeechRecognitionModuleEmitter._clientListeners) {
-        // if nativeListener in listeners, remove it
-        if (nativeListeners.has(nativeListener)) {
-          // Remove the enhanced listener
-          ExpoSpeechRecognitionModuleEmitter._clientListeners.delete(listener);
-        }
-      }
-
-      // Remove the native listeners
-      for (const listener of nativeListeners) {
-        ExpoSpeechRecognitionModuleEmitter.removeListener(eventName, listener);
-      }
-
-      // Clean up
-      ExpoSpeechRecognitionModuleEmitter._nativeListeners.delete(eventName);
-    }
-  },
-};
+export const ExpoSpeechRecognitionModule = registerWebModule(
+  ExpoSpeechRecognitionModuleWeb,
+);
