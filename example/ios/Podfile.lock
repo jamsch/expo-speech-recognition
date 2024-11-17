@@ -39,7 +39,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - ExpoSpeechRecognition (0.2.23):
+  - ExpoSpeechRecognition (0.2.25):
     - ExpoModulesCore
   - EXSplashScreen (0.27.6):
     - DoubleConversion
@@ -1467,7 +1467,7 @@ SPEC CHECKSUMS:
   ExpoFont: 00756e6c796d8f7ee8d211e29c8b619e75cbf238
   ExpoKeepAwake: 3b8815d9dd1d419ee474df004021c69fdd316d08
   ExpoModulesCore: 260ee156852434da26e782bbb993093186c5aade
-  ExpoSpeechRecognition: 078201eb1fbae87409cfecba6176edc262f75121
+  ExpoSpeechRecognition: f61156226f963808aeadcde6d463133e162f138a
   EXSplashScreen: 10b116117c9bb6a272ba782706f21dadc23f44d9
   FBLazyVector: ac12dc084d1c8ec4cc4d7b3cf1b0ebda6dab85af
   fmt: 4c2741a687cc09f0634a2e2c72a838b99f1ff120
@@ -1522,7 +1522,7 @@ SPEC CHECKSUMS:
   ReactCommon: f7da14a8827b72704169a48c929bcde802698361
   RNReanimated: 58a768c2c17a5589ef732fa6bd8d7ed0eb6df1c1
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
-  Yoga: 2246eea72aaf1b816a68a35e6e4b74563653ae09
+  Yoga: 950bbfd7e6f04790fdb51149ed51df41f329fcc8
 
 PODFILE CHECKSUM: ceec9518dac8a3c13e167f58439e04a010b51688
 
