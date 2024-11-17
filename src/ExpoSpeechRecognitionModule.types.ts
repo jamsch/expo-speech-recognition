@@ -559,18 +559,38 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
    *
    * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
    * the only way that the permissions can be changed is by the user themselves using the device settings app.
+   *
+   * @deprecated Use `requestMicrophonePermissionsAsync` and `requestSpeechRecognizerPermissionsAsync` instead.
    */
   requestPermissionsAsync(): Promise<PermissionResponse>;
   /**
    * Returns the current permission status for the microphone and speech recognition.
+   *
+   * @deprecated Use `getMicrophonePermissionsAsync` and `getSpeechRecognizerPermissionsAsync` instead.
    */
   getPermissionsAsync(): Promise<PermissionResponse>;
-
+  /**
+   * Returns the current permission status for the microphone.
+   */
   getMicrophonePermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * Presents a dialog to the user to request permissions for using the microphone.
+   *
+   * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
+   * the only way that the permissions can be changed is by the user themselves using the device settings app.
+   */
   requestMicrophonePermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * Returns the current permission status for speech recognition.
+   */
   getSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * Presents a dialog to the user to request permissions for using speech recognition.
+   *
+   * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
+   * the only way that the permissions can be changed is by the user themselves using the device settings app.
+   */
   requestSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
-
   /**
    * Returns an array of locales supported by the speech recognizer.
    *
