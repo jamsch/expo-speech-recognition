@@ -1,11 +1,7 @@
-import type { Subscription } from "expo-modules-core";
-
 // Import the native module. On web, it will be resolved to ExpoSpeechRecognition.web.ts
 // and on native platforms to ExpoSpeechRecognition.ts
-import {
-  ExpoSpeechRecognitionModule,
-  ExpoSpeechRecognitionModuleEmitter,
-} from "./ExpoSpeechRecognitionModule";
+import type { EventSubscription } from "expo-modules-core";
+import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
 import type {
   ExpoSpeechRecognitionNativeEventMap,
   ExpoSpeechRecognitionOptions,
@@ -210,7 +206,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   androidRecognitionServicePackage: ExpoSpeechRecognitionOptions["androidRecognitionServicePackage"];
 
   // keyed by listener function
-  #subscriptionMap: Map<SpeechListener<any>, Subscription[]> = new Map();
+  #subscriptionMap: Map<SpeechListener<any>, EventSubscription[]> = new Map();
 
   start() {
     ExpoSpeechRecognitionModule.requestPermissionsAsync().then(() => {
@@ -381,8 +377,9 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
         wrappedListener as (this: SpeechRecognition, ev: Event) => unknown,
       );
 
-    const subscription = ExpoSpeechRecognitionModuleEmitter.addListener(
+    const subscription = ExpoSpeechRecognitionModule.addListener(
       enhancedEvent.eventName,
+      // @ts-expect-error
       enhancedEvent.nativeListener,
     );
 
