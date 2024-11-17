@@ -1,5 +1,5 @@
 import type { PermissionResponse } from "expo-modules-core";
-import type { NativeModule } from "react-native";
+import type { NativeModule } from "expo";
 
 import type {
   AudioEncodingAndroid,
@@ -541,7 +541,13 @@ export type AndroidIntentOptions = {
   EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: number;
 };
 
-export interface ExpoSpeechRecognitionModuleType extends NativeModule {
+export type ExpoSpeechRecognitionNativeEvents = {
+  [K in keyof ExpoSpeechRecognitionNativeEventMap]: (
+    event: ExpoSpeechRecognitionNativeEventMap[K],
+  ) => void;
+};
+
+export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSpeechRecognitionNativeEvents> {
   /**
    * Starts speech recognition.
    */
