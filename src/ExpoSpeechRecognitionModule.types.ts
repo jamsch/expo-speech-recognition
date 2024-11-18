@@ -563,16 +563,17 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
   /**
    * Presents a dialog to the user to request permissions for using speech recognition and the microphone.
    *
-   * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
-   * the only way that the permissions can be changed is by the user themselves using the device settings app.
+   * For Android, this will request RECORD_AUDIO permission.
    *
-   * @deprecated Use `requestMicrophonePermissionsAsync` and `requestSpeechRecognizerPermissionsAsync` instead.
+   * For iOS, this will request microphone and speech recognition permissions.
+   * Once a user has granted (or denied) permissions by responding to the original permission request dialog,
+   * the only way that the permissions can be changed is by the user themselves using the device settings app.
    */
   requestPermissionsAsync(): Promise<PermissionResponse>;
   /**
-   * Returns the current permission status for the microphone and speech recognition.
+   * Returns the current permission status for speech recognition and the microphone.
    *
-   * @deprecated Use `getMicrophonePermissionsAsync` and `getSpeechRecognizerPermissionsAsync` instead.
+   * You may also use `getMicrophonePermissionsAsync` and `getSpeechRecognizerPermissionsAsync` to get the permissions separately.
    */
   getPermissionsAsync(): Promise<PermissionResponse>;
   /**
