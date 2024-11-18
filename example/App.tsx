@@ -145,7 +145,7 @@ export default function App() {
       return;
     }
 
-    if (!settings.requiresOnDeviceRecognition) {
+    if (!settings.requiresOnDeviceRecognition && Platform.OS === "ios") {
       const speechRecognizerPermissions =
         await ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync();
       console.log("Speech recognizer permissions", speechRecognizerPermissions);
