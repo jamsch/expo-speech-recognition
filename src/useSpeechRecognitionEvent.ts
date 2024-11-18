@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
-import { ExpoSpeechRecognitionModuleEmitter } from "./ExpoSpeechRecognitionModule";
-import type { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitionModule.types";
+import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
+import type { ExpoSpeechRecognitionNativeEvents } from "./ExpoSpeechRecognitionModule.types";
+import { useEventListener } from "expo";
 
 /**
  * This hook allows you to listen to native events emitted by the `ExpoSpeechRecognitionModule`.
@@ -11,20 +11,12 @@ import type { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitio
  * @param listener The listener function to call when the event is emitted
  */
 export function useSpeechRecognitionEvent<
-  K extends keyof ExpoSpeechRecognitionNativeEventMap,
->(
-  eventName: K,
-  listener: (ev: ExpoSpeechRecognitionNativeEventMap[K]) => void,
-) {
-  const listenerRef = useRef(listener);
-  listenerRef.current = listener;
-
-  useEffect(() => {
-    const handler = listenerRef.current;
-    const subscription = ExpoSpeechRecognitionModuleEmitter.addListener(
-      eventName,
-      handler,
-    );
-    return subscription.remove;
-  }, [eventName]);
+  K extends keyof ExpoSpeechRecognitionNativeEvents,
+>(eventName: K, listener: ExpoSpeechRecognitionNativeEvents[K]) {
+  return useEventListener(
+    ExpoSpeechRecognitionModule,
+    eventName,
+    // @ts-expect-error
+    listener,
+  );
 }

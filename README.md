@@ -36,7 +36,6 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [requestPermissionsAsync()](#requestpermissionsasync-promisepermissionresponse)
   - [getPermissionsAsync()](#getpermissionsasync-promisepermissionresponse)
   - [getStateAsync()](#getstateasync-promisespeechrecognitionstate)
-  - [addSpeechRecognitionListener()](#addspeechrecognitionlistener)
   - [getSupportedLocales()](#getsupportedlocales)
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
   - [getDefaultRecognitionService()](#getdefaultrecognitionservice--packagename-string--android-only)
@@ -55,7 +54,12 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 
 ```
 npm install expo-speech-recognition
+
+# Or for older SDKs:
+npm install expo-speech-recognition@sdk-51
+npm install expo-speech-recognition@sdk-50
 ```
+
 
 2. Configure the config plugin.
 
@@ -168,7 +172,10 @@ function App() {
       {!recognizing ? (
         <Button title="Start" onPress={handleStart} />
       ) : (
-        <Button title="Stop" onPress={ExpoSpeechRecognitionModule.stop} />
+        <Button
+          title="Stop"
+          onPress={() => ExpoSpeechRecognitionModule.stop()}
+        />
       )}
 
       <ScrollView>
@@ -208,32 +215,35 @@ ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
 You can also use the `ExpoSpeechRecognitionModule` to use the native APIs directly. The listener events are similar to the Web Speech API.
 
 ```ts
-import {
-  ExpoSpeechRecognitionModule,
-  addSpeechRecognitionListener,
-} from "expo-speech-recognition";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 // Register event listeners
-const startListener = addSpeechRecognitionListener("start", () => {
+const startListener = ExpoSpeechRecognitionModule.addListener("start", () => {
   console.log("Speech recognition started");
 });
 
 // and remove the listener when you're done:
 startListener.remove();
 
-const endListener = addSpeechRecognitionListener("end", () => {
+const endListener = ExpoSpeechRecognitionModule.addListener("end", () => {
   console.log("Speech recognition ended");
 });
 
-const resultListener = addSpeechRecognitionListener("result", (event) => {
-  // Note: this is not the same as the `result` event listener on the web speech API
-  // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
-  console.log("results:", event.results, "final:", event.isFinal);
-});
+const resultListener = ExpoSpeechRecognitionModule.addListener(
+  "result",
+  (event) => {
+    // Note: this is not the same as the `result` event listener on the web speech API
+    // event.results is an array of results (e.g. `[{ transcript: "hello", confidence: 0.5, segments: [] }]`)
+    console.log("results:", event.results, "final:", event.isFinal);
+  },
+);
 
-const errorListener = addSpeechRecognitionListener("error", (event) => {
-  console.log("error code:", event.error, "error message:", event.message);
-});
+const errorListener = ExpoSpeechRecognitionModule.addListener(
+  "error",
+  (event) => {
+    console.log("error code:", event.error, "error message:", event.message);
+  },
+);
 
 // Start speech recognition
 ExpoSpeechRecognitionModule.start({
@@ -347,11 +357,11 @@ To handle errors, you can listen to the `error` event:
 ```ts
 import {
   type ExpoSpeechRecognitionErrorCode,
-  addSpeechRecognitionListener,
+  ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 
-addSpeechRecognitionListener("error", (event) => {
+ExpoSpeechRecognitionModule.addListener("error", (event) => {
   console.log("error code:", event.error, "error message:", event.message);
 });
 
@@ -871,22 +881,6 @@ ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
   console.log("Current state:", state);
   // "inactive" | "starting" | "stopping" | "recognizing"
 });
-```
-
-### `addSpeechRecognitionListener()`
-
-Refer to [Speech Recognition Events](#speech-recognition-events) for the list of supported events.
-
-```ts
-import { addSpeechRecognitionListener } from "expo-speech-recognition";
-
-const listener = addSpeechRecognitionListener("result", (event) => {
-  console.log("transcript:", event.results[0]?.transcript);
-  console.log("confidence:", event.results[0]?.confidence);
-});
-
-// Remove the listener when you're done
-listener.remove();
 ```
 
 ### `getSupportedLocales()`

@@ -219,12 +219,12 @@ export default function App() {
             <BigButton
               title="Stop"
               disabled={status !== "recognizing"}
-              onPress={ExpoSpeechRecognitionModule.stop}
+              onPress={() => ExpoSpeechRecognitionModule.stop()}
             />
             <BigButton
               title="Abort"
               disabled={status !== "recognizing"}
-              onPress={ExpoSpeechRecognitionModule.abort}
+              onPress={() => ExpoSpeechRecognitionModule.abort()}
             />
           </View>
         )}

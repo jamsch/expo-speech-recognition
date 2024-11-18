@@ -1,8 +1,4 @@
-import {
-  ExpoSpeechRecognitionModule,
-  ExpoSpeechRecognitionModuleEmitter,
-} from "./ExpoSpeechRecognitionModule";
-import type { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitionModule.types";
+import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
 
 // Export the SpeechRecognition APIs
 export {
@@ -12,10 +8,7 @@ export {
 } from "./ExpoWebSpeechRecognition";
 
 // Native module
-export {
-  ExpoSpeechRecognitionModule,
-  ExpoSpeechRecognitionModuleEmitter,
-} from "./ExpoSpeechRecognitionModule";
+export { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
 
 // Hooks
 export { useSpeechRecognitionEvent } from "./useSpeechRecognitionEvent";
@@ -63,28 +56,24 @@ export const getDefaultRecognitionService =
 export const getAssistantService =
   ExpoSpeechRecognitionModule.getAssistantService;
 
-export const addSpeechRecognitionListener = <
-  T extends keyof ExpoSpeechRecognitionNativeEventMap,
->(
-  eventName: T,
-  listener: (ev: ExpoSpeechRecognitionNativeEventMap[T]) => void,
-) => ExpoSpeechRecognitionModuleEmitter.addListener(eventName, listener);
+export const addSpeechRecognitionListener =
+  ExpoSpeechRecognitionModule.addListener;
 
-export {
-  type ExpoSpeechRecognitionOptions,
-  type AndroidIntentOptions,
-  type ExpoSpeechRecognitionNativeEventMap,
-  type AVAudioSessionCategoryOptionsValue,
-  type AVAudioSessionModeValue,
-  type AVAudioSessionCategoryValue,
-  type AudioEncodingAndroidValue,
-  type AudioSourceOptions,
-  type RecordingOptions,
-  type IOSTaskHintValue,
-  type SetCategoryOptions,
-  type ExpoSpeechRecognitionErrorCode,
-  type ExpoSpeechRecognitionErrorEvent,
-  type ExpoSpeechRecognitionResultEvent,
-  type ExpoSpeechRecognitionResult,
-  type ExpoSpeechRecognitionResultSegment,
+export type {
+  ExpoSpeechRecognitionOptions,
+  AndroidIntentOptions,
+  ExpoSpeechRecognitionNativeEventMap,
+  AVAudioSessionCategoryOptionsValue,
+  AVAudioSessionModeValue,
+  AVAudioSessionCategoryValue,
+  AudioEncodingAndroidValue,
+  AudioSourceOptions,
+  RecordingOptions,
+  IOSTaskHintValue,
+  SetCategoryOptions,
+  ExpoSpeechRecognitionErrorCode,
+  ExpoSpeechRecognitionErrorEvent,
+  ExpoSpeechRecognitionResultEvent,
+  ExpoSpeechRecognitionResult,
+  ExpoSpeechRecognitionResultSegment,
 } from "./ExpoSpeechRecognitionModule.types";
