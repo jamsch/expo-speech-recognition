@@ -4,6 +4,7 @@ import type {
   ExpoSpeechRecognitionNativeEventMap,
   ExpoSpeechRecognitionNativeEvents,
   ExpoSpeechRecognitionOptions,
+  ExpoSpeechRecognitionResultSegment,
 } from "./ExpoSpeechRecognitionModule.types";
 
 let _speechRecognitionRef: SpeechRecognition | null = null;
@@ -126,6 +127,7 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
     // Re-subscribe to events so that we don't lose them
     // This covers the case where the user has already subscribed to an event prior to calling `start()`
     this._nativeListeners.forEach((listeners, eventName) => {
+      console.log("subscribing to", eventName);
       for (const listener of listeners) {
         // May already be subscribed
         _speechRecognitionRef?.removeEventListener(eventName, listener);
@@ -312,22 +314,65 @@ const webToNativeEventMap: {
   end: (ev) => null,
   error: (ev) => ({ error: ev.error, message: ev.message }),
   nomatch: (ev) => null,
-  result: (ev) => {
-    const nativeResults: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
-      [];
+  result: (ev): ExpoSpeechRecognitionNativeEventMap["result"] => {
+    console.log(ev.resultIndex, ev.results);
 
-    for (let i = 0; i < ev.results[ev.resultIndex].length; i++) {
-      const result = ev.results[ev.resultIndex][i];
-      nativeResults.push({
-        transcript: result.transcript,
-        confidence: result.confidence,
-        segments: [],
-      });
+    const isFinal = Boolean(ev.results[ev.resultIndex]?.isFinal);
+
+    if (isFinal) {
+      const results: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
+        [];
+
+      for (let i = 0; i < ev.results[ev.resultIndex].length; i++) {
+        const result = ev.results[ev.resultIndex][i];
+        results.push({
+          transcript: result.transcript,
+          confidence: result.confidence,
+          segments: [],
+        });
+      }
+      return {
+        isFinal: true,
+        results,
+      };
+    }
+
+    // Interim results: Append to the transcript
+    let transcript = "";
+    const segments: ExpoSpeechRecognitionResultSegment[] = [];
+
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const resultList = ev.results[i];
+
+      for (let j = 0; j < resultList.length; j++) {
+        const result = resultList[j];
+        if (!result) {
+          continue;
+        }
+        segments.push({
+          confidence: result.confidence,
+          segment: result.transcript,
+          startTimeMillis: 0,
+          endTimeMillis: 0,
+        });
+
+        if (!isFinal) {
+          transcript += result.transcript;
+        }
+      }
     }
 
     return {
-      isFinal: Boolean(ev.results[ev.resultIndex]?.isFinal),
-      results: nativeResults,
+      isFinal: false,
+      results: [
+        {
+          transcript,
+          confidence:
+            segments.reduce((acc, curr) => acc + curr.confidence, 0) /
+            segments.length,
+          segments,
+        },
+      ],
     };
   },
   soundstart: (ev) => null,
