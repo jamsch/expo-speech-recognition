@@ -152,6 +152,9 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
   }
 
   requestPermissionsAsync() {
+    console.warn(
+      "requestPermissionsAsync is not supported on web. Returning a granted permission response.",
+    );
     return Promise.resolve({
       granted: true,
       canAskAgain: false,
@@ -162,13 +165,61 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
 
   getPermissionsAsync() {
     console.warn(
-      "getPermissionsAsync is not supported on web. Returning a denied permission response.",
+      "getPermissionsAsync is not supported on web. Returning a granted permission response.",
     );
     return Promise.resolve({
-      granted: false,
+      granted: true,
       canAskAgain: false,
       expires: "never",
-      status: "denied",
+      status: "granted",
+    } as PermissionResponse);
+  }
+
+  getMicrophonePermissionsAsync() {
+    console.warn(
+      "getMicrophonePermissionsAsync is not supported on web. Returning a granted permission response.",
+    );
+    return Promise.resolve({
+      granted: true,
+      canAskAgain: false,
+      expires: "never",
+      status: "granted",
+    } as PermissionResponse);
+  }
+
+  requestMicrophonePermissionsAsync() {
+    console.warn(
+      "requestMicrophonePermissionsAsync is not supported on web. Returning a granted permission response.",
+    );
+    return Promise.resolve({
+      granted: true,
+      canAskAgain: false,
+      expires: "never",
+      status: "granted",
+    } as PermissionResponse);
+  }
+
+  getSpeechRecognizerPermissionsAsync() {
+    console.warn(
+      "getSpeechRecognizerPermissionsAsync is not supported on web. Returning a granted permission response.",
+    );
+    return Promise.resolve({
+      granted: true,
+      canAskAgain: false,
+      expires: "never",
+      status: "granted",
+    } as PermissionResponse);
+  }
+
+  requestSpeechRecognizerPermissionsAsync() {
+    console.warn(
+      "requestSpeechRecognizerPermissionsAsync is not supported on web. Returning a granted permission response.",
+    );
+    return Promise.resolve({
+      granted: true,
+      canAskAgain: false,
+      expires: "never",
+      status: "granted",
     } as PermissionResponse);
   }
 

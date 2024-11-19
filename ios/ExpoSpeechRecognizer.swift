@@ -56,14 +56,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     guard recognizer != nil else {
       throw RecognizerError.nilRecognizer
     }
-
-    guard await SFSpeechRecognizer.hasAuthorizationToRecognize() else {
-      throw RecognizerError.notAuthorizedToRecognize
-    }
-
-    guard await AVAudioSession.sharedInstance().hasPermissionToRecord() else {
-      throw RecognizerError.notPermittedToRecord
-    }
   }
 
   /// Returns a suitable audio format to use for the speech recognition task and audio file recording.

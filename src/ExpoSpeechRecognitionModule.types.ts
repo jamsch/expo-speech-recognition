@@ -557,14 +557,42 @@ export interface ExpoSpeechRecognitionModuleType extends NativeModule {
   /**
    * Presents a dialog to the user to request permissions for using speech recognition and the microphone.
    *
-   * For iOS, once a user has granted (or denied) location permissions by responding to the original permission request dialog,
+   * For Android, this will request RECORD_AUDIO permission.
+   *
+   * For iOS, this will request microphone and speech recognition permissions.
+   * Once a user has granted (or denied) permissions by responding to the original permission request dialog,
    * the only way that the permissions can be changed is by the user themselves using the device settings app.
    */
   requestPermissionsAsync(): Promise<PermissionResponse>;
   /**
-   * Returns the current permission status for the microphone and speech recognition.
+   * Returns the current permission status for speech recognition and the microphone.
+   *
+   * You may also use `getMicrophonePermissionsAsync` and `getSpeechRecognizerPermissionsAsync` to get the permissions separately.
    */
   getPermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * Returns the current permission status for the microphone.
+   */
+  getMicrophonePermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * Presents a dialog to the user to request permissions for using the microphone.
+   *
+   * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
+   * the only way that the permissions can be changed is by the user themselves using the device settings app.
+   */
+  requestMicrophonePermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * Returns the current permission status for speech recognition.
+   */
+  getSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
+  /**
+   * [iOS only] Presents a dialog to the user to request permissions for using the speech recognizer.
+   * This permission is required when `requiresOnDeviceRecognition` is disabled (i.e. network-based recognition)
+   *
+   * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
+   * the only way that the permissions can be changed is by the user themselves using the device settings app.
+   */
+  requestSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
   /**
    * Returns an array of locales supported by the speech recognizer.
    *

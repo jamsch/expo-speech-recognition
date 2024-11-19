@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
 import android.speech.ModelDownloadListener
@@ -16,6 +17,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.annotation.RequiresApi
+import expo.modules.interfaces.permissions.PermissionsResponse
 import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
 import expo.modules.interfaces.permissions.Permissions.getPermissionsWithPermissionsManager
 import expo.modules.kotlin.Promise
@@ -140,6 +142,46 @@ class ExpoSpeechRecognitionModule : Module() {
                     appContext.permissions,
                     promise,
                     RECORD_AUDIO,
+                )
+            }
+
+            AsyncFunction("requestMicrophonePermissionsAsync") { promise: Promise ->
+                askForPermissionsWithPermissionsManager(
+                    appContext.permissions,
+                    promise,
+                    RECORD_AUDIO,
+                )
+            }
+
+            AsyncFunction("getMicrophonePermissionsAsync") { promise: Promise ->
+                getPermissionsWithPermissionsManager(
+                    appContext.permissions,
+                    promise,
+                    RECORD_AUDIO,
+                )
+            }
+
+            AsyncFunction("getSpeechRecognizerPermissionsAsync") { promise: Promise ->
+                Log.w("ExpoSpeechRecognitionModule", "getSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
+                promise.resolve(
+                    Bundle().apply {
+                        putString(PermissionsResponse.EXPIRES_KEY, "never")
+                        putString(PermissionsResponse.STATUS_KEY, "granted")
+                        putBoolean(PermissionsResponse.CAN_ASK_AGAIN_KEY, false)
+                        putBoolean(PermissionsResponse.GRANTED_KEY, true)
+                    }
+                )
+            }
+
+            AsyncFunction("requestSpeechRecognizerPermissionsAsync") { promise: Promise ->
+                Log.w("ExpoSpeechRecognitionModule", "requestSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
+                promise.resolve(
+                    Bundle().apply {
+                        putString(PermissionsResponse.EXPIRES_KEY, "never")
+                        putString(PermissionsResponse.STATUS_KEY, "granted")
+                        putBoolean(PermissionsResponse.CAN_ASK_AGAIN_KEY, false)
+                        putBoolean(PermissionsResponse.GRANTED_KEY, true)
+                    }
                 )
             }
 
