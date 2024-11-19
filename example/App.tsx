@@ -128,7 +128,7 @@ export default function App() {
     console.log("[event]: languagedetection", ev);
   });
 
-  const startListening = () => {
+  const startListening = async () => {
     if (status !== "idle") {
       return;
     }
@@ -136,16 +136,27 @@ export default function App() {
     setError(null);
     setStatus("starting");
 
-    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
-      console.log("Permissions", result);
-      if (!result.granted) {
-        console.log("Permissions not granted", result);
+    const microphonePermissions =
+      await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync();
+    console.log("Microphone permissions", microphonePermissions);
+    if (!microphonePermissions.granted) {
+      setError({ error: "not-allowed", message: "Permissions not granted" });
+      setStatus("idle");
+      return;
+    }
+
+    if (!settings.requiresOnDeviceRecognition && Platform.OS === "ios") {
+      const speechRecognizerPermissions =
+        await ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync();
+      console.log("Speech recognizer permissions", speechRecognizerPermissions);
+      if (!speechRecognizerPermissions.granted) {
         setError({ error: "not-allowed", message: "Permissions not granted" });
         setStatus("idle");
         return;
       }
-      ExpoSpeechRecognitionModule.start(settings);
-    });
+    }
+
+    ExpoSpeechRecognitionModule.start(settings);
   };
 
   return (
@@ -807,6 +818,50 @@ function OtherSettings(props: {
                   "RequestPermissions result",
                   JSON.stringify(result),
                 );
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Get microphone permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Request microphone permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Get speech recognizer permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
+              },
+            );
+          }}
+        />
+        <BigButton
+          title="Request speech recognizer permissions"
+          color="#7C90DB"
+          onPress={() => {
+            ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync().then(
+              (result) => {
+                Alert.alert("Result", JSON.stringify(result));
               },
             );
           }}
