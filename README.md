@@ -943,6 +943,21 @@ ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then((result) => {
 > [!NOTE]
 > This is only supported on iOS.
 
+Checks the current permissions to use network-based recognition for [`SFSpeechRecognizer`](https://developer.apple.com/documentation/speech/sfspeechrecognizer) for iOS.
+
+```ts
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
+ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
+  (result) => {
+    console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
+    console.log("Granted:", result.granted); // true | false
+    console.log("Can ask again:", result.canAskAgain); // true | false
+    console.log("Expires:", result.expires); // "never" | number
+  },
+);
+```
+
 ### `getStateAsync(): Promise<SpeechRecognitionState>`
 
 Returns the current internal state of the speech recognizer.
