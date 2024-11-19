@@ -5,6 +5,7 @@
 ### Patch Changes
 
 - e4c54f1: Fixed handling of interim and final results on web
+- d3d3d63: Separate microphone and recognizer permissions
 
 ## 1.0.0
 

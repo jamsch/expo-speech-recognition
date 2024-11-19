@@ -33,8 +33,12 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [start()](#startoptions-speechrecognitionoptions-void)
   - [stop()](#stop-void)
   - [abort()](#abort-void)
-  - [requestPermissionsAsync()](#requestpermissionsasync-promisepermissionresponse)
-  - [getPermissionsAsync()](#getpermissionsasync-promisepermissionresponse)
+  - [requestPermissionsAsync()](#requestpermissionsasync)
+  - [requestMicrophonePermissionsAsync()](#requestmicrophonepermissionsasync)
+  - [requestSpeechRecognizerPermissionsAsync()](#requestspeechrecognizerpermissionsasync)
+  - [getPermissionsAsync()](#getpermissionsasync)
+  - [getMicrophonePermissionsAsync()](#getmicrophonepermissionsasync)
+  - [getSpeechRecognizerPermissionsAsync()](#getspeechrecognizerpermissionsasync)
   - [getStateAsync()](#getstateasync-promisespeechrecognitionstate)
   - [getSupportedLocales()](#getsupportedlocales)
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
@@ -59,7 +63,6 @@ npm install expo-speech-recognition
 npm install expo-speech-recognition@sdk-51
 npm install expo-speech-recognition@sdk-50
 ```
-
 
 2. Configure the config plugin.
 
@@ -837,11 +840,16 @@ ExpoSpeechRecognitionModule.abort();
 // Expect an "error" event to be emitted with the code "aborted"
 ```
 
-### `requestPermissionsAsync(): Promise<PermissionResponse>`
+### `requestPermissionsAsync()`
 
 Presents a dialog to the user to request the necessary permissions.
 
-For iOS, this requests two permissions: record permissions (to access the microphone), and speech recognition permissions. Once a user has granted (or denied) permissions by responding to the original permission request dialog, the only way that the permissions can be changed is by the user themselves using the device settings app.
+- On Android, this requests [`RECORD_AUDIO`](https://developer.android.com/reference/android/Manifest.permission#RECORD_AUDIO) permissions.
+- On iOS, this requests two permissions: [`AVAudioSession.RecordPermission`](https://developer.apple.com/documentation/avfaudio/avaudiosession/recordpermission) and [`SFSpeechRecognizer.requestAuthorization()`](https://developer.apple.com/documentation/speech/sfspeechrecognizer/1649892-requestauthorization).
+
+If you're using on-device recognition on iOS, you just need to request microphone permissions, which can be called with [`requestMicrophonePermissionsAsync()`](#requestmicrophonepermissionsasync).
+
+Once a user has granted (or denied) permissions by responding to the original permission request dialog, the only way that the permissions can be changed is by the user themselves using the device settings app.
 
 ```ts
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
@@ -854,9 +862,55 @@ ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
 });
 ```
 
-### `getPermissionsAsync(): Promise<PermissionResponse>`
+### `requestMicrophonePermissionsAsync()`
 
-Returns the current permission status for the microphone and speech recognition.
+Requests permissions to use the microphone.
+
+- On iOS, this requests [`AVAudioSession.RecordPermission`](https://developer.apple.com/documentation/avfaudio/avaudiosession/recordpermission) permissions.
+- On Android, this requests [`RECORD_AUDIO`](https://developer.android.com/reference/android/Manifest.permission#RECORD_AUDIO) permissions.
+
+```ts
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
+ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync().then(
+  (result) => {
+    console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
+    console.log("Granted:", result.granted); // true | false
+    console.log("Can ask again:", result.canAskAgain); // true | false
+    console.log("Expires:", result.expires); // "never" | number
+  },
+);
+```
+
+### `requestSpeechRecognizerPermissionsAsync()`
+
+> [!NOTE]
+> This is only supported on iOS. Request this permission only if you aren't using on-device recognition.
+
+Requests [`SFSpeechRecognizer.requestAuthorization()`](https://developer.apple.com/documentation/speech/sfspeechrecognizer/1649892-requestauthorization) permissions before sending voice data across the network to Apple's servers for transcription.
+
+```ts
+import { Platform } from "react-native";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
+const requiresOnDeviceRecognition = false;
+
+// We only need this permission when network-based recognition is used on iOS
+if (!requiresOnDeviceRecognition && Platform.OS === "ios") {
+  ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync().then(
+    (result) => {
+      console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
+      console.log("Granted:", result.granted); // true | false
+      console.log("Can ask again:", result.canAskAgain); // true | false
+      console.log("Expires:", result.expires); // "never" | number
+    },
+  );
+}
+```
+
+### `getPermissionsAsync()`
+
+Returns the current permission status for both microphone and iOS speech recognizer.
 
 ```ts
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
@@ -868,6 +922,26 @@ ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
   console.log("Expires:", result.expires); // "never" | number
 });
 ```
+
+### `getMicrophonePermissionsAsync()`
+
+Returns the current permission status for the microphone. On Android, this checks the [`RECORD_AUDIO`](https://developer.android.com/reference/android/Manifest.permission#RECORD_AUDIO) permissions. On iOS this checks the [`AVAudioSession.RecordPermission`](https://developer.apple.com/documentation/avfaudio/avaudiosession/recordpermission) permissions.
+
+```ts
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
+ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then((result) => {
+  console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
+  console.log("Granted:", result.granted); // true | false
+  console.log("Can ask again:", result.canAskAgain); // true | false
+  console.log("Expires:", result.expires); // "never" | number
+});
+```
+
+### `getSpeechRecognizerPermissionsAsync()`
+
+> [!NOTE]
+> This is only supported on iOS.
 
 ### `getStateAsync(): Promise<SpeechRecognitionState>`
 
