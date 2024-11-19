@@ -127,7 +127,6 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
     // Re-subscribe to events so that we don't lose them
     // This covers the case where the user has already subscribed to an event prior to calling `start()`
     this._nativeListeners.forEach((listeners, eventName) => {
-      console.log("subscribing to", eventName);
       for (const listener of listeners) {
         // May already be subscribed
         _speechRecognitionRef?.removeEventListener(eventName, listener);
@@ -315,8 +314,6 @@ const webToNativeEventMap: {
   error: (ev) => ({ error: ev.error, message: ev.message }),
   nomatch: (ev) => null,
   result: (ev): ExpoSpeechRecognitionNativeEventMap["result"] => {
-    console.log(ev.resultIndex, ev.results);
-
     const isFinal = Boolean(ev.results[ev.resultIndex]?.isFinal);
 
     if (isFinal) {
