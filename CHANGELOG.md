@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 1.0.1
+
+### Patch Changes
+
+- e4c54f1: Fixed handling of interim and final results on web
+
 ## 1.0.0
 
 ### Major Changes
