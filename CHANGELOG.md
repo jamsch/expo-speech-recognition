@@ -1,5 +1,12 @@
 # expo-speech-recognition
 
+## 1.1.0
+
+### Minor Changes
+
+- 7fa9bc6: Implemented long form file-based transcriptions for iOS. This change circumvents the undocumented 1-minute limitation in [`SFSpeechURLRecognitionRequest
+`](https://developer.apple.com/documentation/speech/sfspeechurlrecognitionrequest).
+
 ## 1.0.1
 
 ### Patch Changes
