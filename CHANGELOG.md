@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 1.1.0
+
+### Minor Changes
+
+- 7fa9bc6: Implemented long form file-based transcriptions for iOS
+
 ## 1.0.1
 
 ### Patch Changes
