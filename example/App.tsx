@@ -998,12 +998,13 @@ function TranscribeLocalAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
-      requiresOnDeviceRecognition: true,
+      requiresOnDeviceRecognition: Platform.OS === "ios",
       audioSource: {
         uri: localUri,
         audioChannels: 1,
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         sampleRate: 16000,
+        // chunkDelayMillis: 50,
       },
     });
   };
@@ -1188,29 +1189,38 @@ function RecordUsingExpoAvDemo() {
 
   const handleStart = async () => {
     setIsRecording(true);
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync({
+        isMeteringEnabled: true,
+        android: {
+          bitRate: 32000,
+          extension: ".m4a",
+          outputFormat: AndroidOutputFormat.MPEG_4,
+          audioEncoder: AndroidAudioEncoder.AAC,
+          numberOfChannels: 1,
+          sampleRate: 16000,
+        },
+        ios: {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
+          numberOfChannels: 1,
+          bitRate: 16000,
+          extension: ".wav",
+          outputFormat: IOSOutputFormat.LINEARPCM,
+        },
+        web: {
+          mimeType: "audio/wav",
+          bitsPerSecond: 128000,
+        },
+      });
 
-    const { recording } = await Audio.Recording.createAsync({
-      isMeteringEnabled: true,
-      android: {
-        bitRate: 32000,
-        extension: ".m4a",
-        outputFormat: AndroidOutputFormat.MPEG_4,
-        audioEncoder: AndroidAudioEncoder.AAC,
-        numberOfChannels: 1,
-        sampleRate: 16000,
-      },
-      ios: {
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
-        extension: ".wav",
-        outputFormat: IOSOutputFormat.LINEARPCM,
-      },
-      web: {
-        mimeType: "audio/wav",
-        bitsPerSecond: 128000,
-      },
-    });
-
-    recordingRef.current = recording;
+      recordingRef.current = recording;
+    } catch (e) {
+      console.log("Error starting recording", e);
+    }
   };
 
   const handleStop = async () => {

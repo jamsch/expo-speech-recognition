@@ -474,7 +474,7 @@ function AudioPlayer(props: { source: string }) {
 > [!IMPORTANT]
 > This feature is available on Android 13+ and iOS. If the device does not support the feature, you'll receive an `error` event with the code `audio-capture`.
 
-Instead of using the microphone, you can configure the `audioSource.uri` option to transcribe audio files.
+Instead of using the microphone, you can configure the `audioSource.uri` option to transcribe audio files. For long-form audio files, you will likely want to use on-device recognition instead of network-based recognition which you can opt-in via `requiresOnDeviceRecognition`. For Android, you should first check if the user has the speech model installed with `getSupportedLocales()`.
 
 ### Supported input audio formats
 
@@ -488,8 +488,6 @@ The following audio formats have been verified on a Samsung Galaxy S23 Ultra on 
 - 16000hz ogg vorbis 1-channel ([example file](https://github.com/jamsch/expo-speech-recognition/blob/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg))
 
 #### iOS
-
-> Due to a limitation in the underlying `SFSpeechURLRecognitionRequest` API, file-based transcription will only transcribe the **first 1 minute of the audio file**.
 
 The following audio formats have been verified on an iPhone 15 Pro Max on iOS 17.5:
 
@@ -513,6 +511,8 @@ function TranscribeAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
+      // Recommended: true on iOS, false on Android, unless the speech model is installed, which you can check with `getSupportedLocales()`
+      requiresOnDeviceRecognition: Platform.OS === "ios",
       audioSource: {
         /** Local file URI */
         uri: "file:///path/to/audio.wav",
@@ -523,7 +523,7 @@ function TranscribeAudioFile() {
         /** [Android only] Audio sampling rate in Hz. */
         sampleRate: 16000,
         /**
-         * [Android only] The delay between chunks of audio to stream to the speech recognition service.
+         * The delay between chunks of audio to stream to the speech recognition service.
          * Use this setting to avoid being rate-limited when using network-based recognition.
          * If you're using on-device recognition, you may want to increase this value to avoid unprocessed audio chunks.
          * Default: 50ms for network-based recognition, 15ms for on-device recognition
@@ -534,7 +534,7 @@ function TranscribeAudioFile() {
   };
 
   useSpeechRecognitionEvent("result", (ev) => {
-    // Note: multiple final results will likely be returned on Android
+    // Note: multiple final results will likely be returned
     // so you'll need to concatenate previous final results
     setTranscription(ev.results[0]?.transcript || "");
   });

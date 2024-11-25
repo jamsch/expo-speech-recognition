@@ -92,8 +92,6 @@ public class ExpoSpeechRecognitionModule: Module {
       // Fired when the speech recognition service has begun listening to incoming audio with
       // intent to recognize grammars associated with the current SpeechRecognition
       "start",
-      // Called when there's results (as a string array, not API compliant)
-      "result",
       // Called when the language detection (and switching) results are available.
       "languagedetection",
       // Fired when the input volume changes
