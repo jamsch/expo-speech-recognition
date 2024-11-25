@@ -998,12 +998,13 @@ function TranscribeLocalAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
-      requiresOnDeviceRecognition: true,
+      requiresOnDeviceRecognition: false,
       audioSource: {
         uri: localUri,
         audioChannels: 1,
         audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
         sampleRate: 16000,
+        // chunkDelayMillis: 50,
       },
     });
   };

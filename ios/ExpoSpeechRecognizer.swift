@@ -199,6 +199,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     // Reset the speech recognizer before starting
     reset(andEmitEnd: false)
 
+    self.options = options
+    self.request = nil
     self.outputFileUrl = nil
     self.speechStartHandler = speechStartHandler
 
@@ -214,109 +216,24 @@ actor ExpoSpeechRecognizer: ObservableObject {
         recognizer: recognizer
       )
       self.request = request
-
-      // Check if options.audioSource is set, if it is, then it is sourced from a file
       let isSourcedFromFile = options.audioSource?.uri != nil
 
-      if isSourcedFromFile {
-        // If we're doing file-based recognition we don't need to create an audio engine
-        self.audioEngine = nil
+      // Check if options.audioSource is set, if it is, then it is sourced from a file
+      if let audioSource = options.audioSource?.uri {
+        try prepareFileRecognition(request: request, url: URL(string: audioSource)!)
       } else {
-        // Set up the audio session to get the correct audio format
-        try Self.setupAudioSession(options.iosCategory)
-
-        self.audioEngine = AVAudioEngine()
-
-        guard let audioEngine = self.audioEngine else {
-          print("expo-speech-recognition: ERROR - Failed to create AVAudioEngine")
-          throw RecognizerError.invalidAudioSource
-        }
-
-        let inputNode = audioEngine.inputNode
-        // Note: accessing `inputNode.outputFormat(forBus: 0)` may crash the thread with the error:
-        // `required condition is false: format.sampleRate == hwFormat.sampleRate`
-        // (under the hood it calls `AVAudioEngineImpl::UpdateInputNode` -> `AVAudioNode setOutputFormat:forBus:0`)
-        let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
-
-        // Check if the microphone is busy
-        guard !Self.audioInputIsBusy(audioFormat) else {
-          print(
-            "expo-speech-recognition: ERROR - input is busy \(audioFormat)"
-          )
-          throw RecognizerError.audioInputBusy
-        }
-
-        let mixerNode = AVAudioMixerNode()
-        audioEngine.attach(mixerNode)
-        audioEngine.connect(inputNode, to: mixerNode, format: audioFormat)
-
-        // Feature: file recording
-        if options.recordingOptions?.persist == true {
-          guard
-            let fileAudioFormat = Self.getFileAudioFormat(
-              options: options,
-              engine: audioEngine
-            )
-          else {
-            print(
-              "expo-speech-recognition: ERROR - Failed to create AVAudioFormat from given sample rate"
-            )
-            throw RecognizerError.invalidAudioSource
-          }
-
-          let outputUrl = prepareFileWriter(
-            outputDirectory: options.recordingOptions?.outputDirectory,
-            outputFileName: options.recordingOptions?.outputFileName,
-            audioFormat: fileAudioFormat
-          )
-          self.outputFileUrl = outputUrl
-        }
-
-        // Set up audio recording & sink to recognizer/file
-        try Self.prepareEngine(
-          audioEngine: audioEngine,
-          mixerNode: mixerNode,
-          options: options,
-          request: request,
-          audioFileRef: self.audioFileRef,
-          volumeChangeHandler: { volume in
-            Task { @MainActor in
-              self.volumeChangeHandler?(volume)
-            }
-          }
-        )
+        try prepareMicrophoneRecognition(request: request, options: options)
       }
 
-      // Run timers on non-continuous mode, as long as the audio source is the mic
-      let shouldRunTimers = !options.continuous && !isSourcedFromFile
-      let audioEngine = self.audioEngine
-
-      self.task = recognizer.recognitionTask(
+      startRecognitionTask(
         with: request,
-        resultHandler: { [weak self] result, error in
-          // Speech start event
-          if result != nil && error == nil {
-            Task { [weak self] in
-              await self?.handleSpeechStart()
-            }
-          }
-
-          // Handle the result
-          self?.recognitionHandler(
-            audioEngine: audioEngine,
-            result: result,
-            error: error,
-            resultHandler: resultHandler,
-            errorHandler: errorHandler,
-            continuous: options.continuous,
-            shouldRunTimers: shouldRunTimers,
-            canEmitInterimResults: options.interimResults
-          )
-        })
-
-      if shouldRunTimers {
-        invalidateAndScheduleTimer()
-      }
+        recognizer: recognizer,
+        resultHandler: resultHandler,
+        errorHandler: errorHandler,
+        continuous: options.continuous,
+        canEmitInterimResults: options.interimResults,
+        isSourcedFromFile: isSourcedFromFile
+      )
 
       // Emit the "start" event to indicate that speech recognition has started
       startHandler()
@@ -326,6 +243,168 @@ actor ExpoSpeechRecognizer: ObservableObject {
     } catch {
       errorHandler(error)
       reset(andEmitEnd: true)
+    }
+  }
+
+  private func startRecognitionTask(
+    with request: SFSpeechRecognitionRequest,
+    recognizer: SFSpeechRecognizer,
+    resultHandler: @escaping (SFSpeechRecognitionResult) -> Void,
+    errorHandler: @escaping (Error) -> Void,
+    continuous: Bool,
+    canEmitInterimResults: Bool,
+    isSourcedFromFile: Bool
+  ) {
+    let audioEngine = self.audioEngine
+    let shouldRunTimers = !continuous && !isSourcedFromFile
+
+    self.task = recognizer.recognitionTask(
+      with: request,
+      resultHandler: { [weak self] result, error in
+        if let result = result {
+          print("Received result: \(result.bestTranscription.formattedString)")
+        }
+        if let error = error as NSError? {
+          print("Recognition error: \(error), domain: \(error.domain), code: \(error.code)")
+        }
+
+        self?.recognitionHandler(
+          audioEngine: audioEngine,
+          result: result,
+          error: error,
+          resultHandler: resultHandler,
+          errorHandler: errorHandler,
+          continuous: continuous,
+          shouldRunTimers: shouldRunTimers,
+          canEmitInterimResults: canEmitInterimResults,
+          isSourcedFromFile: isSourcedFromFile
+        )
+      }
+    )
+  }
+
+  private func prepareFileRecognition(request: SFSpeechRecognitionRequest, url: URL) throws {
+    self.audioEngine = nil
+
+    guard let request = self.request as? SFSpeechAudioBufferRecognitionRequest else {
+      throw RecognizerError.invalidAudioSource
+    }
+
+    let chunkDelayMillis: Int
+    if let options = self.options, let specifiedDelay = options.audioSource?.chunkDelayMillis {
+      chunkDelayMillis = specifiedDelay
+    } else if self.options?.requiresOnDeviceRecognition == true {
+      chunkDelayMillis = 15  // On-device recognition
+    } else {
+      chunkDelayMillis = 50  // Network-based recognition
+    }
+
+    Task.detached(priority: .userInitiated) {
+      do {
+        let file = try AVAudioFile(forReading: url)
+        let inputFormat = file.processingFormat
+        print("Input file format: \(inputFormat)")
+
+        let outputFormat = AVAudioFormat(
+          commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
+        print("Output format: \(outputFormat)")
+
+        let converter = AVAudioConverter(from: inputFormat, to: outputFormat)!
+
+        let bufferCapacity: AVAudioFrameCount = 4096
+        let inputBuffer = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: bufferCapacity)!
+        let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: bufferCapacity)!
+
+        while file.framePosition < file.length {
+          let framesToRead = min(
+            bufferCapacity, AVAudioFrameCount(file.length - file.framePosition)
+          )
+          try file.read(into: inputBuffer, frameCount: framesToRead)
+
+          var error: NSError?
+          let inputBlock: AVAudioConverterInputBlock = { _, outStatus in
+            outStatus.pointee = .haveData
+            return inputBuffer
+          }
+
+          converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
+
+          if let error = error {
+            throw error
+          }
+
+          request.append(outputBuffer)
+
+          // Avoid overloading the recognizer
+          if #available(iOS 16, *) {
+            try await Task.sleep(for: .milliseconds(chunkDelayMillis))
+          }
+        }
+
+        print("Audio streaming ended")
+        request.endAudio()
+
+      } catch {
+        print("Error feeding audio file: \(error)")
+        request.endAudio()
+      }
+    }
+  }
+
+  private func prepareMicrophoneRecognition(
+    request: SFSpeechRecognitionRequest,
+    options: SpeechRecognitionOptions
+  ) throws {
+    try Self.setupAudioSession(options.iosCategory)
+    self.audioEngine = AVAudioEngine()
+
+    guard let audioEngine = self.audioEngine else {
+      print("expo-speech-recognition: ERROR - Failed to create AVAudioEngine")
+      throw RecognizerError.invalidAudioSource
+    }
+
+    let inputNode = audioEngine.inputNode
+    let audioFormat = Self.getAudioFormat(forEngine: audioEngine)
+
+    guard !Self.audioInputIsBusy(audioFormat) else {
+      print("expo-speech-recognition: ERROR - input is busy \(audioFormat)")
+      throw RecognizerError.audioInputBusy
+    }
+
+    let mixerNode = AVAudioMixerNode()
+    audioEngine.attach(mixerNode)
+    audioEngine.connect(inputNode, to: mixerNode, format: audioFormat)
+
+    if options.recordingOptions?.persist == true {
+      guard let fileAudioFormat = Self.getFileAudioFormat(options: options, engine: audioEngine)
+      else {
+        print(
+          "expo-speech-recognition: ERROR - Failed to create AVAudioFormat from given sample rate")
+        throw RecognizerError.invalidAudioSource
+      }
+
+      self.outputFileUrl = prepareFileWriter(
+        outputDirectory: options.recordingOptions?.outputDirectory,
+        outputFileName: options.recordingOptions?.outputFileName,
+        audioFormat: fileAudioFormat
+      )
+    }
+
+    try Self.prepareEngine(
+      audioEngine: audioEngine,
+      mixerNode: mixerNode,
+      options: options,
+      request: request,
+      audioFileRef: self.audioFileRef,
+      volumeChangeHandler: { volume in
+        Task { @MainActor in
+          self.volumeChangeHandler?(volume)
+        }
+      }
+    )
+
+    if !options.continuous {
+      invalidateAndScheduleTimer()
     }
   }
 
@@ -447,15 +526,10 @@ actor ExpoSpeechRecognizer: ObservableObject {
   }
 
   private static func prepareRequest(
-    options: SpeechRecognitionOptions, recognizer: SFSpeechRecognizer
+    options: SpeechRecognitionOptions,
+    recognizer: SFSpeechRecognizer
   ) -> SFSpeechRecognitionRequest {
-
-    let request: SFSpeechRecognitionRequest
-    if let audioSource = options.audioSource {
-      request = SFSpeechURLRecognitionRequest(url: URL(string: audioSource.uri)!)
-    } else {
-      request = SFSpeechAudioBufferRecognitionRequest()
-    }
+    let request = SFSpeechAudioBufferRecognitionRequest()
 
     // We also force-enable partial results on non-continuous mode,
     // which will allow us to re-schedule timers when text is detected
@@ -694,7 +768,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     errorHandler: @escaping (Error) -> Void,
     continuous: Bool,
     shouldRunTimers: Bool,
-    canEmitInterimResults: Bool
+    canEmitInterimResults: Bool,
+    isSourcedFromFile: Bool
   ) {
     // When a final result is returned, we should expect the task to be idle or stopping
     let receivedFinalResult = result?.isFinal ?? false
@@ -730,7 +805,18 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     }
 
-    if (receivedFinalLikeResult && !continuous) || receivedError || receivedFinalResult {
+    if receivedError || (receivedFinalLikeResult && !continuous && !isSourcedFromFile)
+      || receivedFinalResult
+    {
+      if receivedError {
+        print("Received error: \(String(describing: error))")
+      } else if receivedFinalLikeResult {
+        print("Received final like result")
+      } else if receivedFinalResult {
+        print("Received final result")
+      } else {
+        print("ending task")
+      }
       Task { @MainActor in
         await reset()
       }
