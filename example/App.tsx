@@ -998,7 +998,7 @@ function TranscribeLocalAudioFile() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
-      requiresOnDeviceRecognition: false,
+      requiresOnDeviceRecognition: Platform.OS === "ios",
       audioSource: {
         uri: localUri,
         audioChannels: 1,

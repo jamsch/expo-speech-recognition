@@ -336,7 +336,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
         print("Audio streaming ended")
         request.endAudio()
-
       } catch {
         print("Error feeding audio file: \(error)")
         request.endAudio()
