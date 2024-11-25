@@ -291,51 +291,30 @@ actor ExpoSpeechRecognizer: ObservableObject {
     } else {
       chunkDelayMillis = 50  // Network-based recognition
     }
+    let chunkDelayNs = UInt64(chunkDelayMillis) * 1_000_000
+    // var playbackBuffers = [AVAudioPCMBuffer]()
 
     Task.detached(priority: .userInitiated) {
       do {
         let file = try AVAudioFile(forReading: url)
-        let inputFormat = file.processingFormat
-        print("Input file format: \(inputFormat)")
-
-        let outputFormat = AVAudioFormat(
-          commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
-        print("Output format: \(outputFormat)")
-
-        let converter = AVAudioConverter(from: inputFormat, to: outputFormat)!
-
         let bufferCapacity: AVAudioFrameCount = 4096
-        let inputBuffer = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: bufferCapacity)!
-        let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: bufferCapacity)!
+        let inputBuffer = AVAudioPCMBuffer(
+          pcmFormat: file.processingFormat, frameCapacity: bufferCapacity
+        )!
 
         while file.framePosition < file.length {
           let framesToRead = min(
             bufferCapacity, AVAudioFrameCount(file.length - file.framePosition)
           )
           try file.read(into: inputBuffer, frameCount: framesToRead)
-
-          var error: NSError?
-          let inputBlock: AVAudioConverterInputBlock = { _, outStatus in
-            outStatus.pointee = .haveData
-            return inputBuffer
-          }
-
-          converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
-
-          if let error = error {
-            throw error
-          }
-
-          request.append(outputBuffer)
-
-          // Avoid overloading the recognizer
-          if #available(iOS 16, *) {
-            try await Task.sleep(for: .milliseconds(chunkDelayMillis))
-          }
+          request.append(inputBuffer)
+          // playbackBuffers.append(inputBuffer.copy() as! AVAudioPCMBuffer)
+          try await Task.sleep(nanoseconds: chunkDelayNs)
         }
 
         print("Audio streaming ended")
         request.endAudio()
+        // await self.playBack(playbackBuffers: playbackBuffers)
       } catch {
         print("Error feeding audio file: \(error)")
         request.endAudio()
@@ -851,6 +830,36 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
     }
   }
+
+  /*
+  private var playbackEngine: AVAudioEngine?
+  private var playerNode: AVAudioPlayerNode?
+  /// Playback audio from an array of AVAudioPCMBuffers
+  /// For testing purposes only
+  func playBack(playbackBuffers: [AVAudioPCMBuffer]) {
+    guard !playbackBuffers.isEmpty else { return }
+
+    playbackEngine = AVAudioEngine()
+    playerNode = AVAudioPlayerNode()
+
+    guard let playbackEngine = playbackEngine, let playerNode = playerNode else { return }
+
+    playbackEngine.attach(playerNode)
+    let outputFormat = playbackBuffers[0].format
+    playbackEngine.connect(playerNode, to: playbackEngine.mainMixerNode, format: outputFormat)
+
+    for buffer in playbackBuffers {
+      playerNode.scheduleBuffer(buffer, completionHandler: nil)
+    }
+
+    do {
+      try playbackEngine.start()
+      playerNode.play()
+    } catch {
+      print("Failed to start playback engine: \(error)")
+    }
+  }
+  */
 }
 
 extension SFSpeechRecognizer {
