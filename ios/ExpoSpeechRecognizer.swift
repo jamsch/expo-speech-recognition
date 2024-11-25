@@ -261,13 +261,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     self.task = recognizer.recognitionTask(
       with: request,
       resultHandler: { [weak self] result, error in
-        if let result = result {
-          print("Received result: \(result.bestTranscription.formattedString)")
-        }
-        if let error = error as NSError? {
-          print("Recognition error: \(error), domain: \(error.domain), code: \(error.code)")
-        }
-
         self?.recognitionHandler(
           audioEngine: audioEngine,
           result: result,
