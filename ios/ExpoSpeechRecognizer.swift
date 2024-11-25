@@ -312,11 +312,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
           try await Task.sleep(nanoseconds: chunkDelayNs)
         }
 
-        print("Audio streaming ended")
+        print("[expo-speech-recognition]: Audio streaming ended")
         request.endAudio()
         // await self.playBack(playbackBuffers: playbackBuffers)
       } catch {
-        print("Error feeding audio file: \(error)")
+        print("[expo-speech-recognition]: Error feeding audio file: \(error)")
         request.endAudio()
       }
     }
@@ -779,15 +779,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     if receivedError || (receivedFinalLikeResult && !continuous && !isSourcedFromFile)
       || receivedFinalResult
     {
-      if receivedError {
-        print("Received error: \(String(describing: error))")
-      } else if receivedFinalLikeResult {
-        print("Received final like result")
-      } else if receivedFinalResult {
-        print("Received final result")
-      } else {
-        print("ending task")
-      }
       Task { @MainActor in
         await reset()
       }
