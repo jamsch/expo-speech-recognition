@@ -1,5 +1,4 @@
 import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
-import type { ExpoSpeechRecognitionNativeEventMap } from "./ExpoSpeechRecognitionModule.types";
 
 // Export the SpeechRecognition APIs
 export {
@@ -9,7 +8,10 @@ export {
 } from "./ExpoWebSpeechRecognition";
 
 // Native module
-export { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
+export {
+  ExpoSpeechRecognitionModule,
+  ExpoSpeechRecognitionModuleEmitter,
+} from "./ExpoSpeechRecognitionModule";
 
 // Hooks
 export { useSpeechRecognitionEvent } from "./useSpeechRecognitionEvent";
@@ -60,21 +62,21 @@ export const getAssistantService =
 export const addSpeechRecognitionListener =
   ExpoSpeechRecognitionModule.addListener;
 
-export {
-  type ExpoSpeechRecognitionOptions,
-  type AndroidIntentOptions,
-  type ExpoSpeechRecognitionNativeEventMap,
-  type AVAudioSessionCategoryOptionsValue,
-  type AVAudioSessionModeValue,
-  type AVAudioSessionCategoryValue,
-  type AudioEncodingAndroidValue,
-  type AudioSourceOptions,
-  type RecordingOptions,
-  type IOSTaskHintValue,
-  type SetCategoryOptions,
-  type ExpoSpeechRecognitionErrorCode,
-  type ExpoSpeechRecognitionErrorEvent,
-  type ExpoSpeechRecognitionResultEvent,
-  type ExpoSpeechRecognitionResult,
-  type ExpoSpeechRecognitionResultSegment,
+export type {
+  ExpoSpeechRecognitionOptions,
+  AndroidIntentOptions,
+  ExpoSpeechRecognitionNativeEventMap,
+  AVAudioSessionCategoryOptionsValue,
+  AVAudioSessionModeValue,
+  AVAudioSessionCategoryValue,
+  AudioEncodingAndroidValue,
+  AudioSourceOptions,
+  RecordingOptions,
+  IOSTaskHintValue,
+  SetCategoryOptions,
+  ExpoSpeechRecognitionErrorCode,
+  ExpoSpeechRecognitionErrorEvent,
+  ExpoSpeechRecognitionResultEvent,
+  ExpoSpeechRecognitionResult,
+  ExpoSpeechRecognitionResultSegment,
 } from "./ExpoSpeechRecognitionModule.types";
