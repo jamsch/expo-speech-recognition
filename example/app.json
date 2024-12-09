@@ -52,12 +52,6 @@
             "newArchEnabled": true
           }
         }
-      ],
-      [
-        "expo-asset",
-        {
-          "assets": ["./assets/audio"]
-        }
       ]
     ]
   }
