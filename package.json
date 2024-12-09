@@ -40,13 +40,13 @@
     "@types/dom-speech-recognition": "^0.0.4",
     "@types/react": "^18.3.3",
     "expo-module-scripts": "^3.5.2",
-    "expo-modules-core": "^1.12.21"
+    "expo-modules-core": "~1.11.14"
   },
   "prettier": {
     "trailingComma": "all"
   },
   "peerDependencies": {
-    "expo": "*",
+    "expo": "<51.0.0 >=50.0.0",
     "react": "*",
     "react-native": "*"
   }
