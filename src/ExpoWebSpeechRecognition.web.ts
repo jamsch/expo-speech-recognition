@@ -4,12 +4,22 @@ let browserSpeechRecognitionEvent: typeof SpeechRecognitionEvent | null = null;
 
 if (typeof webkitSpeechRecognition !== "undefined") {
   browserSpeechRecognition = webkitSpeechRecognition;
-  browserSpeechGrammarList = webkitSpeechGrammarList;
-  browserSpeechRecognitionEvent = webkitSpeechRecognitionEvent;
+  browserSpeechGrammarList =
+    typeof webkitSpeechGrammarList !== "undefined"
+      ? webkitSpeechGrammarList
+      : null;
+  browserSpeechRecognitionEvent =
+    typeof webkitSpeechRecognitionEvent !== "undefined"
+      ? webkitSpeechRecognitionEvent
+      : null;
 } else if (typeof SpeechRecognition !== "undefined") {
   browserSpeechRecognition = SpeechRecognition;
-  browserSpeechGrammarList = SpeechGrammarList;
-  browserSpeechRecognitionEvent = SpeechRecognitionEvent;
+  browserSpeechGrammarList =
+    typeof SpeechGrammarList !== "undefined" ? SpeechGrammarList : null;
+  browserSpeechRecognitionEvent =
+    typeof SpeechRecognitionEvent !== "undefined"
+      ? SpeechRecognitionEvent
+      : null;
 }
 
 export const ExpoWebSpeechRecognition = browserSpeechRecognition;
