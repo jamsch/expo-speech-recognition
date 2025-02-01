@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 1.1.1
+
+### Patch Changes
+
+- 46d8490: Add type guards to Web Speech API to avoid unresolved references
+
 ## 1.1.0
 
 ### Minor Changes
