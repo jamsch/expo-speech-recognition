@@ -162,11 +162,7 @@ function App() {
     ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
-      maxAlternatives: 1,
       continuous: false,
-      requiresOnDeviceRecognition: false,
-      addsPunctuation: false,
-      contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
     });
   };
 
@@ -253,7 +249,7 @@ ExpoSpeechRecognitionModule.start({
   lang: "en-US",
   // Whether to return results as they become available without waiting for the final result.
   interimResults: true,
-  // The maximum number of alternative transcriptions to return.
+  // [Default: 5] The maximum number of alternative transcriptions to return.
   maxAlternatives: 1,
   // [Default: false] Continuous recognition.
   // If false:
