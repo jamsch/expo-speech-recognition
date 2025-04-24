@@ -56,10 +56,8 @@ export default function App() {
     null,
   );
 
-  const [transcription, setTranscription] = useState<null | {
-    transcriptTally: string;
-    transcript: string;
-  }>(null);
+  const transcriptTallyRef = useRef<string>("");
+  const [transcription, setTranscription] = useState<string>("");
 
   const [status, setStatus] = useState<"idle" | "starting" | "recognizing">(
     "idle",
@@ -92,21 +90,19 @@ export default function App() {
 
     const transcript = ev.results[0]?.transcript || "";
 
-    setTranscription((current) => {
-      // When a final result is received, any following recognized transcripts will omit the previous final result
-      const transcriptTally = ev.isFinal
-        ? (current?.transcriptTally ?? "") + transcript
-        : (current?.transcriptTally ?? "");
-
-      return {
-        transcriptTally,
-        transcript: ev.isFinal ? transcriptTally : transcriptTally + transcript,
-      };
-    });
+    if (ev.isFinal) {
+      // When a final result is received, any following result events will include a new transcript
+      // So we need to keep a tally of the current transcript so we can append it to the following result events
+      transcriptTallyRef.current += transcript;
+      setTranscription(transcriptTallyRef.current);
+    } else {
+      setTranscription(transcriptTallyRef.current + transcript);
+    }
   });
 
   useSpeechRecognitionEvent("start", () => {
-    setTranscription(null);
+    transcriptTallyRef.current = "";
+    setTranscription("");
     setStatus("recognizing");
   });
 
@@ -132,7 +128,8 @@ export default function App() {
     if (status !== "idle") {
       return;
     }
-    setTranscription(null);
+    transcriptTallyRef.current = "";
+    setTranscription("");
     setError(null);
     setStatus("starting");
 
@@ -187,7 +184,7 @@ export default function App() {
         </View>
         <View style={{ marginTop: 10 }}>
           <Text style={styles.text}>
-            {transcription?.transcript || "transcript goes here"}
+            {transcription || "transcript goes here"}
           </Text>
         </View>
       </ScrollView>
