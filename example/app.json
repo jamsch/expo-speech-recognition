@@ -1,5 +1,6 @@
 {
   "expo": {
+    "newArchEnabled": true,
     "name": "expo-speech-recognition-example",
     "slug": "expo-speech-recognition-example",
     "version": "1.0.0",
@@ -17,6 +18,7 @@
       "bundleIdentifier": "expo.modules.speechrecognition.example"
     },
     "android": {
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -40,17 +42,6 @@
             "com.google.android.googlequicksearchbox",
             "com.google.android.tts"
           ]
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "newArchEnabled": true
-          },
-          "android": {
-            "newArchEnabled": true
-          }
         }
       ],
       [

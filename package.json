@@ -39,7 +39,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.2",
     "@types/dom-speech-recognition": "^0.0.6",
-    "@types/react": "^19.1.2",
+    "@types/react": "~19.0.10",
     "expo": "~53.0.0",
     "expo-module-scripts": "^4.1.6"
   },
