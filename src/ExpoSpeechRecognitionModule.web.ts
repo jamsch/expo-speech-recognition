@@ -381,4 +381,5 @@ const webToNativeEventMap: {
 
 export const ExpoSpeechRecognitionModule = registerWebModule(
   ExpoSpeechRecognitionModuleWeb,
+  "ExpoSpeechRecognitionModule",
 );
