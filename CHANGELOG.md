@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 2.0.0
+
+### Major Changes
+
+- 71461d1: Added support for Expo SDK 53
+
 ## 1.1.1
 
 ### Patch Changes
