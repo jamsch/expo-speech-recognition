@@ -449,8 +449,10 @@ export class ExpoWebSpeechGrammar implements SpeechGrammar {
 class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
   #results: ExpoSpeechRecognitionResult[] = [];
 
-  [Symbol.iterator](): IterableIterator<ExpoSpeechRecognitionResult> {
-    return this.#results[Symbol.iterator]();
+  [Symbol.iterator](): ArrayIterator<ExpoSpeechRecognitionResult> {
+    return this.#results[
+      Symbol.iterator
+    ]() as ArrayIterator<ExpoSpeechRecognitionResult>;
   }
   length: number;
   item(index: number): SpeechRecognitionResult {
@@ -478,8 +480,10 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
     return this.#alternatives[index];
   }
   [index: number]: SpeechRecognitionAlternative;
-  [Symbol.iterator](): IterableIterator<SpeechRecognitionAlternative> {
-    return this.#alternatives[Symbol.iterator]();
+  [Symbol.iterator](): ArrayIterator<SpeechRecognitionAlternative> {
+    return this.#alternatives[
+      Symbol.iterator
+    ]() as ArrayIterator<SpeechRecognitionAlternative>;
   }
 
   constructor(

@@ -158,7 +158,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" translucent={false} />
+      <StatusBar style="dark" />
 
       {settings.volumeChangeEventOptions?.enabled ? (
         <VolumeMeteringAvatar />
