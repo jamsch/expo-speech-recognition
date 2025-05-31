@@ -105,7 +105,7 @@ public class ExpoSpeechRecognitionModule: Module {
       permissionsManager.register([
         EXSpeechRecognitionPermissionRequester(),
         MicrophoneRequester(),
-        SpeechRecognizerRequester()
+        SpeechRecognizerRequester(),
       ])
     }
 
@@ -197,7 +197,7 @@ public class ExpoSpeechRecognitionModule: Module {
               locale: locale
             )
           }
-          
+
           if !options.requiresOnDeviceRecognition {
             guard await SFSpeechRecognizer.hasAuthorizationToRecognize() else {
               sendErrorAndStop(
@@ -207,7 +207,7 @@ public class ExpoSpeechRecognitionModule: Module {
               return
             }
           }
-          
+
           guard await AVAudioSession.sharedInstance().hasPermissionToRecord() else {
             sendErrorAndStop(
               error: "not-allowed",

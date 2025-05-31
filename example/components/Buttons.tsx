@@ -85,6 +85,26 @@ export function OptionButton(props: {
   );
 }
 
+export function SmallButton(props: {
+  title: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.button,
+        styles.smallButton,
+        styles.bgBlue,
+        props.disabled || pressed ? styles.opacity50 : null,
+      ]}
+    >
+      <Text style={[styles.fontBold, styles.textWhite]}>{props.title}</Text>
+    </Pressable>
+  );
+}
+
 export function BigButton(props: {
   title: string;
   color?: string;
@@ -111,6 +131,7 @@ export function BigButton(props: {
 const styles = StyleSheet.create({
   fontBold: { fontWeight: "bold" },
   bgBlue: { backgroundColor: "#539bf5" },
+  bgBluePressed: { backgroundColor: "#0543ad" },
   borderBlue: { borderColor: "#539bf5" },
   bgGrey: { backgroundColor: "#eee" },
   bgRed: { backgroundColor: "#ff0000" },
@@ -139,4 +160,8 @@ const styles = StyleSheet.create({
     color: "black",
   },
   opacity50: { opacity: 0.5 },
+  smallButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
 });

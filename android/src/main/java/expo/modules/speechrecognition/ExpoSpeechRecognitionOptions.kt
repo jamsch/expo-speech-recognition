@@ -53,6 +53,9 @@ class SpeechRecognitionOptions : Record {
 
     @Field
     val volumeChangeEventOptions: VolumeChangeEventOptions? = null
+
+    @Field
+    val iosVoiceProcessingEnabled: Boolean? = false
 }
 
 class VolumeChangeEventOptions : Record {

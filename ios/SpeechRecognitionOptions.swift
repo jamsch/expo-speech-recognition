@@ -37,6 +37,9 @@ struct SpeechRecognitionOptions: Record {
 
   @Field
   var volumeChangeEventOptions: VolumeChangeEventOptions? = nil
+
+  @Field
+  var iosVoiceProcessingEnabled: Bool? = false
 }
 
 struct VolumeChangeEventOptions: Record {

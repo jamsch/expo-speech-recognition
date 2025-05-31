@@ -279,6 +279,9 @@ ExpoSpeechRecognitionModule.start({
     categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
     mode: "measurement",
   },
+  // [Default: undefined] Does extra audio processing to prevent
+  // microphone feedback from speakers
+  iosVoiceProcessingEnabled: true,
   // [Default: undefined] Recording options for Android & iOS
   // Android 13+ and iOS only.
   recordingOptions: {
@@ -755,12 +758,16 @@ As of 7 Aug 2024, the following platforms are supported:
 | Safari Desktop >= v16  | ✅        | Siri                       | Implemented via prefix `webkitSpeechRecognition`. Siri needs to be enabled                                                                                                                               |
 | Chrome on Android      | ✅        | Google                     | There's a few differences in how results get handled in comparison to the Chrome Desktop implementation                                                                                                  |
 | Chrome on iOS          | ❌        | Google                     | Not working (Last tested 2023)                                                                                                                                                                           |
-| Edge on Windows        | (unknown) | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it’s presence at `edge://components`                                                                               |
-| Edge on Mac ARM        | ❌        | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it’s presence at `edge://components`                                                                               |
+| Edge on Windows        | (unknown) | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it's presence at `edge://components`                                                                               |
+| Edge on Mac ARM        | ❌        | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it's presence at `edge://components`                                                                               |
 | Brave Desktop          | ❌        | -                          | As of Aug 2024, Brave is working on an implementation however there's currently no ETA (source: [brave-browser/issues/3725](https://github.com/brave/brave-browser/issues/3725#issuecomment-2224068859)) |
 | Firefox Desktop        | ❌        | -                          | No SpeechRecognition implementation                                                                                                                                                                      |
 
 ## Common Troubleshooting Issues
+
+### Speaker is getting picked up by the microphone
+
+If you're experiencing feedback from the speakers, you may want to consider enabling the `iosVoiceProcessingEnabled` option when starting speech recognition. This option adds additional signal processing to your microphone and output.
 
 ### Android issues
 
