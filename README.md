@@ -279,7 +279,7 @@ ExpoSpeechRecognitionModule.start({
     categoryOptions: ["defaultToSpeaker", "allowBluetooth"],
     mode: "measurement",
   },
-  // [Default: undefined] Does extra audio processing to prevent
+  // [Default: false] Does extra audio processing to prevent
   // microphone feedback from speakers
   iosVoiceProcessingEnabled: true,
   // [Default: undefined] Recording options for Android & iOS
