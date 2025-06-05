@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 2.1.0
+
+### Minor Changes
+
+- c6cb064: Added `iosVoiceProcessingEnabled` option to prevent microphone feedback from speakers for iOS
+
 ## 2.0.0
 
 ### Major Changes
