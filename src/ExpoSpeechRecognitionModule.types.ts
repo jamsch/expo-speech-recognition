@@ -734,17 +734,6 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * Returns the current state of the speech recognizer.
    */
   getStateAsync(): Promise<SpeechRecognitionState>;
-  /**
-   * [iOS only] Enables or disables voice processing on the I/O node.
-   *
-   * See: https://developer.apple.com/documentation/avfaudio/avaudioionode/setvoiceprocessingenabled(_:)
-   */
-  setVoiceProcessingEnabledIOS(options: {
-    /** Whether to enable or disable voice processing */
-    enabled: boolean;
-    /** Which node to configure, either "input" or "output" */
-    node?: "input" | "output";
-  }): void;
 }
 
 export type SetCategoryOptions = {
