@@ -37,6 +37,7 @@ import {
   CheckboxButton,
   BigButton,
   TabButton,
+  SmallButton,
 } from "./components/Buttons";
 import { StatusBar } from "expo-status-bar";
 import { Audio } from "expo-av";
@@ -545,6 +546,19 @@ function GeneralSettings(props: {
             })
           }
         />
+
+        {Platform.OS === "ios" && (
+          <CheckboxButton
+            title="Voice Processing (iOS)"
+            checked={Boolean(settings.iosVoiceProcessingEnabled)}
+            onPress={() =>
+              handleChange(
+                "iosVoiceProcessingEnabled",
+                !settings.iosVoiceProcessingEnabled,
+              )
+            }
+          />
+        )}
       </View>
 
       <View style={styles.textOptionContainer}>
@@ -795,19 +809,17 @@ function OtherSettings(props: {
   // Enable audio recording
   return (
     <View style={styles.gap1}>
-      <View style={[styles.row, styles.gap1, styles.flexWrap]}>
-        <BigButton
+      <View style={[styles.row, styles.gap1, styles.flexWrap, styles.card]}>
+        <SmallButton
           title="Get permissions"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
               Alert.alert("Get Permissions result", JSON.stringify(result));
             });
           }}
         />
-        <BigButton
+        <SmallButton
           title="Request permissions"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.requestPermissionsAsync().then(
               (result) => {
@@ -819,9 +831,8 @@ function OtherSettings(props: {
             );
           }}
         />
-        <BigButton
+        <SmallButton
           title="Get microphone permissions"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then(
               (result) => {
@@ -830,9 +841,8 @@ function OtherSettings(props: {
             );
           }}
         />
-        <BigButton
+        <SmallButton
           title="Request microphone permissions"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync().then(
               (result) => {
@@ -841,9 +851,8 @@ function OtherSettings(props: {
             );
           }}
         />
-        <BigButton
+        <SmallButton
           title="Get speech recognizer permissions"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
               (result) => {
@@ -852,9 +861,8 @@ function OtherSettings(props: {
             );
           }}
         />
-        <BigButton
+        <SmallButton
           title="Request speech recognizer permissions"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync().then(
               (result) => {
@@ -863,9 +871,8 @@ function OtherSettings(props: {
             );
           }}
         />
-        <BigButton
+        <SmallButton
           title="Get speech recognizer state"
-          color="#7C90DB"
           onPress={() => {
             ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
               console.log("Current state:", state);
@@ -873,9 +880,8 @@ function OtherSettings(props: {
             });
           }}
         />
-        <BigButton
+        <SmallButton
           title="Call isRecognitionAvailable()"
-          color="#7C90DB"
           onPress={() => {
             const isAvailable =
               ExpoSpeechRecognitionModule.isRecognitionAvailable();
@@ -883,9 +889,8 @@ function OtherSettings(props: {
           }}
         />
         {Platform.OS === "ios" && (
-          <BigButton
+          <SmallButton
             title="Set audio session active state"
-            color="#7C90DB"
             onPress={() => {
               ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(true, {
                 notifyOthersOnDeactivation: false,
@@ -894,60 +899,62 @@ function OtherSettings(props: {
           />
         )}
       </View>
-      <CheckboxButton
-        title="Persist audio recording to filesystem"
-        checked={Boolean(settings.recordingOptions?.persist)}
-        onPress={() =>
-          handleChange("recordingOptions", {
-            persist: !settings.recordingOptions?.persist,
-            outputDirectory: FileSystem.documentDirectory ?? undefined,
-            outputFileName: "recording.wav",
-            // for iOS if you'd like to downsample the audio, set the outputSampleRate + outputEncoding
-            outputSampleRate: 16000,
-            outputEncoding: "pcmFormatInt16",
-          })
-        }
-      />
-      {settings.recordingOptions?.persist ? (
-        <View
-          style={{
-            borderStyle: "dashed",
-            borderWidth: 2,
-            padding: 10,
-            minHeight: 100,
-            flex: 1,
-          }}
-        >
-          {recordingPath ? (
-            <View>
+      <View style={styles.card}>
+        <CheckboxButton
+          title="Persist audio recording to filesystem"
+          checked={Boolean(settings.recordingOptions?.persist)}
+          onPress={() =>
+            handleChange("recordingOptions", {
+              persist: !settings.recordingOptions?.persist,
+              outputDirectory: FileSystem.documentDirectory ?? undefined,
+              outputFileName: "recording.wav",
+              // for iOS if you'd like to downsample the audio, set the outputSampleRate + outputEncoding
+              outputSampleRate: 16000,
+              outputEncoding: "pcmFormatInt16",
+            })
+          }
+        />
+        {settings.recordingOptions?.persist ? (
+          <View
+            style={{
+              borderStyle: "dashed",
+              borderWidth: 2,
+              padding: 10,
+              minHeight: 100,
+              flex: 1,
+            }}
+          >
+            {recordingPath ? (
+              <View>
+                <Text style={styles.text}>
+                  Audio recording saved to {recordingPath}
+                </Text>
+                <AudioPlayer source={recordingPath} />
+                <BigButton
+                  title="Transcribe the recording"
+                  color="#539bf5"
+                  onPress={() => {
+                    ExpoSpeechRecognitionModule.start({
+                      lang: "en-US",
+                      interimResults: true,
+                      audioSource: {
+                        uri: recordingPath,
+                        audioChannels: 1,
+                        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+                        sampleRate: 16000,
+                      },
+                    });
+                  }}
+                />
+              </View>
+            ) : (
               <Text style={styles.text}>
-                Audio recording saved to {recordingPath}
+                Waiting for speech recognition to end...
               </Text>
-              <AudioPlayer source={recordingPath} />
-              <BigButton
-                title="Transcribe the recording"
-                color="#539bf5"
-                onPress={() => {
-                  ExpoSpeechRecognitionModule.start({
-                    lang: "en-US",
-                    interimResults: true,
-                    audioSource: {
-                      uri: recordingPath,
-                      audioChannels: 1,
-                      audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
-                      sampleRate: 16000,
-                    },
-                  });
-                }}
-              />
-            </View>
-          ) : (
-            <Text style={styles.text}>
-              Waiting for speech recognition to end...
-            </Text>
-          )}
-        </View>
-      ) : null}
+            )}
+          </View>
+        ) : null}
+      </View>
 
       <WebSpeechAPIDemo />
 
