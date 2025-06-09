@@ -840,7 +840,9 @@ Immediately cancels speech recognition (does not process the final result).
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 ExpoSpeechRecognitionModule.abort();
-// Expect an "error" event to be emitted with the code "aborted"
+// Expect the following events to be emitted in order:
+// - "error" event with the code "aborted"
+// - "end" event indicating speech recognition has finished
 ```
 
 ### `requestPermissionsAsync()`
