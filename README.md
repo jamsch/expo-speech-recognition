@@ -659,7 +659,7 @@ recognition.onresult = (event) => {
 const handleStart = (event: Event) => console.log("started!");
 recognition.registerEventListener("start", handleStart);
 // and remember to unregister after you're done:
-recognition.unregisterEventListener("start", handleStart);
+recognition.removeEventListener("start", handleStart);
 
 const handleResult = (event: SpeechRecognitionEvent) => {
   console.log("result:", event.results[event.resultIndex][0].transcript);
