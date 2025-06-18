@@ -51,6 +51,9 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
   - [setAudioSessionActiveIOS()](#setaudiosessionactiveiosvalue-boolean-options--notifyothersondeactivation-boolean--void)
+- [System Overview Diagrams](#system-overview-diagrams)
+  - [Overall Architecture](#overall-architecture)
+  - [Event Flow](#event-flow)
 
 ## Installation
 
@@ -336,7 +339,11 @@ ExpoSpeechRecognitionModule.abort();
 
 ## Speech Recognition Events
 
-Events are largely based on the [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition). The following events are supported:
+Events are largely based on the [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition).
+
+View the [event flow diagram here](#event-flow).
+
+The following events are supported:
 
 | Event Name          | Description                                                                                | Notes                                                                                                                                                                                                                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -820,8 +827,6 @@ ExpoSpeechRecognitionModule.start({
 Stops speech recognition and attempts to return a final result (through the `result` event).
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.stop();
 // Expect the following events to be emitted in order:
 // One of:
@@ -837,8 +842,6 @@ ExpoSpeechRecognitionModule.stop();
 Immediately cancels speech recognition (does not process the final result).
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.abort();
 // Expect the following events to be emitted in order:
 // - "error" event with the code "aborted"
@@ -857,8 +860,6 @@ If you're using on-device recognition on iOS, you just need to request microphon
 Once a user has granted (or denied) permissions by responding to the original permission request dialog, the only way that the permissions can be changed is by the user themselves using the device settings app.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
   console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
   console.log("Granted:", result.granted); // true | false
@@ -875,8 +876,6 @@ Requests permissions to use the microphone.
 - On Android, this requests [`RECORD_AUDIO`](https://developer.android.com/reference/android/Manifest.permission#RECORD_AUDIO) permissions.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync().then(
   (result) => {
     console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
@@ -918,8 +917,6 @@ if (!requiresOnDeviceRecognition && Platform.OS === "ios") {
 Returns the current permission status for both microphone and iOS speech recognizer.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
   console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
   console.log("Granted:", result.granted); // true | false
@@ -933,8 +930,6 @@ ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
 Returns the current permission status for the microphone. On Android, this checks the [`RECORD_AUDIO`](https://developer.android.com/reference/android/Manifest.permission#RECORD_AUDIO) permissions. On iOS this checks the [`AVAudioSession.RecordPermission`](https://developer.apple.com/documentation/avfaudio/avaudiosession/recordpermission) permissions.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then((result) => {
   console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
   console.log("Granted:", result.granted); // true | false
@@ -951,8 +946,6 @@ ExpoSpeechRecognitionModule.getMicrophonePermissionsAsync().then((result) => {
 Checks the current permissions to use network-based recognition for [`SFSpeechRecognizer`](https://developer.apple.com/documentation/speech/sfspeechrecognizer) for iOS.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
   (result) => {
     console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
@@ -968,8 +961,6 @@ ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
 Returns the current internal state of the speech recognizer.
 
 ```ts
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-
 // Note: you probably should rather rely on the events emitted by the SpeechRecognition API instead
 ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
   console.log("Current state:", state);
@@ -985,9 +976,7 @@ ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
 Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
 
 ```ts
-import { getSupportedLocales } from "expo-speech-recognition";
-
-getSupportedLocales({
+ExpoSpeechRecognitionModule.getSupportedLocales({
   /**
    * The package name of the speech recognition service to use.
    * If not provided, the default service used for on-device recognition will be used.
@@ -1021,9 +1010,7 @@ Get list of speech recognition services available on the device.
 > This only includes services that are listed under `androidSpeechServicePackages` in your app.json as well as the core services listed under `forceQueryable` when running the command: `adb shell dumpsys package queries`
 
 ```ts
-import { getSpeechRecognitionServices } from "expo-speech-recognition";
-
-const packages = getSpeechRecognitionServices();
+const packages = ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
 console.log("Speech recognition services:", packages.join(", "));
 // e.g. ["com.google.android.as", "com.google.android.tts", "com.samsung.android.bixby.agent"]
 ```
@@ -1033,9 +1020,7 @@ console.log("Speech recognition services:", packages.join(", "));
 Returns the default voice recognition service on the device.
 
 ```ts
-import { getDefaultRecognitionService } from "expo-speech-recognition";
-
-const service = getDefaultRecognitionService();
+const service = ExpoSpeechRecognitionModule.getDefaultRecognitionService();
 console.log("Default recognition service:", service.packageName);
 // Usually this is "com.google.android.tts" on Android 13+ and "com.google.android.googlequicksearchbox" on Android <=12.
 // For on-device recognition, "com.google.android.as" will likely be used.
@@ -1046,9 +1031,7 @@ console.log("Default recognition service:", service.packageName);
 Returns the default voice assistant service on the device.
 
 ```ts
-import { getAssistantService } from "expo-speech-recognition";
-
-const service = getAssistantService();
+const service = ExpoSpeechRecognitionModule.getAssistantService();
 console.log("Default assistant service:", service.packageName);
 // Usually "com.google.android.googlequicksearchbox" for Google
 // or "com.samsung.android.bixby.agent" for Samsung
@@ -1063,9 +1046,7 @@ If this method returns false, calling `start()` will fail and emit an error even
 For Web, this method only checks if the browser has the Web SpeechRecognition API available, however keep in mind that browsers (like Brave) may still have the APIs but not have it implemented yet. Refer to [Platform Compatibility Table](#platform-compatibility-table) for more information. You may want to use a user agent parser to fill in the gaps.
 
 ```ts
-import { isRecognitionAvailable } from "expo-speech-recognition";
-
-const available = isRecognitionAvailable();
+const available = ExpoSpeechRecognitionModule.isRecognitionAvailable();
 console.log("Speech recognition available:", available);
 ```
 
@@ -1074,9 +1055,7 @@ console.log("Speech recognition available:", available);
 Whether the device supports on-device speech recognition.
 
 ```ts
-import { supportsOnDeviceRecognition } from "expo-speech-recognition";
-
-const available = supportsOnDeviceRecognition();
+const available = ExpoSpeechRecognitionModule.supportsOnDeviceRecognition();
 console.log("OnDevice recognition available:", available);
 ```
 
@@ -1085,9 +1064,7 @@ console.log("OnDevice recognition available:", available);
 Whether audio recording is supported during speech recognition. This mostly applies to Android devices, to check if it's at least Android 13.
 
 ```ts
-import { supportsRecording } from "expo-speech-recognition";
-
-const available = supportsRecording();
+const available = ExpoSpeechRecognitionModule.supportsRecording();
 console.log("Recording available:", available);
 ```
 
@@ -1100,10 +1077,8 @@ You can see which locales are supported and installed on your device by running 
 To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
 
 ```ts
-import { androidTriggerOfflineModelDownload } from "expo-speech-recognition";
-
 // Download the offline model for the specified locale
-androidTriggerOfflineModelDownload({
+ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
   locale: "en-US",
 })
   .then((result) => {
@@ -1139,13 +1114,13 @@ This function is an implementation of [AVAudioSession.setCategory](https://devel
 
 ```ts
 import {
-  setCategoryIOS,
+  ExpoSpeechRecognitionModule,
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
 } from "expo-speech-recognition";
 
-setCategoryIOS({
+ExpoSpeechRecognitionModule.setCategoryIOS({
   category: AVAudioSessionCategory.playAndRecord, // or "playAndRecord"
   categoryOptions: [
     AVAudioSessionCategoryOptions.defaultToSpeaker,
@@ -1160,9 +1135,9 @@ setCategoryIOS({
 Returns the current audio session category and options. For advanced use cases, you may want to use this function to safely configure the audio session category and mode.
 
 ```ts
-import { getAudioSessionCategoryAndOptionsIOS } from "expo-speech-recognition";
+const values =
+  ExpoSpeechRecognitionModule.getAudioSessionCategoryAndOptionsIOS();
 
-const values = getAudioSessionCategoryAndOptionsIOS();
 console.log(values);
 // { category: "playAndRecord", categoryOptions: ["defaultToSpeaker", "allowBluetooth"], mode: "measurement" }
 ```
@@ -1172,9 +1147,103 @@ console.log(values);
 Sets the audio session active state.
 
 ```ts
-import { setAudioSessionActiveIOS } from "expo-speech-recognition";
-
-setAudioSessionActiveIOS(true, {
+ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(true, {
   notifyOthersOnDeactivation: true,
 });
+```
+
+## System Overview Diagrams
+
+### Overall Architecture
+
+```mermaid
+graph TB
+
+    subgraph "JavaScript Layer"
+        HOOK[useSpeechRecognitionEvent Hook]
+        MODULE[ExpoSpeechRecognitionModule]
+        WEB[ExpoWebSpeechRecognition]
+
+        WEB_NOTE[Note: Only for polyfilling<br/>external libraries that use<br/>the Web Speech API]
+
+        BROWSER[ExpoWebSpeechRecognition.ts]
+    end
+
+    subgraph "Platform Bridges"
+        EXPO[Expo Modules Core]
+    end
+
+    subgraph "iOS Native"
+        IOS_MOD[ExpoSpeechRecognitionModule.swift]
+        IOS_REC[ExpoSpeechRecognizer.swift]
+        SF[SFSpeechRecognizer]
+        AVAUDIO[AVAudioEngine]
+    end
+
+    subgraph "Android Native"
+        AND_MOD[ExpoSpeechRecognitionModule.kt]
+        AND_SVC[ExpoSpeechService.kt]
+        ANDROID_SR[Android SpeechRecognizer]
+        AUDIO_REC[ExpoAudioRecorder]
+    end
+
+    subgraph "Web"
+        WEB_MOD[ExpoSpeechRecognitionModule.web.ts]
+    end
+
+    HOOK --> MODULE
+    MODULE --> EXPO
+
+    EXPO --> IOS_MOD
+    EXPO --> AND_MOD
+    EXPO --> WEB_MOD
+
+    IOS_MOD --> IOS_REC
+    IOS_REC --> SF
+    IOS_REC --> AVAUDIO
+
+    AND_MOD --> AND_SVC
+    AND_SVC --> ANDROID_SR
+    AND_SVC --> AUDIO_REC
+
+    WEB --> BROWSER
+    BROWSER -.- WEB_NOTE
+
+    style MODULE fill:#f3e5f5,color:#000000
+    style IOS_MOD fill:#e8f5e8,color:#000000
+    style AND_MOD fill:#fff3e0,color:#000000
+    style WEB fill:#fce4ec,color:#000000
+    style WEB_MOD fill:#e1f5fe,color:#000000
+    style WEB_NOTE fill:#fff9c4,color:#000000
+```
+
+### Event Flow
+
+```mermaid
+sequenceDiagram
+    participant App as React Native App
+    participant Module as ExpoSpeechRecognitionModule
+    participant Native as Native Platform
+    participant Engine as Speech Engine (e.g. Siri, Google)
+
+    App->>Module: start(options)
+    Module->>Native: Initialize speech recognizer
+    Native->>Engine: Setup recognition service
+
+    Native->>App: emit("start")
+    Native->>App: emit("audiostart")
+
+    loop Speech Recognition
+        Engine->>Native: Audio data captured
+
+        Note over App,Native: "volumechange" events only occur if user has opted in
+        Native->>App: emit("volumechange", {value})
+        Engine->>Native: Partial results
+        Native->>App: emit("result", {results, isFinal: false})
+    end
+
+    Engine->>Native: Final result
+    Native->>App: emit("result", {results, isFinal: true})
+    Native->>App: emit("audioend")
+    Native->>App: emit("end")
 ```
