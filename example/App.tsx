@@ -13,8 +13,6 @@ import {
 import {
   AudioEncodingAndroid,
   ExpoSpeechRecognitionModule,
-  getSpeechRecognitionServices,
-  getSupportedLocales,
   useSpeechRecognitionEvent,
   TaskHintIOS,
   AVAudioSessionCategory,
@@ -50,7 +48,8 @@ import {
 } from "expo-av/build/Audio";
 import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
 
-const speechRecognitionServices = getSpeechRecognitionServices();
+const speechRecognitionServices =
+  ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
 
 export default function App() {
   const [error, setError] = useState<{ error: string; message: string } | null>(
@@ -117,7 +116,7 @@ export default function App() {
     setError(ev);
   });
 
-  useSpeechRecognitionEvent("nomatch", (ev) => {
+  useSpeechRecognitionEvent("nomatch", () => {
     console.log("[event]: nomatch");
   });
 
@@ -148,7 +147,18 @@ export default function App() {
         await ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync();
       console.log("Speech recognizer permissions", speechRecognizerPermissions);
       if (!speechRecognizerPermissions.granted) {
-        setError({ error: "not-allowed", message: "Permissions not granted" });
+        if (speechRecognizerPermissions.isSpeechRecognitionRestricted) {
+          setError({
+            error: "not-allowed",
+            message:
+              "Speech recognition is restricted. Please enable it in Settings > Screen Time > Content & Privacy Restrictions",
+          });
+        } else {
+          setError({
+            error: "not-allowed",
+            message: "Permissions not granted",
+          });
+        }
         setStatus("idle");
         return;
       }
@@ -482,7 +492,7 @@ function GeneralSettings(props: {
   }>({ locales: [], installedLocales: [] });
 
   useEffect(() => {
-    getSupportedLocales({
+    ExpoSpeechRecognitionModule.getSupportedLocales({
       androidRecognitionServicePackage:
         settings.androidRecognitionServicePackage,
     })
