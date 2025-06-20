@@ -1219,6 +1219,8 @@ graph TB
 
 ### Event Flow
 
+#### Non-continuous recognition
+
 ```mermaid
 sequenceDiagram
     participant App as React Native App
@@ -1239,11 +1241,45 @@ sequenceDiagram
         Note over App,Native: "volumechange" events only occur if user has opted in
         Native->>App: emit("volumechange", {value})
         Engine->>Native: Partial results
+        Note over App,Native: "result" {isFinal: false} only occur when interimResults is enabled
         Native->>App: emit("result", {results, isFinal: false})
     end
 
     Engine->>Native: Final result
     Native->>App: emit("result", {results, isFinal: true})
+    Native->>App: emit("audioend")
+    Native->>App: emit("end")
+```
+
+#### Continuous recognition
+
+```mermaid
+sequenceDiagram
+    participant App as React Native App
+    participant Module as ExpoSpeechRecognitionModule
+    participant Native as Native Platform
+    participant Engine as Speech Engine (e.g. Siri, Google)
+
+    App->>Module: start(options)
+    Module->>Native: Initialize speech recognizer
+    Native->>Engine: Setup recognition service
+
+    Native->>App: emit("start")
+    Native->>App: emit("audiostart")
+
+    loop Speech Recognition Segment
+      loop Interim Results (Volatile)
+        Note over App,Engine: Partial results cover new segments
+        Note over App,Engine: You may want to concatenate with the previous final result
+        Engine->>Native: Partial results
+        Native->>App: emit("result", {results, isFinal: false})
+      end
+
+      Note over App,Engine: Final results cover new segments and are new utterances
+      Engine->>Native: Final result
+      Native->>App: emit("result", {results, isFinal: true})
+    end
+
     Native->>App: emit("audioend")
     Native->>App: emit("end")
 ```
