@@ -147,7 +147,7 @@ export default function App() {
         await ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync();
       console.log("Speech recognizer permissions", speechRecognizerPermissions);
       if (!speechRecognizerPermissions.granted) {
-        if (speechRecognizerPermissions.isSpeechRecognitionRestricted) {
+        if (speechRecognizerPermissions.restricted) {
           setError({
             error: "not-allowed",
             message:

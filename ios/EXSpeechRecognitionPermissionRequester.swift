@@ -39,7 +39,7 @@ public class EXSpeechRecognitionPermissionRequester: NSObject, EXPermissionsRequ
 
     return [
       "status": status.rawValue,
-      "isSpeechRecognitionRestricted": speechPermission == .restricted,
+      "restricted": speechPermission == .restricted,
     ]
   }
 }

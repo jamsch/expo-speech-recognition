@@ -198,6 +198,7 @@ import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
   console.log("Status:", result.status);
   console.log("Granted:", result.granted);
+  console.log("Restricted:", result.restricted);
   console.log("Can ask again:", result.canAskAgain);
   console.log("Expires:", result.expires);
 });

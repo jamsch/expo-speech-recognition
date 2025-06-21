@@ -5,9 +5,11 @@ export type ExpoSpeechRecognitionPermissionResponse = PermissionResponse & {
   /**
    * Whether the speech recognition is restricted by Content & Privacy Restrictions.
    *
+   * This value corresponds to the `restricted` enum of `SFSpeechRecognizer.authorizationStatus()`.
+   *
    * This is only available on iOS.
    */
-  isSpeechRecognitionRestricted?: boolean;
+  restricted?: boolean;
 };
 
 import type {
@@ -587,7 +589,7 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * Once a user has granted (or denied) permissions by responding to the original permission request dialog,
    * the only way that the permissions can be changed is by the user themselves using the device settings app.
    */
-  requestPermissionsAsync(): Promise<PermissionResponse>;
+  requestPermissionsAsync(): Promise<ExpoSpeechRecognitionPermissionResponse>;
   /**
    * Returns the current permission status for speech recognition and the microphone.
    *

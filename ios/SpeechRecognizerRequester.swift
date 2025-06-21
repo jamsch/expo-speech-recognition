@@ -29,7 +29,7 @@ public class SpeechRecognizerRequester: NSObject, EXPermissionsRequester {
 
     return [
       "status": status.rawValue,
-      "isSpeechRecognitionRestricted": speechPermission == .restricted,
+      "restricted": speechPermission == .restricted,
     ]
   }
 }
