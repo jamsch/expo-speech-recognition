@@ -150,8 +150,7 @@ export default function App() {
         if (speechRecognizerPermissions.restricted) {
           setError({
             error: "not-allowed",
-            message:
-              "Speech recognition is restricted. Please enable it in Settings > Screen Time > Content & Privacy Restrictions",
+            message: "Speech recognition is restricted.",
           });
         } else {
           setError({
