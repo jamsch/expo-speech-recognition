@@ -809,6 +809,20 @@ If you're running a multimedia application with audio or video playback, you'll 
 - `ExpoSpeechRecognitionModule.start({ iosCategory })` to configure the audio session category and mode when speech recognition starts
 - `setAudioCategoryIOS({ category, categoryOptions, mode })` to set the audio session category and mode at a later point in time
 
+#### Permissions issues even though the app is explicitly allowed in Settings
+
+If the user has explicitly allowed your app **Microphone** and **Speech Recognition** permissions (under Settings > Apps > [your app]), this likely has something to do with the Speech Recognition permission.
+
+For a quick fix, you could enable `requiresOnDeviceSpeechRecognition` so that you don't use network-based speech recognition. You should also switch to using the [`requestMicrophonePermissionsAsync()`](#requestmicrophonepermissionsasync) function instead, which only requests the microphone permissions instead of both microphone and speech recognition. Keep in mind that you probably only want to do this with iOS.
+
+However, to diagnose the underlying issue:
+
+- Whether the user has enabled Content & Privacy Restrictions for Speech Recognition on their iOS device (Settings > Screen Time > Content & Privacy Restrictions > Speech Recognition)
+  - Remedy: Add, or disable the app from the list of apps under Speech Recognition
+- Whether the user is part of a Mobile device management (MDM) profile. This could make the speech recognition `restricted` (you can check for this in with the [`getPermissionsAsync()`](#getpermissionsasync) and [`requestPermissionsAsync()`](#requestpermissionsasync) APIs). To check for this Settings > General > VPN & Device Management
+  - Remedy: If the user is part of a managed profile, ask the MDM administrator to update the [Privacy Preferences Policy Control payload settings](https://support.apple.com/en-us/guide/deployment/dep38df53c2a/web) to allow your app to use speech recognition.
+- As usual, after changing any of these kinds of settings in the Settings app, a reboot may just "fix" it
+
 ## API Methods
 
 ### `start(options: SpeechRecognitionOptions): void`
