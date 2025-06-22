@@ -6,7 +6,7 @@
 
 - dd8d0dd: Fix: restricted speech recognition permissions for iOS will now be classified as "denied" instead of "undetermined"
 
-  You can now use `restricted` to check whether speech recognition is restricted:
+  You can now use `restricted` to check whether the Speech Recognition permission is restricted:
 
   ```ts
   const permissions =
