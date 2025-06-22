@@ -29,14 +29,17 @@ public class EXSpeechRecognitionPermissionRequester: NSObject, EXPermissionsRequ
 
     if speechPermission == .authorized && recordPermission == .granted {
       status = EXPermissionStatusGranted
-    } else if speechPermission == .denied || recordPermission == .denied {
+    } else if speechPermission == .denied || recordPermission == .denied
+      || speechPermission == .restricted
+    {
       status = EXPermissionStatusDenied
     } else {
       status = EXPermissionStatusUndetermined
     }
 
     return [
-      "status": status.rawValue
+      "status": status.rawValue,
+      "restricted": speechPermission == .restricted,
     ]
   }
 }

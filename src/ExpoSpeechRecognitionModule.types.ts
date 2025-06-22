@@ -1,6 +1,17 @@
 import type { PermissionResponse } from "expo-modules-core";
 import type { NativeModule } from "expo";
 
+export type ExpoSpeechRecognitionPermissionResponse = PermissionResponse & {
+  /**
+   * Whether the speech recognition is restricted by Content & Privacy Restrictions.
+   *
+   * This value corresponds to the `restricted` enum of `SFSpeechRecognizer.authorizationStatus()`.
+   *
+   * This is only available on iOS.
+   */
+  restricted?: boolean;
+};
+
 import type {
   AudioEncodingAndroid,
   AVAudioSessionCategory,
@@ -578,13 +589,13 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * Once a user has granted (or denied) permissions by responding to the original permission request dialog,
    * the only way that the permissions can be changed is by the user themselves using the device settings app.
    */
-  requestPermissionsAsync(): Promise<PermissionResponse>;
+  requestPermissionsAsync(): Promise<ExpoSpeechRecognitionPermissionResponse>;
   /**
    * Returns the current permission status for speech recognition and the microphone.
    *
    * You may also use `getMicrophonePermissionsAsync` and `getSpeechRecognizerPermissionsAsync` to get the permissions separately.
    */
-  getPermissionsAsync(): Promise<PermissionResponse>;
+  getPermissionsAsync(): Promise<ExpoSpeechRecognitionPermissionResponse>;
   /**
    * Returns the current permission status for the microphone.
    */
@@ -599,7 +610,7 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
   /**
    * Returns the current permission status for speech recognition.
    */
-  getSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
+  getSpeechRecognizerPermissionsAsync(): Promise<ExpoSpeechRecognitionPermissionResponse>;
   /**
    * [iOS only] Presents a dialog to the user to request permissions for using the speech recognizer.
    * This permission is required when `requiresOnDeviceRecognition` is disabled (i.e. network-based recognition)
@@ -607,7 +618,7 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * For iOS, once a user has granted (or denied) permissions by responding to the original permission request dialog,
    * the only way that the permissions can be changed is by the user themselves using the device settings app.
    */
-  requestSpeechRecognizerPermissionsAsync(): Promise<PermissionResponse>;
+  requestSpeechRecognizerPermissionsAsync(): Promise<ExpoSpeechRecognitionPermissionResponse>;
   /**
    * Returns an array of locales supported by the speech recognizer.
    *

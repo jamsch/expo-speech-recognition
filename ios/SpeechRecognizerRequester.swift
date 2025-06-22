@@ -21,14 +21,15 @@ public class SpeechRecognizerRequester: NSObject, EXPermissionsRequester {
 
     if speechPermission == .authorized {
       status = EXPermissionStatusGranted
-    } else if speechPermission == .denied {
+    } else if speechPermission == .denied || speechPermission == .restricted {
       status = EXPermissionStatusDenied
     } else {
       status = EXPermissionStatusUndetermined
     }
 
     return [
-      "status": status.rawValue
+      "status": status.rawValue,
+      "restricted": speechPermission == .restricted,
     ]
   }
 }
