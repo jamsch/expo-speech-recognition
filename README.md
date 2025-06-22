@@ -921,7 +921,7 @@ if (!requiresOnDeviceRecognition && Platform.OS === "ios") {
     (result) => {
       console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
       console.log("Granted:", result.granted); // true | false
-      console.log("Restricted:", result.restricted); //true | false | undefined (iOS only)
+      console.log("Restricted:", result.restricted); // true | false | undefined (iOS only)
       console.log("Can ask again:", result.canAskAgain); // true | false
       console.log("Expires:", result.expires); // "never" | number
     },
@@ -937,7 +937,7 @@ Returns the current permission status for both microphone and iOS speech recogni
 ExpoSpeechRecognitionModule.getPermissionsAsync().then((result) => {
   console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
   console.log("Granted:", result.granted); // true | false
-  console.log("Restricted:", result.restricted); //true | false | undefined (iOS only)
+  console.log("Restricted:", result.restricted); // true | false | undefined (iOS only)
   console.log("Can ask again:", result.canAskAgain); // true | false
   console.log("Expires:", result.expires); // "never" | number
 });
@@ -968,7 +968,7 @@ ExpoSpeechRecognitionModule.getSpeechRecognizerPermissionsAsync().then(
   (result) => {
     console.log("Status:", result.status); // "granted" | "denied" | "not-determined"
     console.log("Granted:", result.granted); // true | false
-    console.log("Restricted:", result.restricted); //true | false | undefined (iOS only)
+    console.log("Restricted:", result.restricted); // true | false | undefined (iOS only)
     console.log("Can ask again:", result.canAskAgain); // true | false
     console.log("Expires:", result.expires); // "never" | number
   },
