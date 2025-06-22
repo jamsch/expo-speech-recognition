@@ -819,8 +819,8 @@ However, to diagnose the underlying issue:
 
 - Whether the user has enabled Content & Privacy Restrictions for Speech Recognition on their iOS device (Settings > Screen Time > Content & Privacy Restrictions > Speech Recognition)
   - Remedy: Add, or disable the app from the list of apps under Speech Recognition
-- Whether the user is part of a Mobile device management (MDM) profile. This could make the speech recognition `restricted` (you can check for this in with the [`getPermissionsAsync()`](#getpermissionsasync) and [`requestPermissionsAsync()`](#requestpermissionsasync) APIs). To check for this Settings > General > VPN & Device Management
-  - Remedy: If the user is part of a managed profile, ask the MDM administrator to update the [Privacy Preferences Policy Control payload settings](https://support.apple.com/en-us/guide/deployment/dep38df53c2a/web) to allow your app to use speech recognition.
+- Whether the user is part of a Mobile device management (MDM) profile. This could make the speech recognition `restricted` (you can check for this in with the [`getPermissionsAsync()`](#getpermissionsasync) and [`requestPermissionsAsync()`](#requestpermissionsasync) APIs). To check for this, open Settings > General > VPN & Device Management.
+  - Remedy: If the user is part of a managed profile, ask the MDM administrator (usually your work) to update the [Privacy Preferences Policy Control payload settings](https://support.apple.com/en-us/guide/deployment/dep38df53c2a/web) to allow your app to use speech recognition.
 - As usual, after changing any of these kinds of settings in the Settings app, a reboot may just "fix" it
 
 ## API Methods
