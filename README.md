@@ -813,7 +813,7 @@ If you're running a multimedia application with audio or video playback, you'll 
 
 If the user has explicitly allowed your app **Microphone** and **Speech Recognition** permissions (under Settings > Apps > [your app]), this likely has something to do with the Speech Recognition permission.
 
-For a quick fix, you could enable `requiresOnDeviceSpeechRecognition` so that you don't use network-based speech recognition. You should also switch to using the [`requestMicrophonePermissionsAsync()`](#requestmicrophonepermissionsasync) function instead, which only requests the microphone permissions instead of both microphone and speech recognition. Keep in mind that you probably only want to do this with iOS.
+For a quick fix, you could enable `requiresOnDeviceSpeechRecognition` so that you don't use network-based speech recognition (and therefore don't need Speech Recognition permissions). You should also switch to using the [`requestMicrophonePermissionsAsync()`](#requestmicrophonepermissionsasync) function instead, which only requests the microphone permissions instead of both microphone and speech recognition. Android doesn't have a dedicated speech recognition permission so it's safe to only request microphone permissions on both Android and iOS. Keep in mind though that the `requiresOnDeviceSpeechRecognition` setting for Android will require the language model to be installed.
 
 However, to diagnose the underlying issue:
 
