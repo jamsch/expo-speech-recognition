@@ -2,7 +2,6 @@ import {
   Alert,
   Button,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -47,6 +46,7 @@ import {
   IOSOutputFormat,
 } from "expo-av/build/Audio";
 import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const speechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
@@ -162,6 +162,8 @@ export default function App() {
         return;
       }
     }
+
+    console.log(settings);
 
     ExpoSpeechRecognitionModule.start(settings);
   };
