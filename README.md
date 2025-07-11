@@ -756,20 +756,40 @@ ExpoSpeechRecognitionModule.start({
 
 ## Platform Compatibility Table
 
-As of 7 Aug 2024, the following platforms are supported:
+As of 12 July 2025, the following platforms are supported:
 
-| Platform               | Supported | Default Recognition Engine | Notes                                                                                                                                                                                                    |
-| ---------------------- | --------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Android (React Native) | ✅        | Google                     | Continuous mode and Recording features are only supported on Android 13 and above. Recognition engine can be changed via `androidRecognitionServicePackage`                                              |
-| iOS (React Native)     | ✅        | Siri                       |                                                                                                                                                                                                          |
-| Chrome Desktop         | ✅        | Google (server-based)      | Implemented via prefix `webkitSpeechRecognition`.                                                                                                                                                        |
-| Safari Desktop >= v16  | ✅        | Siri                       | Implemented via prefix `webkitSpeechRecognition`. Siri needs to be enabled                                                                                                                               |
-| Chrome on Android      | ✅        | Google                     | There's a few differences in how results get handled in comparison to the Chrome Desktop implementation                                                                                                  |
-| Chrome on iOS          | ❌        | Google                     | Not working (Last tested 2023)                                                                                                                                                                           |
-| Edge on Windows        | (unknown) | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it's presence at `edge://components`                                                                               |
-| Edge on Mac ARM        | ❌        | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it's presence at `edge://components`                                                                               |
-| Brave Desktop          | ❌        | -                          | As of Aug 2024, Brave is working on an implementation however there's currently no ETA (source: [brave-browser/issues/3725](https://github.com/brave/brave-browser/issues/3725#issuecomment-2224068859)) |
-| Firefox Desktop        | ❌        | -                          | No SpeechRecognition implementation                                                                                                                                                                      |
+### Mobile Platforms (React Native)
+
+| Feature                             | Android 12- | Android 13 | Android 14+ | iOS 17+ | Notes                                                                           |
+| ----------------------------------- | ----------- | ---------- | ----------- | ------- | ------------------------------------------------------------------------------- |
+| **Basic Speech Recognition**        | ✅          | ✅         | ✅          | ✅      | Core functionality                                                              |
+| **Continuous Recognition**          | ❌          | ✅         | ✅          | ✅      | Android 12- not supported                                                       |
+| **Interim Results**                 | ✅          | ✅         | ✅          | ✅      | Real-time partial results                                                       |
+| **On-Device Recognition**           | ❌          | ✅         | ✅          | ✅      | Requires language model download on Android                                     |
+| **Audio Recording**                 | ❌          | ✅         | ✅          | ✅      | Persist audio to filesystem                                                     |
+| **Audio File Transcription**        | ❌          | ✅         | ✅          | ✅      | Transcribe from a local file URI                                                |
+| **Volume Metering**                 | ✅          | ✅         | ✅          | ✅      | Real-time volume levels                                                         |
+| **Voice Processing**                | ❌          | ❌         | ❌          | ✅      | iOS: Prevent microphone feedback                                                |
+| **Contextual Strings**              | ✅          | ✅         | ✅          | ✅      | Custom vocabulary bias. Seems to work better on iOS.                            |
+| **Punctuation (`addsPunctuation`)** | ❌          | ✅ \*      | ✅ \*       | ✅      | \*Android: Only with on-device recognition                                      |
+| **Language Detection**              | ❌          | ❌         | ✅ \*       | ❌      | \*Android: only with on-device recognition                                      |
+| **Word Confidence & Timing**        | ❌          | ❌         | ✅ \*       | ✅      | \*Android: only with on-device recognition                                      |
+| **Offensive Word Masking**          | ❌          | ✅         | ✅          | ❌      | Android 13+ with `EXTRA_MASK_OFFENSIVE_WORDS` enabled in `androidIntentOptions` |
+
+### Web Platforms
+
+| Platform               | Supported | Default Recognition Engine | Notes                                                                                                                                                                                                                                |
+| ---------------------- | --------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Android (React Native) | ✅        | Google                     | Continuous mode and Recording features are only supported on Android 13 and above. Recognition engine can be changed via `androidRecognitionServicePackage`                                                                          |
+| iOS (React Native)     | ✅        | Siri                       |                                                                                                                                                                                                                                      |
+| Chrome Desktop         | ✅        | Google (server-based)      | Implemented via prefix `webkitSpeechRecognition`.                                                                                                                                                                                    |
+| Safari Desktop >= v16  | ✅        | Siri                       | Implemented via prefix `webkitSpeechRecognition`. Siri needs to be enabled                                                                                                                                                           |
+| Chrome on Android      | ✅        | Google                     | There's a few differences in how results get handled in comparison to the Chrome Desktop implementation                                                                                                                              |
+| Chrome on iOS          | ❌        | Google                     | Not working (Last tested 2023)                                                                                                                                                                                                       |
+| Edge on Windows        | (unknown) | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it's presence at `edge://components`                                                                                                           |
+| Edge on Mac ARM        | ❌        | Azure                      | SpeechRecognition API is implemented, but requires the Azure speech component. Verify it's presence at `edge://components`                                                                                                           |
+| Brave Desktop          | ❌        | -                          | As of July 2025, Brave is waiting for improvements to the Web Speech API for on-device recognition with no server solution (source: [brave-browser/issues/3725](https://github.com/brave/brave-browser/issues/3725#issue-421332412)) |
+| Firefox Desktop        | ❌        | -                          | No SpeechRecognition implementation                                                                                                                                                                                                  |
 
 ## Common Troubleshooting Issues
 
