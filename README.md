@@ -34,7 +34,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [stop()](#stop-void)
   - [stopAsync()](#stopasync-promisevoid)
   - [abort()](#abort-void)
-  - [abortAsync()](#abortasync-void)
+  - [abortAsync()](#abortasync-promisevoid)
   - [requestPermissionsAsync()](#requestpermissionsasync)
   - [requestMicrophonePermissionsAsync()](#requestmicrophonepermissionsasync)
   - [requestSpeechRecognizerPermissionsAsync()](#requestspeechrecognizerpermissionsasync)
@@ -896,7 +896,7 @@ ExpoSpeechRecognitionModule.abort();
 // - "end" event indicating speech recognition has finished
 ```
 
-### `abortAsync(): void`
+### `abortAsync(): Promise<void>`
 
 Does the same thing as `abort()` but waits for the "end" event to be emitted before resolving.
 
