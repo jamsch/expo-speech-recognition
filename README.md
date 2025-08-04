@@ -32,9 +32,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 - [API Methods](#api-methods)
   - [start()](#startoptions-speechrecognitionoptions-void)
   - [stop()](#stop-void)
-  - [stopAsync()](#stopasync-promisevoid)
   - [abort()](#abort-void)
-  - [abortAsync()](#abortasync-promisevoid)
   - [requestPermissionsAsync()](#requestpermissionsasync)
   - [requestMicrophonePermissionsAsync()](#requestmicrophonepermissionsasync)
   - [requestSpeechRecognizerPermissionsAsync()](#requestspeechrecognizerpermissionsasync)
@@ -53,6 +51,9 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
   - [setAudioSessionActiveIOS()](#setaudiosessionactiveiosvalue-boolean-options--notifyothersondeactivation-boolean--void)
+- [Helper API Methods](#helper-api-methods)
+  - [stopAsync()](#stopasync-promisevoid)
+  - [abortAsync()](#abortasync-promisevoid)
 - [System Overview Diagrams](#system-overview-diagrams)
   - [Overall Architecture](#overall-architecture)
   - [Event Flow](#event-flow)
@@ -876,17 +877,6 @@ ExpoSpeechRecognitionModule.stop();
 // - "end" indicating the end of speech recognition
 ```
 
-### `stopAsync(): Promise<void>`
-
-Does the same thing as `stop()` but waits for the "end" event to be emitted before resolving.
-
-```ts
-import { stopAsync } from "expo-speech-recognition";
-
-await stopAsync();
-console.log("Speech recognition has ended. We can safely call .start() again!");
-```
-
 ### `abort(): void`
 
 Immediately cancels speech recognition (does not process the final result).
@@ -896,17 +886,6 @@ ExpoSpeechRecognitionModule.abort();
 // Expect the following events to be emitted in order:
 // - "error" event with the code "aborted"
 // - "end" event indicating speech recognition has finished
-```
-
-### `abortAsync(): Promise<void>`
-
-Does the same thing as `abort()` but waits for the "end" event to be emitted before resolving.
-
-```ts
-import { abortAsync } from "expo-speech-recognition";
-
-await abortAsync();
-console.log("Speech recognition has ended. We can safely call .start() again!");
 ```
 
 ### `requestPermissionsAsync()`
@@ -1215,6 +1194,32 @@ Sets the audio session active state.
 ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(true, {
   notifyOthersOnDeactivation: true,
 });
+```
+
+## Helper API Methods
+
+These functions are purely implemented on the JavaScript side so they can be used by any platform.
+
+### `stopAsync(): Promise<void>`
+
+Does the same thing as `stop()` but waits for the "end" event to be emitted before resolving.
+
+```ts
+import { stopAsync } from "expo-speech-recognition/helpers";
+
+await stopAsync();
+console.log("Speech recognition has ended. We can safely call .start() again!");
+```
+
+### `abortAsync(): Promise<void>`
+
+Does the same thing as `abort()` but waits for the "end" event to be emitted before resolving.
+
+```ts
+import { abortAsync } from "expo-speech-recognition/helpers";
+
+await abortAsync();
+console.log("Speech recognition has ended. We can safely call .start() again!");
 ```
 
 ## System Overview Diagrams

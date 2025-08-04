@@ -7,7 +7,7 @@ Added `stopAsync()` and `abortAsync()` function helpers. These are the same as `
 Usage:
 
 ```js
-import { stopAsync, abortAsync } from "expo-speech-recognition";
+import { stopAsync, abortAsync } from "expo-speech-recognition/helpers";
 
 // Stopping will attempt to process the final result and end
 await stopAsync();
