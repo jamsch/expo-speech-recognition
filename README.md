@@ -286,7 +286,9 @@ ExpoSpeechRecognitionModule.start({
     mode: "measurement",
   },
   // [Default: false] Does extra audio processing to prevent
-  // microphone feedback from speakers
+  // microphone feedback from speakers.
+  // Note: this setting may switch the AVAudioSession mode to "voiceChat"
+  // and lower the volume of speaker playback
   iosVoiceProcessingEnabled: true,
   // [Default: undefined] Recording options for Android & iOS
   // Android 13+ and iOS only.

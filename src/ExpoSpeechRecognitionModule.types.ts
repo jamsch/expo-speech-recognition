@@ -299,6 +299,8 @@ export type ExpoSpeechRecognitionOptions = {
    *
    * When enabled, extra signal processing is applied on the incoming audio, and any audio that is coming from the device is taken out.
    *
+   * Note: this setting may switch the AVAudioSession mode to "voiceChat" and lower the volume of speaker playback
+   *
    * (This option will place both input and output nodes in voice processing mode as noted in Apple docs: http://developer.apple.com/videos/play/wwdc2019/510/?time=66)
    */
   iosVoiceProcessingEnabled?: boolean;
