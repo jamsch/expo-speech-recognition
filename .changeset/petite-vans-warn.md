@@ -2,7 +2,7 @@
 "expo-speech-recognition": patch
 ---
 
-Added `stopAsync()` and `abortAsync()` function helpers. These are the same as `stop()` and `abort()`, however they wait for the "end" event to be emitted.
+Added `stopAsync()` and `abortAsync()` function helpers. These are the same as `stop()` and `abort()`, however they wait for the "end" event to be emitted before the function resolves.
 
 Usage:
 
