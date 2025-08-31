@@ -14,6 +14,7 @@ export type ExpoSpeechRecognitionPermissionResponse = PermissionResponse & {
 
 import type {
   AudioEncodingAndroid,
+  AvailabilityStatus,
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
@@ -93,6 +94,9 @@ export type ExpoSpeechRecognitionErrorCode =
   | "speech-timeout"
   /** (Android) Unknown error */
   | "unknown";
+
+export type AvailabilityStatusValue =
+  (typeof AvailabilityStatus)[keyof typeof AvailabilityStatus];
 
 export type ExpoSpeechRecognitionErrorEvent = {
   error: ExpoSpeechRecognitionErrorCode;
@@ -650,6 +654,39 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
      */
     installedLocales: string[];
   }>;
+
+  /**
+   * The available method returns a Promise that resolves to a AvailabilityStatus indicating the recognition availability matching the provided options.
+   *
+   * Implementation notes:
+   *
+   * - On Android 12 and below, this method only checks whether speech recognition functionality is available, but not the given languages.
+   * - You need to provide at least one language in the `langs` array
+   *
+   * @throws {"TypeError"} If the `langs` array is empty
+   * @throws {"error"} If there was an error retrieving the recognition availability
+   *
+   * @example
+   *
+   * ```js
+   * import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+   *
+   * const available = await ExpoSpeechRecognitionModule.available({
+   *   langs: ["en-US"],
+   *   processLocally: true,
+   * });
+   *
+   * console.log(available);
+   * ```
+   *
+   * Web Speech API: https://webaudio.github.io/web-speech-api/#dom-speechrecognition-available
+   */
+  available(options: {
+    langs: string[];
+    /** Default: false */
+    processLocally?: boolean;
+  }): Promise<AvailabilityStatusValue>;
+
   /**
    * [Android only] Returns an array of package names of speech recognition services that are available on the device.
    *
@@ -686,7 +723,10 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * This mostly applies to Android devices, to check if it's greater than Android 13.
    */
   supportsRecording(): boolean;
+
   /**
+   * @deprecated Use `available()` instead.
+   *
    * Whether on-device speech recognition is available.
    *
    * If this method returns false, `start()` will fail and emit an error event with the code `service-not-allowed` or `language-not-supported`.

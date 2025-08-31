@@ -1,4 +1,18 @@
 /**
+ * https://webaudio.github.io/web-speech-api/#enumdef-availabilitystatus
+ */
+export const AvailabilityStatus = {
+  /** Indicates that speech recognition is not available for the specified language(s) and processing preference. If `processLocally` of `options` is true, this means on-device recognition for the language is not supported by the user agent. If `processLocally` of `options` is false, it means neither local nor remote recognition is available for at least one of the specified languages. */
+  unavailable: "unavailable",
+  /** Indicates that on-device speech recognition for the specified language(s) is supported by the user agent but not yet installed. It can potentially be installed using the install() method. This status is primarily relevant when `processLocally` of `options` is true. */
+  downloadable: "downloadable",
+  /** Indicates that on-device speech recognition for the specified language(s) is currently in the process of being downloaded. This status is primarily relevant when `processLocally` of `options` is true. */
+  downloading: "downloading",
+  /** Indicates that speech recognition is available for all specified language(s) and the given processing preference. If `processLocally` of `options` is true, this means on-device recognition is installed and ready. If processLocally of options is false, it means recognition (which could be local or remote) is available. */
+  available: "available",
+} as const;
+
+/**
  * [iOS] Audio category used for defining the audio behavior
  *
  * Docs: [AVAudioSession.Category](https://developer.apple.com/documentation/avfaudio/avaudiosession/category)
