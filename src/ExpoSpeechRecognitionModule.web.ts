@@ -262,6 +262,17 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
     return false;
   }
 
+  available(options: { langs: string[]; processLocally?: boolean }) {
+    if (
+      _speechRecognitionRef &&
+      "available" in _speechRecognitionRef &&
+      typeof _speechRecognitionRef.available === "function"
+    ) {
+      return _speechRecognitionRef.available(options);
+    }
+    return Promise.resolve("unavailable");
+  }
+
   androidTriggerOfflineModelDownload() {
     console.warn(
       "androidTriggerOfflineModelDownload is not supported on web. Returning false.",

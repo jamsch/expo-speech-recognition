@@ -4,11 +4,13 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config([
+  {
+    ignores: ["build/**", "example/**"],
+  },
   tseslint.configs.recommended,
   js.configs.recommended,
   {
     files: ["src/**/*.{js,jsx,ts,tsx}"],
-    ignores: ["build/**"],
     languageOptions: {
       globals: globals.node,
     },
