@@ -136,7 +136,7 @@ export type ExpoSpeechRecognitionNativeEventMap = {
      * Example URIs:
      *
      * - Android: `file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav`
-     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf`
+     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav`
      */
     uri: string | null;
   };
@@ -148,7 +148,7 @@ export type ExpoSpeechRecognitionNativeEventMap = {
      * Example URIs:
      *
      * - Android: `file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav`
-     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf`
+     * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav`
      */
     uri: string | null;
   };
