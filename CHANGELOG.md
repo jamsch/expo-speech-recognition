@@ -1,5 +1,13 @@
 # expo-speech-recognition
 
+## 2.1.2
+
+### Patch Changes
+
+- 3898ff6: iOS: Changed the default file extension of recording from .caf to .wav
+
+  The recording files always had WAV headers so the file extension now accurately matches this.
+
 ## 2.1.1
 
 ### Patch Changes
