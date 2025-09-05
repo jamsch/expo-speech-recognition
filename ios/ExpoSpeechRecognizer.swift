@@ -409,7 +409,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       baseDir = dirPath
     }
 
-    let fileName = outputFileName ?? "recording_\(UUID().uuidString).caf"
+    let fileName = outputFileName ?? "recording_\(UUID().uuidString).wav"
     let filePath = baseDir.appendingPathComponent(fileName)
 
     _ = ExtAudioFileCreateWithURL(
