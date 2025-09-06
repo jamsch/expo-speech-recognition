@@ -812,8 +812,8 @@ function OtherSettings(props: {
     console.log("Local file path:", event.uri);
     // Android: Will be saved as a .wav file
     // e.g. "file:///data/user/0/expo.modules.speechrecognition.example/cache/recording_1720678500903.wav"
-    // iOS: Will be saved as a .caf file
-    // e.g. "file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.caf"
+    // iOS: Will be saved as a .wav file
+    // e.g. "file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav"
     setRecordingPath(event.uri);
   });
 
