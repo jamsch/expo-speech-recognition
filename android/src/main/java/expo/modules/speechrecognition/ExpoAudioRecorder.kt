@@ -198,7 +198,7 @@ class ExpoAudioRecorder(
 
         while (isRecordingAudio) {
             val read = audioRecorder!!.read(data, 0, data.size)
-            if (read > -1) {
+            if (read > 0) {
                 try {
                     outputStream?.write(data, 0, read)
                     outputStream?.flush()
@@ -212,9 +212,6 @@ class ExpoAudioRecorder(
                     Log.e(TAG, "Failed to write to output stream", e)
                     e.printStackTrace()
                 }
-            } else {
-                // error, or end of recording
-                break
             }
         }
         tempFileOutputStream.close()
