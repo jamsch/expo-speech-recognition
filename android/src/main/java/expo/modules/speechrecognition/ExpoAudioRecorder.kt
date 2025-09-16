@@ -198,18 +198,20 @@ class ExpoAudioRecorder(
 
         while (isRecordingAudio) {
             val read = audioRecorder!!.read(data, 0, data.size)
-            try {
-                outputStream?.write(data, 0, read)
-                outputStream?.flush()
+            if (read > -1) {
+                try {
+                    outputStream?.write(data, 0, read)
+                    outputStream?.flush()
 
-                // Write to the temp PCM file
-                if (outputFilePath != null) {
-                    tempFileOutputStream.write(data, 0, read)
-                    tempFileOutputStream.flush()
+                    // Write to the temp PCM file
+                    if (outputFilePath != null) {
+                        tempFileOutputStream.write(data, 0, read)
+                        tempFileOutputStream.flush()
+                    }
+                } catch (e: IOException) {
+                    Log.e(TAG, "Failed to write to output stream", e)
+                    e.printStackTrace()
                 }
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to write to output stream", e)
-                e.printStackTrace()
             }
         }
         tempFileOutputStream.close()
