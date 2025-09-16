@@ -212,6 +212,9 @@ class ExpoAudioRecorder(
                     Log.e(TAG, "Failed to write to output stream", e)
                     e.printStackTrace()
                 }
+            } else {
+                // error, or end of recording
+                break
             }
         }
         tempFileOutputStream.close()
