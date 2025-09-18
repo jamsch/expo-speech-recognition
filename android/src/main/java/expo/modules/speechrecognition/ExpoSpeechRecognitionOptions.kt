@@ -109,3 +109,11 @@ class TriggerOfflineModelDownloadOptions : Record {
     @Field
     val locale: String = "en-US"
 }
+
+class AvailableOptions : Record {
+    @Field
+    val langs: List<String> = listOf()
+
+    @Field
+    val processLocally: Boolean? = false
+}

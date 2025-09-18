@@ -232,6 +232,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   }
   stop = ExpoSpeechRecognitionModule.stop;
   abort = ExpoSpeechRecognitionModule.abort;
+  available = ExpoSpeechRecognitionModule.available;
 
   #onstart: SpeechListener<"start"> | null = null;
   set onstart(listener: SpeechListener<"start"> | null) {

@@ -251,6 +251,125 @@ class ExpoSpeechRecognitionModule : Module() {
                 )
             }
 
+            AsyncFunction("available") { options: AvailableOptions, promise: Promise ->
+                try {
+                    // On Android 12 and below, we're not able to query the recognition support
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                        val available = SpeechRecognizer.isRecognitionAvailable(context)
+                        promise.resolve(if (available) "available" else "unavailable")
+                        return@AsyncFunction
+                    }
+
+                    if (!SpeechRecognizer.isRecognitionAvailable(appContext.reactContext!!)) {
+                        promise.resolve("unavailable")
+                        return@AsyncFunction
+                    }
+
+                    val langs = options.langs
+                    val processLocally = options.processLocally == true
+
+                    if (langs.isEmpty()) {
+                        promise.reject("TypeError", "Failed to execute 'available' on 'ExpoSpeechRecognitionModule': Langs array cannot be empty")
+                        return@AsyncFunction
+                    }
+
+                    if (!processLocally) {
+                        val context = appContext.reactContext!!
+
+                        Handler(context.mainLooper).post {
+                            val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
+                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                            recognizer.checkRecognitionSupport(
+                                intent,
+                                Executors.newSingleThreadExecutor(),
+                                @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+                                object : RecognitionSupportCallback {
+                                    override fun onSupportResult(recognitionSupport: RecognitionSupport) {
+                                        try {
+                                            val online = recognitionSupport.onlineLanguages.toSet()
+                                            val installed = recognitionSupport.installedOnDeviceLanguages.toSet()
+                                            val supportedOnDevice = recognitionSupport.supportedOnDeviceLanguages.toSet()
+                                            val all = online.union(installed).union(supportedOnDevice)
+                                            val allAvailable = langs.all { all.contains(it) }
+                                            promise.resolve(if (allAvailable) "available" else "unavailable")
+                                        } catch (e: Exception) {
+                                            promise.reject("error", e.message, e)
+                                        } finally {
+                                            recognizer.destroy()
+                                        }
+                                    }
+
+                                    override fun onError(error: Int) {
+                                        try {
+                                            // Fallback to global availability
+                                            val available = SpeechRecognizer.isRecognitionAvailable(context)
+                                            promise.resolve(if (available) "available" else "unavailable")
+                                        } finally {
+                                            recognizer.destroy()
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        return@AsyncFunction
+                    }
+
+                    // on-device recognition availability
+                    val context = appContext.reactContext!!
+                    if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
+                        promise.resolve("unavailable")
+                        return@AsyncFunction
+                    }
+
+                    Handler(context.mainLooper).post {
+                        val recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+
+                        recognizer.checkRecognitionSupport(
+                            intent,
+                            Executors.newSingleThreadExecutor(),
+                            @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+                            object : RecognitionSupportCallback {
+                                override fun onSupportResult(recognitionSupport: RecognitionSupport) {
+                                    try {
+                                        val installed = recognitionSupport.installedOnDeviceLanguages.toSet()
+                                        val downloadable = recognitionSupport.supportedOnDeviceLanguages.toSet() - installed
+                                        // Android 14+ surfaces downloading set via installedLanguages + ModelDownloadListener state, but not directly here.
+                                        // We cannot reliably detect in-progress downloads; return downloadable unless installed.
+
+                                        var finalStatus = "available"
+                                        for (lang in langs) {
+                                            val currentStatus = when {
+                                                installed.contains(lang) -> "available"
+                                                downloadable.contains(lang) -> "downloadable"
+                                                else -> "unavailable"
+                                            }
+                                            finalStatus = maxAvailability(finalStatus, currentStatus)
+                                        }
+                                        promise.resolve(finalStatus)
+                                    } catch (e: Exception) {
+                                        promise.reject("error", e.message, e)
+                                    } finally {
+                                        recognizer.destroy()
+                                    }
+                                }
+
+                                override fun onError(error: Int) {
+                                    try {
+                                        promise.resolve("unavailable")
+                                    } finally {
+                                        recognizer.destroy()
+                                    }
+                                }
+                            }
+                        )
+                    }
+                } catch (e: Exception) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+
             Function("setAudioSessionActiveIOS") { _: Any ->
                 // Do nothing
             }
@@ -341,6 +460,17 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
                         },
                     )
+                }
+
+                private fun maxAvailability(current: String, candidate: String): String {
+                    // Order: available < downloading < downloadable < unavailable (higher index is worse)
+                    fun rank(value: String): Int = when (value) {
+                        "available" -> 0
+                        "downloading" -> 1
+                        "downloadable" -> 2
+                        else -> 3 // "unavailable"
+                    }
+                    return if (rank(candidate) > rank(current)) candidate else current
                 }
             }
         }

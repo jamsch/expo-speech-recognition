@@ -105,6 +105,14 @@ struct GetSupportedLocaleOptions: Record {
   var androidRecognitionServicePackage: String? = nil
 }
 
+struct AvailableOptions: Record {
+  @Field
+  var langs: [String] = []
+
+  @Field
+  var processLocally: Bool = false
+}
+
 enum CategoryParam: String, Enumerable {
   case ambient
   case soloAmbient
