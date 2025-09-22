@@ -97,6 +97,15 @@ export type ExpoSpeechRecognitionErrorCode =
 export type ExpoSpeechRecognitionErrorEvent = {
   error: ExpoSpeechRecognitionErrorCode;
   message: string;
+  /**
+   * The underlying native error code from the platform-specific speech recognition service.
+   *
+   * - On Android: Maps to SpeechRecognizer error constants (e.g., ERROR_AUDIO = 3)
+   * - Value of -1 indicates a generic/unknown error or when native code is not available
+   *
+   * Usually you won't need this field, but it can be useful for debugging purposes.
+   */
+  code?: number;
 };
 
 export type LanguageDetectionEvent = {

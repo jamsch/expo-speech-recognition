@@ -15,6 +15,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [Direct module API](#direct-module-api)
 - [Speech Recognition Events](#speech-recognition-events)
 - [Handling Errors](#handling-errors)
+  - [Advanced error handling](#advanced-error-handling)
 - [Persisting Audio Recordings](#persisting-audio-recordings)
 - [Transcribing audio files](#transcribing-audio-files)
   - [Supported input audio formats](#supported-input-audio-formats)
@@ -402,6 +403,25 @@ The error code is based on the [Web Speech API error codes](https://developer.mo
 | `client`                 | An unknown client-side error. Corresponds with `SpeechRecognizer.ERROR_CLIENT`. |
 | `speech-timeout`         | (Android) No speech input.                                                      |
 | `unknown`                | (Android) Unknown error                                                         |
+
+### Advanced error handling
+
+Alongside the the mapped web-speech API error name, you can also access the `error.code` field to get the platform's underlying native error code.
+
+This is currently supported on Android only.
+
+```ts
+import {
+  SpeechRecognizerErrorAndroid,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+
+useSpeechRecognitionEvent("error", (event) => {
+  if (event.code === SpeechRecognizerErrorAndroid.ERROR_NETWORK_TIMEOUT) {
+    // do something
+  }
+});
+```
 
 ## Persisting Audio Recordings
 
