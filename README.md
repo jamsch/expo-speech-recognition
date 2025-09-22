@@ -52,6 +52,9 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
   - [setAudioSessionActiveIOS()](#setaudiosessionactiveiosvalue-boolean-options--notifyothersondeactivation-boolean--void)
+- [Helper API Methods](#helper-api-methods)
+  - [stopAsync()](#stopasync-promisevoid)
+  - [abortAsync()](#abortasync-promisevoid)
 - [System Overview Diagrams](#system-overview-diagrams)
   - [Overall Architecture](#overall-architecture)
   - [Event Flow](#event-flow)
@@ -1211,6 +1214,32 @@ Sets the audio session active state.
 ExpoSpeechRecognitionModule.setAudioSessionActiveIOS(true, {
   notifyOthersOnDeactivation: true,
 });
+```
+
+## Helper API Methods
+
+These functions are purely implemented on the JavaScript side so they can be used by any platform.
+
+### `stopAsync(): Promise<void>`
+
+Does the same thing as `stop()` but waits for the "end" event to be emitted before resolving.
+
+```ts
+import { stopAsync } from "expo-speech-recognition/helpers";
+
+await stopAsync();
+console.log("Speech recognition has ended. We can safely call .start() again!");
+```
+
+### `abortAsync(): Promise<void>`
+
+Does the same thing as `abort()` but waits for the "end" event to be emitted before resolving.
+
+```ts
+import { abortAsync } from "expo-speech-recognition/helpers";
+
+await abortAsync();
+console.log("Speech recognition has ended. We can safely call .start() again!");
 ```
 
 ## System Overview Diagrams

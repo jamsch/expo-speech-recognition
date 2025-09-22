@@ -791,7 +791,7 @@ function AndroidSettings(props: {
             <CheckboxButton
               key={key}
               title={key}
-              checked={Boolean(settings.androidIntentOptions?.[key]) ?? false}
+              checked={Boolean(settings.androidIntentOptions?.[key])}
               onPress={() =>
                 handleChange("androidIntentOptions", {
                   ...settings.androidIntentOptions,
