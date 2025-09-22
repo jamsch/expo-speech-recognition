@@ -22,6 +22,7 @@ export {
   RecognizerIntentEnableLanguageSwitch,
   AudioEncodingAndroid,
   TaskHintIOS,
+  SpeechRecognizerErrorAndroid,
 } from "./constants";
 
 export const getSupportedLocales = (options?: {

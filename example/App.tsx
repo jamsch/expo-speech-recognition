@@ -18,6 +18,7 @@ import {
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
   ExpoWebSpeechRecognition,
+  SpeechRecognizerErrorAndroid,
 } from "expo-speech-recognition";
 import type {
   AudioEncodingAndroidValue,
@@ -112,7 +113,22 @@ export default function App() {
   });
 
   useSpeechRecognitionEvent("error", (ev) => {
-    console.log("[event]: error", ev.error, ev.message);
+    console.log(
+      "[event]: error",
+      ev.error,
+      ev.message,
+      ev.code ? `code: ${ev.code}` : "",
+    );
+
+    switch (ev.code) {
+      case SpeechRecognizerErrorAndroid.ERROR_NETWORK_TIMEOUT:
+        break;
+      case SpeechRecognizerErrorAndroid.ERROR_TOO_MANY_REQUESTS:
+        break;
+      case -1:
+        break;
+    }
+
     setError(ev);
   });
 

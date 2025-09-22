@@ -347,3 +347,41 @@ export const TaskHintIOS = {
    */
   confirmation: "confirmation",
 } as const;
+
+/**
+ * An enum of the error codes for the Android SpeechRecognizer class.
+ *
+ * Docs: https://developer.android.com/reference/android/speech/SpeechRecognizer
+ */
+export const SpeechRecognizerErrorAndroid = {
+  /** Audio recording error. */
+  ERROR_AUDIO: 3,
+  /** (API 33+) The service does not allow to check for support. */
+  ERROR_CANNOT_CHECK_SUPPORT: 14,
+  /** (API 33+) The service does not support listening to model downloads events. */
+  ERROR_CANNOT_LISTEN_TO_DOWNLOAD_EVENTS: 15,
+  /** Other client side errors. */
+  ERROR_CLIENT: 5,
+  /** Insufficient permissions */
+  ERROR_INSUFFICIENT_PERMISSIONS: 9,
+  /** Requested language is not available to be used with the current recognizer. */
+  ERROR_LANGUAGE_NOT_SUPPORTED: 12,
+  /** (API 31+) Requested language is supported, but not available currently (e.g. not downloaded yet). */
+  ERROR_LANGUAGE_UNAVAILABLE: 13,
+  /** Other network related errors. */
+  ERROR_NETWORK: 2,
+  /** Network operation timed out. */
+  ERROR_NETWORK_TIMEOUT: 1,
+  /** No recognition result matched. */
+  ERROR_NO_MATCH: 7,
+  /** RecognitionService busy. */
+  ERROR_RECOGNIZER_BUSY: 8,
+  /** Server sends error status. */
+  ERROR_SERVER: 4,
+  /** Server has been disconnected, e.g. because the app has crashed. */
+  ERROR_SERVER_DISCONNECTED: 11,
+  /** No speech input */
+  ERROR_SPEECH_TIMEOUT: 6,
+  /** (API 31+) Too many requests from the same client. */
+  ERROR_TOO_MANY_REQUESTS: 10,
+} as const;

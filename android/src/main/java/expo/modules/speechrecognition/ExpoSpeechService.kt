@@ -157,7 +157,7 @@ class ExpoSpeechService(
                     }
                 e.printStackTrace()
                 log("Failed to create Speech Recognizer with error: $errorMessage")
-                sendEvent("error", mapOf("error" to "audio-capture", "message" to errorMessage))
+                sendEvent("error", mapOf("error" to "audio-capture", "message" to errorMessage, "code" to -1))
                 teardownAndEnd()
             }
         }
@@ -521,7 +521,7 @@ class ExpoSpeechService(
             sendEvent("nomatch", null)
         }
 
-        sendEvent("error", mapOf("error" to errorInfo.error, "message" to errorInfo.message))
+        sendEvent("error", mapOf("error" to errorInfo.error, "message" to errorInfo.message, "code" to error))
         teardownAndEnd(RecognitionState.ERROR)
         log("onError() - ${errorInfo.error}: ${errorInfo.message} - code: $error")
     }
@@ -703,7 +703,7 @@ class ExpoSpeechService(
                 // Extra codes
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "speech-timeout"
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"
-                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "busy"
+                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "too-many-requests"
                 else -> "unknown"
             }
 
@@ -722,7 +722,7 @@ class ExpoSpeechService(
                     "Requested language is not available to be used with the current recognizer."
                 // Extra codes/messages
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RecognitionService busy."
-                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "Too many requests."
+                SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "Too many requests from the same client."
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input."
                 else -> "Unknown error"
             }
