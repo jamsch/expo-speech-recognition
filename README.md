@@ -406,7 +406,7 @@ The error code is based on the [Web Speech API error codes](https://developer.mo
 
 ### Advanced error handling
 
-Alongside the the mapped web-speech API error name, you can also access the `error.code` field to get the exact error that the `SpeechRecognizer` has thrown.
+Alongside the the mapped web-speech API error name, you can also access the `error.code` field to get the platform's underlying native error code.
 
 This is currently supported on Android only.
 
