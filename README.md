@@ -417,16 +417,8 @@ import {
 } from "expo-speech-recognition";
 
 useSpeechRecognitionEvent("error", (event) => {
-  if (Platform.OS === "android") {
-    switch (event.code) {
-      case SpeechRecognizerErrorAndroid.ERROR_NETWORK_TIMEOUT:
-        break; // do something
-      case SpeechRecognizerErrorAndroid.ERROR_TOO_MANY_REQUESTS:
-        break;
-      case -1:
-        // An error usually thrown by the this library
-        break;
-    }
+  if (event.code === SpeechRecognizerErrorAndroid.ERROR_NETWORK_TIMEOUT) {
+    // do something
   }
 });
 ```
