@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.AutoCloseOutputStream
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -27,6 +28,7 @@ interface AudioRecorder {
  *
  * Once stopped, the recording stream is written to a wav file for external use
  */
+@RequiresApi(Build.VERSION_CODES.GINGERBREAD)
 class ExpoAudioRecorder(
     private val context: Context,
     // Optional output file path
@@ -201,7 +203,7 @@ class ExpoAudioRecorder(
             val recorder = audioRecorder ?: break
 
             val read =
-                if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     // avoid empty reads
                     recorder.read(data, 0, data.size, AudioRecord.READ_BLOCKING)
                 } else {
