@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 2.1.5
+
+### Patch Changes
+
+- 9010d14: Android: Use `VOICE_RECOGNITION` audio source input by default and harden the record loop to gracefully handle read errors
+
 ## 2.1.4
 
 ### Patch Changes
