@@ -357,6 +357,44 @@ public class ExpoSpeechRecognitionModule: Module {
       return recognizer?.isAvailable ?? false
     }
 
+    AsyncFunction("available") { (options: AvailableOptions, promise: Promise) in
+      if options.langs.isEmpty {
+        promise.resolve("unavailable")
+        return
+      }
+
+      if !options.processLocally {
+        let allAvailable = options.langs.allSatisfy { lang in
+          if let locale = resolveLocale(localeIdentifier: lang) {
+            return SFSpeechRecognizer(locale: locale)?.isAvailable ?? false
+          }
+          return false
+        }
+        promise.resolve(allAvailable ? "available" : "unavailable")
+        return
+      }
+
+      // init as "available" (lowest rank)
+      var finalStatus = "available"
+
+      for lang in options.langs {
+        guard let locale = resolveLocale(localeIdentifier: lang) else {
+          finalStatus = maxAvailability(current: finalStatus, candidate: "unavailable")
+          continue
+        }
+        let recognizer = SFSpeechRecognizer(locale: locale)
+        if recognizer?.supportsOnDeviceRecognition == true {
+          // SFSpeechRecognizer doesn't expose installed vs downloadable; treat supported as available
+          // todo: handle this when we use SpeechAnalyzer
+          finalStatus = maxAvailability(current: finalStatus, candidate: "available")
+        } else {
+          finalStatus = maxAvailability(current: finalStatus, candidate: "unavailable")
+        }
+      }
+
+      promise.resolve(finalStatus)
+    }
+
     Function("stop") { () -> Void in
       Task {
         if let recognizer = speechRecognizer {
@@ -431,6 +469,18 @@ public class ExpoSpeechRecognitionModule: Module {
     previousResult = nil
     sendEvent("error", ["error": error, "message": message])
     sendEvent("end")
+  }
+
+  func maxAvailability(current: String, candidate: String) -> String {
+    func rank(_ s: String) -> Int {
+      switch s {
+      case "available": return 0
+      case "downloading": return 1
+      case "downloadable": return 2
+      default: return 3  // unavailable
+      }
+    }
+    return rank(candidate) > rank(current) ? candidate : current
   }
 
   func handleEnd() {

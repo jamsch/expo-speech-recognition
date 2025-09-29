@@ -45,6 +45,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [getSpeechRecognitionServices()](#getspeechrecognitionservices-string-android-only)
   - [getDefaultRecognitionService()](#getdefaultrecognitionservice--packagename-string--android-only)
   - [getAssistantService()](#getassistantservice--packagename-string--android-only)
+  - [available()](#availableoptions-promiseavailabilitystatusvalue)
   - [isRecognitionAvailable()](#isrecognitionavailable-boolean)
   - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean)
   - [supportsRecording()](#supportsrecording-boolean)
@@ -1096,6 +1097,36 @@ const service = ExpoSpeechRecognitionModule.getAssistantService();
 console.log("Default assistant service:", service.packageName);
 // Usually "com.google.android.googlequicksearchbox" for Google
 // or "com.samsung.android.bixby.agent" for Samsung
+```
+
+### `available(options): Promise<AvailabilityStatusValue>`
+
+This is an implementation of the Web Speech API [available](https://webaudio.github.io/web-speech-api/#dom-speechrecognition-available) method.
+
+This method allows you to check if speech recognition is available for specific languages and whether local (on-device) processing is supported before starting recognition.
+
+> [!NOTE]
+> On Android 12 and lower, this method only checks whether speech recognition functionality is available, but not the given languages.
+
+```ts
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
+
+// Check if English recognition is available
+const availability = await ExpoSpeechRecognitionModule.available({
+  langs: ["en-US"],
+  processLocally: false,
+});
+
+console.log("Recognition available:", availability);
+// Returns one of: "unavailable" | "downloadable" | "downloading" | "available"
+
+// Check multiple languages with on-device processing
+const localAvailability = await ExpoSpeechRecognitionModule.available({
+  langs: ["en-US", "es-ES", "fr-FR"],
+  processLocally: true,
+});
+
+console.log("Local recognition available:", localAvailability);
 ```
 
 ### `isRecognitionAvailable(): boolean`

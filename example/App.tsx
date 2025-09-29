@@ -217,12 +217,9 @@ export default function App() {
         </View>
       </ScrollView>
 
-      <ScrollView
-        style={styles.card}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
+      <View style={styles.card}>
         <Settings value={settings} onChange={setSettings} />
-      </ScrollView>
+      </View>
 
       <View
         style={[
@@ -329,8 +326,8 @@ function Settings(props: {
   };
 
   return (
-    <View>
-      <View style={[styles.flex1, styles.row, styles.mb2, styles.gap1]}>
+    <View style={[styles.flex1, { height: "100%" }]}>
+      <View style={[styles.row, styles.gap1, { minHeight: 30 }]}>
         <TabButton
           title="General Settings"
           active={tab === "general"}
@@ -360,18 +357,20 @@ function Settings(props: {
           }}
         />
       </View>
-      {tab === "general" && (
-        <GeneralSettings value={settings} onChange={handleChange} />
-      )}
-      {tab === "android" && (
-        <AndroidSettings value={settings} onChange={handleChange} />
-      )}
-      {tab === "other" && (
-        <OtherSettings value={settings} onChange={handleChange} />
-      )}
-      {tab === "ios" && (
-        <IOSSettings value={settings} onChange={handleChange} />
-      )}
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        {tab === "general" && (
+          <GeneralSettings value={settings} onChange={handleChange} />
+        )}
+        {tab === "android" && (
+          <AndroidSettings value={settings} onChange={handleChange} />
+        )}
+        {tab === "other" && (
+          <OtherSettings value={settings} onChange={handleChange} />
+        )}
+        {tab === "ios" && (
+          <IOSSettings value={settings} onChange={handleChange} />
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -983,6 +982,8 @@ function OtherSettings(props: {
         ) : null}
       </View>
 
+      <AvailabilityTestForm />
+
       <WebSpeechAPIDemo />
 
       <RecordUsingExpoAvDemo />
@@ -1309,6 +1310,73 @@ function RecordUsingExpoAvDemo() {
           }}
         />
       )}
+    </View>
+  );
+}
+
+function AvailabilityTestForm() {
+  const [testLocale, setTestLocale] = useState("en-US");
+  const [processLocally, setProcessLocally] = useState(false);
+  const [availability, setAvailability] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleTestAvailability = async () => {
+    setIsLoading(true);
+    setAvailability(null);
+
+    try {
+      const result = await ExpoSpeechRecognitionModule.available({
+        langs: [testLocale],
+        processLocally,
+      });
+      setAvailability(result);
+    } catch (error) {
+      setAvailability(`Error: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={[styles.textLabel, styles.mb2]}>
+        Test Locale Availability
+      </Text>
+
+      <View style={styles.textOptionContainer}>
+        <Text style={styles.textLabel}>Locale:</Text>
+        <TextInput
+          style={[styles.textInput, styles.flex1]}
+          value={testLocale}
+          onChangeText={setTestLocale}
+          placeholder="e.g. en-US, es-ES, fr-FR"
+        />
+      </View>
+
+      <CheckboxButton
+        title="Process Locally (On-Device)"
+        checked={processLocally}
+        onPress={() => setProcessLocally(!processLocally)}
+      />
+
+      <BigButton
+        title={isLoading ? "Checking..." : "Check Availability"}
+        color="#539bf5"
+        disabled={isLoading}
+        onPress={handleTestAvailability}
+      />
+
+      <View
+        style={{
+          marginTop: 10,
+          padding: 10,
+          backgroundColor: "#f0f0f0",
+          borderRadius: 5,
+        }}
+      >
+        <Text style={styles.textLabel}>Result:</Text>
+        <Text style={styles.text}>{availability}</Text>
+      </View>
     </View>
   );
 }
