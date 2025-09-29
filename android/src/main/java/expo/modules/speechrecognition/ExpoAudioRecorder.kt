@@ -7,6 +7,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.AutoCloseOutputStream
+import android.os.Build
 import android.util.Log
 import java.io.DataOutputStream
 import java.io.File
@@ -131,7 +132,7 @@ class ExpoAudioRecorder(
     @SuppressLint("MissingPermission")
     private fun createRecorder(): AudioRecord =
         AudioRecord(
-            MediaRecorder.AudioSource.DEFAULT,
+            MediaRecorder.AudioSource.VOICE_RECOGNITION,
             sampleRateInHz,
             channelConfig,
             AudioFormat.ENCODING_PCM_16BIT,
@@ -194,23 +195,60 @@ class ExpoAudioRecorder(
 
     private fun streamAudioToPipe() {
         val tempFileOutputStream = FileOutputStream(tempPcmFile)
-        val data = ByteArray(bufferSizeInBytes / 2)
+        val data = ByteArray(bufferSizeInBytes)
 
         while (isRecordingAudio) {
-            val read = audioRecorder!!.read(data, 0, data.size)
-            if (read > 0) {
-                try {
-                    outputStream?.write(data, 0, read)
-                    outputStream?.flush()
+            val recorder = audioRecorder ?: break
 
-                    // Write to the temp PCM file
-                    if (outputFilePath != null) {
-                        tempFileOutputStream.write(data, 0, read)
-                        tempFileOutputStream.flush()
+            val read =
+                if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    // avoid empty reads
+                    recorder.read(data, 0, data.size, AudioRecord.READ_BLOCKING)
+                } else {
+                    recorder.read(data, 0, data.size)
+                }
+
+            when {
+                read > 0 -> {
+                    try {
+                        outputStream?.write(data, 0, read)
+                        outputStream?.flush()
+
+                        // Write to the temp PCM file
+                        if (outputFilePath != null) {
+                            tempFileOutputStream.write(data, 0, read)
+                            tempFileOutputStream.flush()
+                        }
+                    } catch (e: IOException) {
+                        Log.e(TAG, "Failed to write to output stream", e)
+                        e.printStackTrace()
                     }
-                } catch (e: IOException) {
-                    Log.e(TAG, "Failed to write to output stream", e)
-                    e.printStackTrace()
+                }
+
+                // (this should only happen on API 22 and below)
+                read == 0 -> {
+                    try {
+                        Thread.sleep(10)
+                    } catch (_: InterruptedException) {}
+                }
+
+                read == AudioRecord.ERROR_DEAD_OBJECT -> {
+                    Log.w(TAG, "AudioRecord returned ERROR_DEAD_OBJECT; breaking out of the loop")
+                    // todo: we should probably emit an error event here
+                    break
+                }
+
+                read == AudioRecord.ERROR_INVALID_OPERATION || read == AudioRecord.ERROR_BAD_VALUE -> {
+                    Log.w(TAG, "AudioRecord read error: $read; backing off briefly")
+                    try {
+                        Thread.sleep(10)
+                    } catch (_: InterruptedException) {}
+                }
+
+                else -> {
+                    // todo: we should probably emit an error event here
+                    Log.w(TAG, "AudioRecord read returned '$read'; breaking out of the loop")
+                    break
                 }
             }
         }
