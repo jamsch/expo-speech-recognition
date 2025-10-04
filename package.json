@@ -4,6 +4,16 @@
   "description": "Speech Recognition for React Native Expo projects",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./helpers": {
+      "types": "./build/helpers.d.ts",
+      "default": "./build/helpers.js"
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
