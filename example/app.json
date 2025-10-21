@@ -18,7 +18,6 @@
       "bundleIdentifier": "expo.modules.speechrecognition.example"
     },
     "android": {
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -49,7 +48,8 @@
         {
           "assets": ["./assets/audio"]
         }
-      ]
+      ],
+      "expo-build-properties"
     ]
   }
 }

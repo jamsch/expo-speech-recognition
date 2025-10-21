@@ -10,27 +10,26 @@
     "android:fix-emulator-mic": "adb emu avd hostmicon"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~5.0.4",
+    "@expo/metro-runtime": "~6.1.2",
     "@types/dom-speech-recognition": "^0.0.6",
     "babel-plugin-module-resolver": "^5.0.2",
-    "expo": "~53.0.10",
-    "expo-asset": "~11.1.5",
-    "expo-av": "~15.1.5",
-    "expo-build-properties": "~0.14.6",
-    "expo-file-system": "~18.1.9",
-    "expo-splash-screen": "~0.30.9",
-    "expo-status-bar": "~2.2.3",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.79.3",
-    "react-native-reanimated": "~3.17.4",
-    "react-native-web": "^0.20.0",
-    "react-native-safe-area-context": "5.4.0"
+    "expo": "~54.0.10",
+    "expo-asset": "~12.0.9",
+    "expo-build-properties": "~1.0.9",
+    "expo-file-system": "~19.0.15",
+    "expo-splash-screen": "~31.0.10",
+    "expo-status-bar": "~3.0.8",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.4",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
-    "@types/react": "~19.0.10",
-    "typescript": "~5.8.3"
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
   },
   "private": true,
   "expo": {
