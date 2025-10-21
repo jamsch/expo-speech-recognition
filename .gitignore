@@ -58,5 +58,5 @@ yarn-error.log
 
 # Test assets
 example/assets/audio/test/
-#example/android/
-#example/ios/
+example/android/
+example/ios/
