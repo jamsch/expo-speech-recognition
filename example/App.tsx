@@ -1,6 +1,5 @@
 import {
   Alert,
-  Button,
   Platform,
   ScrollView,
   StyleSheet,
@@ -39,12 +38,7 @@ import {
 } from "./components/Buttons";
 import { StatusBar } from "expo-status-bar";
 import { useAssets } from "expo-asset";
-import * as FileSystem from "expo-file-system";
-import {
-  AndroidAudioEncoder,
-  AndroidOutputFormat,
-  IOSOutputFormat,
-} from "expo-av/build/Audio";
+import { Paths, File } from "expo-file-system";
 import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -929,16 +923,16 @@ function OtherSettings(props: {
         <CheckboxButton
           title="Persist audio recording to filesystem"
           checked={Boolean(settings.recordingOptions?.persist)}
-          onPress={() =>
+          onPress={() => {
             handleChange("recordingOptions", {
               persist: !settings.recordingOptions?.persist,
-              outputDirectory: FileSystem.documentDirectory ?? undefined,
+              outputDirectory: Paths.document.uri ?? undefined,
               outputFileName: "recording.wav",
               // for iOS if you'd like to downsample the audio, set the outputSampleRate + outputEncoding
               outputSampleRate: 16000,
               outputEncoding: "pcmFormatInt16",
-            })
-          }
+            });
+          }}
         />
         {settings.recordingOptions?.persist ? (
           <View
@@ -955,7 +949,6 @@ function OtherSettings(props: {
                 <Text style={styles.text}>
                   Audio recording saved to {recordingPath}
                 </Text>
-                <AudioPlayer source={recordingPath} />
                 <BigButton
                   title="Transcribe the recording"
                   color="#539bf5"
@@ -1062,11 +1055,13 @@ function TranscribeRemoteAudioFile(props: {
   const handleTranscribe = async () => {
     setBusy(true);
     // download the file
-    const file = await FileSystem.downloadAsync(
-      props.remoteUrl,
-      FileSystem.cacheDirectory + props.fileName,
-    );
-    if (file.status >= 300 || file.status < 200) {
+
+    const file = new File(Paths.join(Paths.cache, props.fileName));
+    const response = await File.downloadFileAsync(props.remoteUrl, file, {
+      idempotent: true,
+    });
+
+    if (!response.exists) {
       console.warn("Failed to download file", file);
       setBusy(false);
       return;
@@ -1098,18 +1093,6 @@ function TranscribeRemoteAudioFile(props: {
       />
     </View>
   );
-}
-
-function AudioPlayer(props: { source: string }) {
-  const handlePlay = () => {
-    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true }).catch(
-      (reason) => {
-        console.log("Failed to play audio", reason);
-      },
-    );
-  };
-
-  return <Button title="Play back recording" onPress={handlePlay} />;
 }
 
 function WebSpeechAPIDemo() {
@@ -1214,7 +1197,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 10,
-    padding: 10,
+    paddingHorizontal: 10,
     backgroundColor: "#eee",
     alignItems: "center",
     justifyContent: "center",

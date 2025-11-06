@@ -294,9 +294,9 @@ ExpoSpeechRecognitionModule.start({
   recordingOptions: {
     // [Default: false] Whether to persist the audio to a local file path.
     persist: false,
-    // [Default: FileSystem.CacheDirectory]
+    // [Default: Paths.cache.uri]
     // Changes the default storage location for the audio file.
-    // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
+    // e.g. `Paths.document.uri` (from `expo-file-system`)
     outputDirectory: undefined,
     // [Default: `"recording_${timestamp|uuid}.[wav|caf]"`]
     // Changes the file name for the audio file.
@@ -458,7 +458,7 @@ function RecordAudio() {
       recordingOptions: {
         persist: true,
         // Optional: Specify the output file path to save the recording to
-        // e.g. `FileSystem.documentDirectory` (from `expo-file-system`)
+        // e.g. `Paths.document.uri` (from `expo-file-system`)
         outputDirectory:
           "/data/user/0/expo.modules.speechrecognition.example/files",
         // Optional: Specify the output file name to save the recording to
