@@ -46,7 +46,8 @@
     "expo": "~54.0.0",
     "expo-module-scripts": "^5.0.7",
     "globals": "16.4.0",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "typescript-eslint": "8.46.3"
   },
   "prettier": {
     "trailingComma": "all"
