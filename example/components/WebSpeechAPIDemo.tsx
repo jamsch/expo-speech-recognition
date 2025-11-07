@@ -3,9 +3,10 @@ import {
   ExpoSpeechRecognitionModule,
 } from "expo-speech-recognition";
 import { useEffect, useMemo, useState } from "react";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-import { BigButton } from "./Buttons";
-import { Card } from "./Card";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { BigButton } from "./ui/Buttons";
+import { Card } from "./ui/Card";
+import { MonoText } from "./ui/MonoText";
 
 export function WebSpeechAPIDemo() {
   const [error, setError] = useState<{ code: string; message: string } | null>(
@@ -94,12 +95,12 @@ export function WebSpeechAPIDemo() {
         </View>
       )}
 
-      <Text style={styles.text}>Errors: {JSON.stringify(error)}</Text>
+      <MonoText>Errors: {JSON.stringify(error)}</MonoText>
 
       <ScrollView>
-        <Text style={styles.text}>
+        <MonoText>
           {transcription?.transcript || "Transcripts goes here"}
-        </Text>
+        </MonoText>
       </ScrollView>
     </Card>
   );
@@ -109,8 +110,5 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
     gap: 4,
-  },
-  text: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
 });

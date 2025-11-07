@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableNativeFeedback,
   View,
 } from "react-native";
 import {
@@ -19,7 +18,6 @@ import {
   SpeechRecognizerErrorAndroid,
 } from "expo-speech-recognition";
 import type {
-  AudioEncodingAndroidValue,
   AndroidIntentOptions,
   AVAudioSessionCategoryValue,
   AVAudioSessionModeValue,
@@ -34,15 +32,17 @@ import {
   BigButton,
   TabButton,
   SmallButton,
-} from "./components/Buttons";
+} from "./components/ui/Buttons";
 import { StatusBar } from "expo-status-bar";
-import { useAssets } from "expo-asset";
-import { Paths, File } from "expo-file-system";
+import { Paths } from "expo-file-system";
 import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppContainer } from "./components/AppContainer";
 import { WebSpeechAPIDemo } from "./components/WebSpeechAPIDemo";
-import { Card } from "./components/Card";
+import { Card } from "./components/ui/Card";
+import { DownloadOfflineModelButton } from "./components/DownloadOfflineModelButton";
+import { TranscribeLocalAudioFileDemo } from "./components/TranscribeLocalAudioFileDemo";
+import { TranscribeRemoteAudioFileDemo } from "./components/TranscribeRemoteAudioFileDemo";
 
 const speechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
@@ -247,59 +247,6 @@ export default function App() {
         </Card>
       </AppContainer>
     </SafeAreaProvider>
-  );
-}
-
-export function DownloadOfflineModelButton(props: { locale: string }) {
-  const [downloading, setDownloading] = useState<{ locale: string } | null>(
-    null,
-  );
-
-  const handleDownload = () => {
-    setDownloading({ locale: props.locale });
-
-    ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
-      locale: props.locale,
-    })
-      .then((result) => {
-        if (result.status === "opened_dialog") {
-          // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
-          Alert.alert("Offline model download dialog opened.");
-        } else if (result.status === "download_success") {
-          // On Android 14+, the status will be "download_success" indicating that the model download was successful.
-          Alert.alert("Offline model downloaded successfully!");
-        } else if (result.status === "download_canceled") {
-          // On Android 14+, the download was canceled by a user interaction.
-          Alert.alert("Offline model download was canceled.");
-        }
-      })
-      .catch((err) => {
-        Alert.alert("Failed to download offline model!", err.message);
-      })
-      .finally(() => {
-        setDownloading(null);
-      });
-  };
-
-  return (
-    <TouchableNativeFeedback
-      disabled={Boolean(downloading)}
-      onPress={handleDownload}
-    >
-      <View>
-        <Text
-          style={{
-            fontWeight: "bold",
-            color: downloading ? "#999" : "#539bf5",
-          }}
-          adjustsFontSizeToFit
-        >
-          {downloading
-            ? `Downloading ${props.locale} model...`
-            : `Download ${props.locale} Offline Model`}
-        </Text>
-      </View>
-    </TouchableNativeFeedback>
   );
 }
 
@@ -977,121 +924,29 @@ function OtherSettings(props: {
 
       <WebSpeechAPIDemo />
 
-      <TranscribeLocalAudioFile />
+      <TranscribeLocalAudioFileDemo />
 
-      <TranscribeRemoteAudioFile
+      <TranscribeRemoteAudioFileDemo
         fileName="remote-en-us-sentence-16000hz-pcm_s16le.wav"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav"
         audioEncoding={AudioEncodingAndroid.ENCODING_PCM_16BIT}
         description="16000hz 16-bit 1-channel PCM audio file"
       />
 
-      <TranscribeRemoteAudioFile
+      <TranscribeRemoteAudioFileDemo
         fileName="remote-en-us-sentence-16000hz.mp3"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
         audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
         description="16000hz MP3 1-channel audio file"
       />
 
-      <TranscribeRemoteAudioFile
+      <TranscribeRemoteAudioFileDemo
         fileName="remote-en-us-sentence-16000hz.ogg"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
         description="(May not work on iOS) 16000hz ogg vorbis 1-channel audio file"
       />
     </View>
-  );
-}
-
-function TranscribeLocalAudioFile() {
-  const [busy, setBusy] = useState(false);
-  const [assets] = useAssets([require("./assets/audio/en-us-sentence.wav")]);
-
-  const localUri = assets?.[0]?.localUri;
-
-  const handleTranscribe = () => {
-    if (!localUri) {
-      console.warn("No local URI");
-      return;
-    }
-
-    setBusy(true);
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: true,
-      requiresOnDeviceRecognition: Platform.OS === "ios",
-      audioSource: {
-        uri: localUri,
-        audioChannels: 1,
-        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
-        sampleRate: 16000,
-        // chunkDelayMillis: 50,
-      },
-    });
-  };
-
-  useSpeechRecognitionEvent("end", () => setBusy(false));
-
-  return (
-    <Card>
-      <Text style={[styles.text, styles.mb2]}>{localUri || ""}</Text>
-      <BigButton
-        disabled={busy}
-        color="#539bf5"
-        title={busy ? "Transcribing..." : "Transcribe local en-US audio file"}
-        onPress={handleTranscribe}
-      />
-    </Card>
-  );
-}
-
-function TranscribeRemoteAudioFile(props: {
-  remoteUrl: string;
-  description: string;
-  audioEncoding: AudioEncodingAndroidValue;
-  fileName: string;
-}) {
-  const [busy, setBusy] = useState(false);
-  const handleTranscribe = async () => {
-    setBusy(true);
-    // download the file
-
-    const file = new File(Paths.join(Paths.cache, props.fileName));
-    const response = await File.downloadFileAsync(props.remoteUrl, file, {
-      idempotent: true,
-    });
-
-    if (!response.exists) {
-      console.warn("Failed to download file", file);
-      setBusy(false);
-      return;
-    }
-    console.log("Downloaded file", file);
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: true,
-      audioSource: {
-        uri: file.uri,
-        audioChannels: 1,
-        audioEncoding: props.audioEncoding,
-        sampleRate: 16000,
-      },
-    });
-  };
-
-  useSpeechRecognitionEvent("end", () => setBusy(false));
-
-  return (
-    <Card>
-      <Text style={[styles.text, styles.mb2]}>{props.description}</Text>
-      <Text style={[styles.text, styles.mb2]}>{props.remoteUrl}</Text>
-      <BigButton
-        disabled={busy}
-        color="#539bf5"
-        title={busy ? "Transcribing..." : "Transcribe remote audio file"}
-        onPress={handleTranscribe}
-      />
-    </Card>
   );
 }
 
