@@ -1,12 +1,10 @@
 import {
   Alert,
-  Button,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableNativeFeedback,
   View,
 } from "react-native";
 import {
@@ -17,11 +15,9 @@ import {
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
-  ExpoWebSpeechRecognition,
   SpeechRecognizerErrorAndroid,
 } from "expo-speech-recognition";
 import type {
-  AudioEncodingAndroidValue,
   AndroidIntentOptions,
   AVAudioSessionCategoryValue,
   AVAudioSessionModeValue,
@@ -29,25 +25,24 @@ import type {
   ExpoSpeechRecognitionOptions,
   SetCategoryOptions,
 } from "expo-speech-recognition";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   OptionButton,
   CheckboxButton,
   BigButton,
   TabButton,
   SmallButton,
-} from "./components/Buttons";
+} from "./components/ui/Buttons";
 import { StatusBar } from "expo-status-bar";
-import { Audio } from "expo-av";
-import { useAssets } from "expo-asset";
-import * as FileSystem from "expo-file-system";
-import {
-  AndroidAudioEncoder,
-  AndroidOutputFormat,
-  IOSOutputFormat,
-} from "expo-av/build/Audio";
+import { Paths } from "expo-file-system";
 import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AppContainer } from "./components/AppContainer";
+import { WebSpeechAPIDemo } from "./components/WebSpeechAPIDemo";
+import { Card } from "./components/ui/Card";
+import { DownloadOfflineModelButton } from "./components/DownloadOfflineModelButton";
+import { TranscribeLocalAudioFileDemo } from "./components/TranscribeLocalAudioFileDemo";
+import { TranscribeRemoteAudioFileDemo } from "./components/TranscribeRemoteAudioFileDemo";
 
 const speechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
@@ -185,129 +180,73 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaProvider>
+      <AppContainer>
+        <StatusBar style="dark" />
 
-      {settings.volumeChangeEventOptions?.enabled ? (
-        <VolumeMeteringAvatar />
-      ) : null}
+        {settings.volumeChangeEventOptions?.enabled ? (
+          <VolumeMeteringAvatar />
+        ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.text}>
-          {error ? JSON.stringify(error) : "Error messages go here"}
-        </Text>
-      </View>
-
-      <ScrollView
-        style={[styles.card, { padding: 0, height: 140, maxHeight: 140 }]}
-        contentContainerStyle={{ padding: 10 }}
-      >
-        <View>
+        <Card>
           <Text style={styles.text}>
-            Status:{" "}
-            <Text style={{ color: status === "idle" ? "green" : "red" }}>
-              {status}
-            </Text>
+            {error ? JSON.stringify(error) : "Error messages go here"}
           </Text>
-        </View>
-        <View style={{ marginTop: 10 }}>
-          <Text style={styles.text}>
-            {transcription || "transcript goes here"}
-          </Text>
-        </View>
-      </ScrollView>
+        </Card>
 
-      <ScrollView
-        style={styles.card}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        <Settings value={settings} onChange={setSettings} />
-      </ScrollView>
-
-      <View
-        style={[
-          styles.card,
-          styles.buttonContainer,
-          { justifyContent: "space-between" },
-        ]}
-      >
-        {Platform.OS === "android" && settings.requiresOnDeviceRecognition && (
-          <View style={styles.flex1}>
-            <DownloadOfflineModel locale={settings.lang ?? "en-US"} />
-          </View>
-        )}
-
-        {status === "idle" ? (
-          <BigButton title="Start Recognition" onPress={startListening} />
-        ) : (
-          <View style={[styles.row, styles.gap1]}>
-            <BigButton
-              title="Stop"
-              disabled={status !== "recognizing"}
-              onPress={() => ExpoSpeechRecognitionModule.stop()}
-            />
-            <BigButton
-              title="Abort"
-              disabled={status !== "recognizing"}
-              onPress={() => ExpoSpeechRecognitionModule.abort()}
-            />
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
-  );
-}
-
-function DownloadOfflineModel(props: { locale: string }) {
-  const [downloading, setDownloading] = useState<{ locale: string } | null>(
-    null,
-  );
-
-  const handleDownload = () => {
-    setDownloading({ locale: props.locale });
-
-    ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
-      locale: props.locale,
-    })
-      .then((result) => {
-        if (result.status === "opened_dialog") {
-          // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
-          Alert.alert("Offline model download dialog opened.");
-        } else if (result.status === "download_success") {
-          // On Android 14+, the status will be "download_success" indicating that the model download was successful.
-          Alert.alert("Offline model downloaded successfully!");
-        } else if (result.status === "download_canceled") {
-          // On Android 14+, the download was canceled by a user interaction.
-          Alert.alert("Offline model download was canceled.");
-        }
-      })
-      .catch((err) => {
-        Alert.alert("Failed to download offline model!", err.message);
-      })
-      .finally(() => {
-        setDownloading(null);
-      });
-  };
-
-  return (
-    <TouchableNativeFeedback
-      disabled={Boolean(downloading)}
-      onPress={handleDownload}
-    >
-      <View>
-        <Text
-          style={{
-            fontWeight: "bold",
-            color: downloading ? "#999" : "#539bf5",
-          }}
-          adjustsFontSizeToFit
+        <Card
+          use={ScrollView}
+          style={{ height: 140, maxHeight: 140 }}
+          contentContainerStyle={{ padding: 10 }}
         >
-          {downloading
-            ? `Downloading ${props.locale} model...`
-            : `Download ${props.locale} Offline Model`}
-        </Text>
-      </View>
-    </TouchableNativeFeedback>
+          <View>
+            <Text style={styles.text}>
+              Status:{" "}
+              <Text style={{ color: status === "idle" ? "green" : "red" }}>
+                {status}
+              </Text>
+            </Text>
+          </View>
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.text}>
+              {transcription || "transcript goes here"}
+            </Text>
+          </View>
+        </Card>
+
+        <Card use={ScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
+          <Settings value={settings} onChange={setSettings} />
+        </Card>
+
+        <Card
+          style={[styles.buttonContainer, { justifyContent: "space-between" }]}
+        >
+          {Platform.OS === "android" &&
+            settings.requiresOnDeviceRecognition && (
+              <View style={styles.flex1}>
+                <DownloadOfflineModelButton locale={settings.lang ?? "en-US"} />
+              </View>
+            )}
+
+          {status === "idle" ? (
+            <BigButton title="Start Recognition" onPress={startListening} />
+          ) : (
+            <View style={[styles.row, styles.gap1]}>
+              <BigButton
+                title="Stop"
+                disabled={status !== "recognizing"}
+                onPress={() => ExpoSpeechRecognitionModule.stop()}
+              />
+              <BigButton
+                title="Abort"
+                disabled={status !== "recognizing"}
+                onPress={() => ExpoSpeechRecognitionModule.abort()}
+              />
+            </View>
+          )}
+        </Card>
+      </AppContainer>
+    </SafeAreaProvider>
   );
 }
 
@@ -706,7 +645,7 @@ function AndroidSettings(props: {
   return (
     <View style={styles.gap1}>
       <View>
-        <View style={[styles.card, styles.mb2]}>
+        <Card style={styles.mb2}>
           <View style={styles.gap1}>
             <Text style={styles.textLabel}>Device preferences</Text>
             {defaultRecognitionService ? (
@@ -720,7 +659,7 @@ function AndroidSettings(props: {
               </Text>
             ) : null}
           </View>
-        </View>
+        </Card>
 
         <Text style={styles.textLabel}>Android Recognition Service</Text>
         <View style={[styles.row, styles.flexWrap]}>
@@ -836,7 +775,7 @@ function OtherSettings(props: {
   // Enable audio recording
   return (
     <View style={styles.gap1}>
-      <View style={[styles.row, styles.gap1, styles.flexWrap, styles.card]}>
+      <Card style={[styles.row, styles.gap1, styles.flexWrap]}>
         <SmallButton
           title="Get permissions"
           onPress={() => {
@@ -925,21 +864,22 @@ function OtherSettings(props: {
             }}
           />
         )}
-      </View>
-      <View style={styles.card}>
+      </Card>
+
+      <Card>
         <CheckboxButton
           title="Persist audio recording to filesystem"
           checked={Boolean(settings.recordingOptions?.persist)}
-          onPress={() =>
+          onPress={() => {
             handleChange("recordingOptions", {
               persist: !settings.recordingOptions?.persist,
-              outputDirectory: FileSystem.documentDirectory ?? undefined,
+              outputDirectory: Paths.document.uri ?? undefined,
               outputFileName: "recording.wav",
               // for iOS if you'd like to downsample the audio, set the outputSampleRate + outputEncoding
               outputSampleRate: 16000,
               outputEncoding: "pcmFormatInt16",
-            })
-          }
+            });
+          }}
         />
         {settings.recordingOptions?.persist ? (
           <View
@@ -956,7 +896,6 @@ function OtherSettings(props: {
                 <Text style={styles.text}>
                   Audio recording saved to {recordingPath}
                 </Text>
-                <AudioPlayer source={recordingPath} />
                 <BigButton
                   title="Transcribe the recording"
                   color="#539bf5"
@@ -981,29 +920,27 @@ function OtherSettings(props: {
             )}
           </View>
         ) : null}
-      </View>
+      </Card>
 
       <WebSpeechAPIDemo />
 
-      <RecordUsingExpoAvDemo />
+      <TranscribeLocalAudioFileDemo />
 
-      <TranscribeLocalAudioFile />
-
-      <TranscribeRemoteAudioFile
+      <TranscribeRemoteAudioFileDemo
         fileName="remote-en-us-sentence-16000hz-pcm_s16le.wav"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav"
         audioEncoding={AudioEncodingAndroid.ENCODING_PCM_16BIT}
         description="16000hz 16-bit 1-channel PCM audio file"
       />
 
-      <TranscribeRemoteAudioFile
+      <TranscribeRemoteAudioFileDemo
         fileName="remote-en-us-sentence-16000hz.mp3"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
         audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
         description="16000hz MP3 1-channel audio file"
       />
 
-      <TranscribeRemoteAudioFile
+      <TranscribeRemoteAudioFileDemo
         fileName="remote-en-us-sentence-16000hz.ogg"
         remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
@@ -1013,323 +950,7 @@ function OtherSettings(props: {
   );
 }
 
-function TranscribeLocalAudioFile() {
-  const [busy, setBusy] = useState(false);
-  const [assets] = useAssets([require("./assets/audio/en-us-sentence.wav")]);
-
-  const localUri = assets?.[0]?.localUri;
-
-  const handleTranscribe = () => {
-    if (!localUri) {
-      console.warn("No local URI");
-      return;
-    }
-
-    setBusy(true);
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: true,
-      requiresOnDeviceRecognition: Platform.OS === "ios",
-      audioSource: {
-        uri: localUri,
-        audioChannels: 1,
-        audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
-        sampleRate: 16000,
-        // chunkDelayMillis: 50,
-      },
-    });
-  };
-
-  useSpeechRecognitionEvent("end", () => setBusy(false));
-
-  return (
-    <View style={styles.card}>
-      <Text style={[styles.text, styles.mb2]}>{localUri || ""}</Text>
-      <BigButton
-        disabled={busy}
-        color="#539bf5"
-        title={busy ? "Transcribing..." : "Transcribe local en-US audio file"}
-        onPress={handleTranscribe}
-      />
-    </View>
-  );
-}
-
-function TranscribeRemoteAudioFile(props: {
-  remoteUrl: string;
-  description: string;
-  audioEncoding: AudioEncodingAndroidValue;
-  fileName: string;
-}) {
-  const [busy, setBusy] = useState(false);
-  const handleTranscribe = async () => {
-    setBusy(true);
-    // download the file
-    const file = await FileSystem.downloadAsync(
-      props.remoteUrl,
-      FileSystem.cacheDirectory + props.fileName,
-    );
-    if (file.status >= 300 || file.status < 200) {
-      console.warn("Failed to download file", file);
-      setBusy(false);
-      return;
-    }
-    console.log("Downloaded file", file);
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: true,
-      audioSource: {
-        uri: file.uri,
-        audioChannels: 1,
-        audioEncoding: props.audioEncoding,
-        sampleRate: 16000,
-      },
-    });
-  };
-
-  useSpeechRecognitionEvent("end", () => setBusy(false));
-
-  return (
-    <View style={styles.card}>
-      <Text style={[styles.text, styles.mb2]}>{props.description}</Text>
-      <Text style={[styles.text, styles.mb2]}>{props.remoteUrl}</Text>
-      <BigButton
-        disabled={busy}
-        color="#539bf5"
-        title={busy ? "Transcribing..." : "Transcribe remote audio file"}
-        onPress={handleTranscribe}
-      />
-    </View>
-  );
-}
-
-function AudioPlayer(props: { source: string }) {
-  const handlePlay = () => {
-    Audio.Sound.createAsync({ uri: props.source }, { shouldPlay: true }).catch(
-      (reason) => {
-        console.log("Failed to play audio", reason);
-      },
-    );
-  };
-
-  return <Button title="Play back recording" onPress={handlePlay} />;
-}
-
-function WebSpeechAPIDemo() {
-  const [error, setError] = useState<{ code: string; message: string } | null>(
-    null,
-  );
-  const [listening, setListening] = useState(false);
-  const [transcription, setTranscription] = useState<null | {
-    isFinal: boolean;
-    transcript: string;
-  }>(null);
-
-  const recognizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
-
-  useEffect(() => {
-    if (!listening) {
-      return;
-    }
-    const handleResult = (ev: SpeechRecognitionEventMap["result"]) => {
-      console.log("[WebSpeechAPIDemo] result", ev.results);
-      setTranscription({
-        isFinal: ev.results[ev.resultIndex]?.isFinal,
-        transcript: ev.results[ev.resultIndex].item(0)?.transcript,
-      });
-    };
-
-    const handleError = (ev: SpeechRecognitionEventMap["error"]) => {
-      console.log("error code:", ev.error, "error messsage:", ev.message);
-      setError({
-        code: ev.error,
-        message: ev.message,
-      });
-    };
-
-    const handleEnd = () => {
-      setListening(false);
-    };
-
-    recognizer.addEventListener("result", handleResult);
-    recognizer.addEventListener("error", handleError);
-    recognizer.addEventListener("end", handleEnd);
-
-    return () => {
-      recognizer.removeEventListener("result", handleResult);
-      recognizer.removeEventListener("error", handleError);
-      recognizer.removeEventListener("end", handleEnd);
-    };
-  }, [listening, recognizer]);
-
-  const startListeningWeb = () => {
-    setListening(true);
-    setTranscription(null);
-    setError(null);
-    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
-      console.log("Permissions", result);
-      if (!result.granted) {
-        console.log("Permissions not granted", result);
-        return;
-      }
-      recognizer.lang = "en-US";
-      recognizer.continuous = true;
-      recognizer.interimResults = true;
-      recognizer.start();
-    });
-  };
-
-  return (
-    <View style={styles.card}>
-      {!listening ? (
-        <BigButton
-          color="#53917E"
-          title="Start Recognition (Web Speech API)"
-          onPress={startListeningWeb}
-        />
-      ) : (
-        <View style={[styles.row, styles.gap1]}>
-          <BigButton
-            color="#B1B695"
-            title="Stop Recognition"
-            onPress={() => recognizer.stop()}
-          />
-          <BigButton
-            color="#B1B695"
-            title="Abort Recognition"
-            onPress={() => recognizer.abort()}
-          />
-        </View>
-      )}
-
-      <Text style={styles.text}>Errors: {JSON.stringify(error)}</Text>
-
-      <ScrollView>
-        <Text style={styles.text}>
-          {transcription?.transcript || "Transcripts goes here"}
-        </Text>
-      </ScrollView>
-    </View>
-  );
-}
-
-function RecordUsingExpoAvDemo() {
-  const [isRecording, setIsRecording] = useState(false);
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
-
-  const handleStart = async () => {
-    setIsRecording(true);
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-      const { recording } = await Audio.Recording.createAsync({
-        isMeteringEnabled: true,
-        android: {
-          bitRate: 32000,
-          extension: ".m4a",
-          outputFormat: AndroidOutputFormat.MPEG_4,
-          audioEncoder: AndroidAudioEncoder.AAC,
-          numberOfChannels: 1,
-          sampleRate: 16000,
-        },
-        ios: {
-          ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
-          numberOfChannels: 1,
-          bitRate: 16000,
-          extension: ".wav",
-          outputFormat: IOSOutputFormat.LINEARPCM,
-        },
-        web: {
-          mimeType: "audio/wav",
-          bitsPerSecond: 128000,
-        },
-      });
-
-      recordingRef.current = recording;
-    } catch (e) {
-      console.log("Error starting recording", e);
-    }
-  };
-
-  const handleStop = async () => {
-    setIsRecording(false);
-    const recording = recordingRef.current;
-    if (!recording) {
-      return;
-    }
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecordingUri(uri);
-  };
-
-  return (
-    <View style={styles.card}>
-      <Text style={[styles.text, styles.mb2]}>Record using Expo AV</Text>
-
-      <View style={styles.row}>
-        {!isRecording ? (
-          <BigButton
-            title="Start Recording"
-            color="#539bf5"
-            onPress={handleStart}
-          />
-        ) : (
-          <BigButton
-            title="Stop Recording"
-            color="#7C90DB"
-            onPress={handleStop}
-          />
-        )}
-      </View>
-
-      {recordingUri && <AudioPlayer source={recordingUri} />}
-
-      {recordingUri && (
-        <BigButton
-          title="Transcribe the recording"
-          color="#539bf5"
-          onPress={() => {
-            console.log("Transcribing recording", recordingUri);
-            ExpoSpeechRecognitionModule.start({
-              lang: "en-US",
-              interimResults: true,
-              // Switch to true for faster transcription
-              // (Make sure you downloaded the offline model first)
-              requiresOnDeviceRecognition: false,
-              audioSource: {
-                uri: recordingUri,
-                audioChannels: 1,
-                audioEncoding: AudioEncodingAndroid.ENCODING_MP3,
-                sampleRate: 16000,
-              },
-            });
-          }}
-        />
-      )}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    gap: 10,
-    padding: 10,
-    backgroundColor: "#eee",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  card: {
-    backgroundColor: "#eee",
-    padding: 10,
-    borderRadius: 10,
-    borderColor: "#ccc",
-    borderWidth: 2,
-    width: "100%",
-  },
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",

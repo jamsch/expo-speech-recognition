@@ -1,5 +1,3 @@
-import { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
-
 // Export the SpeechRecognition APIs
 export {
   ExpoWebSpeechRecognition,
@@ -24,41 +22,6 @@ export {
   TaskHintIOS,
   SpeechRecognizerErrorAndroid,
 } from "./constants";
-
-export const getSupportedLocales = (options?: {
-  androidRecognitionServicePackage?: string;
-}) => ExpoSpeechRecognitionModule.getSupportedLocales(options ?? {});
-
-export const getSpeechRecognitionServices =
-  ExpoSpeechRecognitionModule.getSpeechRecognitionServices;
-
-export const supportsOnDeviceRecognition =
-  ExpoSpeechRecognitionModule.supportsOnDeviceRecognition;
-
-export const supportsRecording = ExpoSpeechRecognitionModule.supportsRecording;
-
-export const setCategoryIOS = ExpoSpeechRecognitionModule.setCategoryIOS;
-
-export const getAudioSessionCategoryAndOptionsIOS =
-  ExpoSpeechRecognitionModule.getAudioSessionCategoryAndOptionsIOS;
-
-export const setAudioSessionActiveIOS =
-  ExpoSpeechRecognitionModule.setAudioSessionActiveIOS;
-
-export const androidTriggerOfflineModelDownload =
-  ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload;
-
-export const isRecognitionAvailable =
-  ExpoSpeechRecognitionModule.isRecognitionAvailable;
-
-export const getDefaultRecognitionService =
-  ExpoSpeechRecognitionModule.getDefaultRecognitionService;
-
-export const getAssistantService =
-  ExpoSpeechRecognitionModule.getAssistantService;
-
-export const addSpeechRecognitionListener =
-  ExpoSpeechRecognitionModule.addListener;
 
 export type {
   ExpoSpeechRecognitionOptions,

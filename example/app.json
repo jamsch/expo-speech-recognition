@@ -12,13 +12,19 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.speechrecognition.example"
+      "bundleIdentifier": "expo.modules.speechrecognition.example",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+      },
+      "appleTeamId": "R8B92ZFJJ5"
     },
     "android": {
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -26,7 +32,8 @@
       "package": "expo.modules.speechrecognition.example",
       "permissions": [
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -47,9 +54,12 @@
       [
         "expo-asset",
         {
-          "assets": ["./assets/audio"]
+          "assets": [
+            "./assets/audio"
+          ]
         }
-      ]
+      ],
+      "expo-build-properties"
     ]
   }
 }

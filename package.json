@@ -40,14 +40,14 @@
   "license": "MIT",
   "homepage": "https://github.com/jamsch/expo-speech-recognition#readme",
   "devDependencies": {
-    "@changesets/cli": "^2.29.2",
-    "@types/dom-speech-recognition": "^0.0.6",
-    "@types/react": "~19.0.14",
-    "expo": "~53.0.0",
-    "expo-module-scripts": "^4.1.6",
-    "globals": "16.2.0",
-    "typescript": "~5.8.3",
-    "typescript-eslint": "8.33.1"
+    "@changesets/cli": "^2.29.7",
+    "@types/dom-speech-recognition": "^0.0.7",
+    "@types/react": "~19.1.15",
+    "expo": "~54.0.0",
+    "expo-module-scripts": "^5.0.7",
+    "globals": "16.4.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "8.46.3"
   },
   "prettier": {
     "trailingComma": "all"

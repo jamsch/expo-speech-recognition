@@ -25,6 +25,8 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.Executors
 
+private const val TAG = "ESRModule"
+
 class ExpoSpeechRecognitionModule : Module() {
     private val expoSpeechService by lazy {
         ExpoSpeechService(appContext.reactContext!!) { name, body ->
@@ -34,7 +36,7 @@ class ExpoSpeechRecognitionModule : Module() {
             } catch (e: IllegalArgumentException) {
                 // "Cannot create an event emitter for the module that isn't present in the module registry."
                 // Likely can occur after destroying the module
-                Log.e("ExpoSpeechRecognitionModule", "Failed to send event: $name", e)
+                Log.e(TAG, "Failed to send event: $name", e)
             }
         }
     }
@@ -42,6 +44,7 @@ class ExpoSpeechRecognitionModule : Module() {
     // Each module class must implement the definition function. The definition consists of components
     // that describes the module's functionality and behavior.
     // See https://docs.expo.dev/modules/module-api for more details about available components.
+    @RequiresApi(Build.VERSION_CODES.FROYO)
     override fun definition() =
         ModuleDefinition {
             // Sets the name of the module that JavaScript code will use to refer to the module. Takes a
@@ -162,7 +165,7 @@ class ExpoSpeechRecognitionModule : Module() {
             }
 
             AsyncFunction("getSpeechRecognizerPermissionsAsync") { promise: Promise ->
-                Log.w("ExpoSpeechRecognitionModule", "getSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
+                Log.w(TAG, "getSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
                 promise.resolve(
                     Bundle().apply {
                         putString(PermissionsResponse.EXPIRES_KEY, "never")
@@ -174,7 +177,7 @@ class ExpoSpeechRecognitionModule : Module() {
             }
 
             AsyncFunction("requestSpeechRecognizerPermissionsAsync") { promise: Promise ->
-                Log.w("ExpoSpeechRecognitionModule", "requestSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
+                Log.w(TAG, "requestSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
                 promise.resolve(
                     Bundle().apply {
                         putString(PermissionsResponse.EXPIRES_KEY, "never")
@@ -347,6 +350,7 @@ class ExpoSpeechRecognitionModule : Module() {
 
     private fun hasNotGrantedRecordPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
 
+    @RequiresApi(Build.VERSION_CODES.CUPCAKE)
     private fun getDefaultAssistantService(): ComponentName? {
         val contentResolver = appContext.reactContext?.contentResolver ?: return null
         val defaultAssistant = Settings.Secure.getString(contentResolver, "assistant")
@@ -356,6 +360,7 @@ class ExpoSpeechRecognitionModule : Module() {
         return ComponentName.unflattenFromString(defaultAssistant)
     }
 
+    @RequiresApi(Build.VERSION_CODES.CUPCAKE)
     private fun getDefaultVoiceRecognitionService(): ComponentName? {
         val contentResolver = appContext.reactContext?.contentResolver ?: return null
         val defaultVoiceRecognitionService = Settings.Secure.getString(contentResolver, "voice_recognition_service")
