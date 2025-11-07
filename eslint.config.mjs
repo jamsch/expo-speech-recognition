@@ -7,8 +7,10 @@ export default tseslint.config([
   tseslint.configs.recommended,
   js.configs.recommended,
   {
+    ignores: ["build/**", "app.plugin.js"],
+  },
+  {
     files: ["src/**/*.{js,jsx,ts,tsx}"],
-    ignores: ["build/**"],
     languageOptions: {
       globals: globals.node,
     },
