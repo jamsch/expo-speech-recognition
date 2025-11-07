@@ -16,7 +16,6 @@ import {
   AVAudioSessionCategory,
   AVAudioSessionCategoryOptions,
   AVAudioSessionMode,
-  ExpoWebSpeechRecognition,
   SpeechRecognizerErrorAndroid,
 } from "expo-speech-recognition";
 import type {
@@ -28,7 +27,7 @@ import type {
   ExpoSpeechRecognitionOptions,
   SetCategoryOptions,
 } from "expo-speech-recognition";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   OptionButton,
   CheckboxButton,
@@ -40,7 +39,10 @@ import { StatusBar } from "expo-status-bar";
 import { useAssets } from "expo-asset";
 import { Paths, File } from "expo-file-system";
 import { VolumeMeteringAvatar } from "./components/VolumeMeteringAvatar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AppContainer } from "./components/AppContainer";
+import { WebSpeechAPIDemo } from "./components/WebSpeechAPIDemo";
+import { Card } from "./components/Card";
 
 const speechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
@@ -178,80 +180,77 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaProvider>
+      <AppContainer>
+        <StatusBar style="dark" />
 
-      {settings.volumeChangeEventOptions?.enabled ? (
-        <VolumeMeteringAvatar />
-      ) : null}
+        {settings.volumeChangeEventOptions?.enabled ? (
+          <VolumeMeteringAvatar />
+        ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.text}>
-          {error ? JSON.stringify(error) : "Error messages go here"}
-        </Text>
-      </View>
-
-      <ScrollView
-        style={[styles.card, { padding: 0, height: 140, maxHeight: 140 }]}
-        contentContainerStyle={{ padding: 10 }}
-      >
-        <View>
+        <Card>
           <Text style={styles.text}>
-            Status:{" "}
-            <Text style={{ color: status === "idle" ? "green" : "red" }}>
-              {status}
+            {error ? JSON.stringify(error) : "Error messages go here"}
+          </Text>
+        </Card>
+
+        <Card
+          use={ScrollView}
+          style={{ height: 140, maxHeight: 140 }}
+          contentContainerStyle={{ padding: 10 }}
+        >
+          <View>
+            <Text style={styles.text}>
+              Status:{" "}
+              <Text style={{ color: status === "idle" ? "green" : "red" }}>
+                {status}
+              </Text>
             </Text>
-          </Text>
-        </View>
-        <View style={{ marginTop: 10 }}>
-          <Text style={styles.text}>
-            {transcription || "transcript goes here"}
-          </Text>
-        </View>
-      </ScrollView>
-
-      <ScrollView
-        style={styles.card}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        <Settings value={settings} onChange={setSettings} />
-      </ScrollView>
-
-      <View
-        style={[
-          styles.card,
-          styles.buttonContainer,
-          { justifyContent: "space-between" },
-        ]}
-      >
-        {Platform.OS === "android" && settings.requiresOnDeviceRecognition && (
-          <View style={styles.flex1}>
-            <DownloadOfflineModel locale={settings.lang ?? "en-US"} />
           </View>
-        )}
-
-        {status === "idle" ? (
-          <BigButton title="Start Recognition" onPress={startListening} />
-        ) : (
-          <View style={[styles.row, styles.gap1]}>
-            <BigButton
-              title="Stop"
-              disabled={status !== "recognizing"}
-              onPress={() => ExpoSpeechRecognitionModule.stop()}
-            />
-            <BigButton
-              title="Abort"
-              disabled={status !== "recognizing"}
-              onPress={() => ExpoSpeechRecognitionModule.abort()}
-            />
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.text}>
+              {transcription || "transcript goes here"}
+            </Text>
           </View>
-        )}
-      </View>
-    </SafeAreaView>
+        </Card>
+
+        <Card use={ScrollView} contentContainerStyle={{ paddingBottom: 20 }}>
+          <Settings value={settings} onChange={setSettings} />
+        </Card>
+
+        <Card
+          style={[styles.buttonContainer, { justifyContent: "space-between" }]}
+        >
+          {Platform.OS === "android" &&
+            settings.requiresOnDeviceRecognition && (
+              <View style={styles.flex1}>
+                <DownloadOfflineModelButton locale={settings.lang ?? "en-US"} />
+              </View>
+            )}
+
+          {status === "idle" ? (
+            <BigButton title="Start Recognition" onPress={startListening} />
+          ) : (
+            <View style={[styles.row, styles.gap1]}>
+              <BigButton
+                title="Stop"
+                disabled={status !== "recognizing"}
+                onPress={() => ExpoSpeechRecognitionModule.stop()}
+              />
+              <BigButton
+                title="Abort"
+                disabled={status !== "recognizing"}
+                onPress={() => ExpoSpeechRecognitionModule.abort()}
+              />
+            </View>
+          )}
+        </Card>
+      </AppContainer>
+    </SafeAreaProvider>
   );
 }
 
-function DownloadOfflineModel(props: { locale: string }) {
+export function DownloadOfflineModelButton(props: { locale: string }) {
   const [downloading, setDownloading] = useState<{ locale: string } | null>(
     null,
   );
@@ -699,7 +698,7 @@ function AndroidSettings(props: {
   return (
     <View style={styles.gap1}>
       <View>
-        <View style={[styles.card, styles.mb2]}>
+        <Card style={styles.mb2}>
           <View style={styles.gap1}>
             <Text style={styles.textLabel}>Device preferences</Text>
             {defaultRecognitionService ? (
@@ -713,7 +712,7 @@ function AndroidSettings(props: {
               </Text>
             ) : null}
           </View>
-        </View>
+        </Card>
 
         <Text style={styles.textLabel}>Android Recognition Service</Text>
         <View style={[styles.row, styles.flexWrap]}>
@@ -829,7 +828,7 @@ function OtherSettings(props: {
   // Enable audio recording
   return (
     <View style={styles.gap1}>
-      <View style={[styles.row, styles.gap1, styles.flexWrap, styles.card]}>
+      <Card style={[styles.row, styles.gap1, styles.flexWrap]}>
         <SmallButton
           title="Get permissions"
           onPress={() => {
@@ -918,8 +917,9 @@ function OtherSettings(props: {
             }}
           />
         )}
-      </View>
-      <View style={styles.card}>
+      </Card>
+
+      <Card>
         <CheckboxButton
           title="Persist audio recording to filesystem"
           checked={Boolean(settings.recordingOptions?.persist)}
@@ -973,7 +973,7 @@ function OtherSettings(props: {
             )}
           </View>
         ) : null}
-      </View>
+      </Card>
 
       <WebSpeechAPIDemo />
 
@@ -1033,7 +1033,7 @@ function TranscribeLocalAudioFile() {
   useSpeechRecognitionEvent("end", () => setBusy(false));
 
   return (
-    <View style={styles.card}>
+    <Card>
       <Text style={[styles.text, styles.mb2]}>{localUri || ""}</Text>
       <BigButton
         disabled={busy}
@@ -1041,7 +1041,7 @@ function TranscribeLocalAudioFile() {
         title={busy ? "Transcribing..." : "Transcribe local en-US audio file"}
         onPress={handleTranscribe}
       />
-    </View>
+    </Card>
   );
 }
 
@@ -1082,7 +1082,7 @@ function TranscribeRemoteAudioFile(props: {
   useSpeechRecognitionEvent("end", () => setBusy(false));
 
   return (
-    <View style={styles.card}>
+    <Card>
       <Text style={[styles.text, styles.mb2]}>{props.description}</Text>
       <Text style={[styles.text, styles.mb2]}>{props.remoteUrl}</Text>
       <BigButton
@@ -1091,125 +1091,11 @@ function TranscribeRemoteAudioFile(props: {
         title={busy ? "Transcribing..." : "Transcribe remote audio file"}
         onPress={handleTranscribe}
       />
-    </View>
-  );
-}
-
-function WebSpeechAPIDemo() {
-  const [error, setError] = useState<{ code: string; message: string } | null>(
-    null,
-  );
-  const [listening, setListening] = useState(false);
-  const [transcription, setTranscription] = useState<null | {
-    isFinal: boolean;
-    transcript: string;
-  }>(null);
-
-  const recognizer = useMemo(() => new ExpoWebSpeechRecognition(), []);
-
-  useEffect(() => {
-    if (!listening) {
-      return;
-    }
-    const handleResult = (ev: SpeechRecognitionEventMap["result"]) => {
-      console.log("[WebSpeechAPIDemo] result", ev.results);
-      setTranscription({
-        isFinal: ev.results[ev.resultIndex]?.isFinal,
-        transcript: ev.results[ev.resultIndex].item(0)?.transcript,
-      });
-    };
-
-    const handleError = (ev: SpeechRecognitionEventMap["error"]) => {
-      console.log("error code:", ev.error, "error messsage:", ev.message);
-      setError({
-        code: ev.error,
-        message: ev.message,
-      });
-    };
-
-    const handleEnd = () => {
-      setListening(false);
-    };
-
-    recognizer.addEventListener("result", handleResult);
-    recognizer.addEventListener("error", handleError);
-    recognizer.addEventListener("end", handleEnd);
-
-    return () => {
-      recognizer.removeEventListener("result", handleResult);
-      recognizer.removeEventListener("error", handleError);
-      recognizer.removeEventListener("end", handleEnd);
-    };
-  }, [listening, recognizer]);
-
-  const startListeningWeb = () => {
-    setListening(true);
-    setTranscription(null);
-    setError(null);
-    ExpoSpeechRecognitionModule.requestPermissionsAsync().then((result) => {
-      console.log("Permissions", result);
-      if (!result.granted) {
-        console.log("Permissions not granted", result);
-        return;
-      }
-      recognizer.lang = "en-US";
-      recognizer.continuous = true;
-      recognizer.interimResults = true;
-      recognizer.start();
-    });
-  };
-
-  return (
-    <View style={styles.card}>
-      {!listening ? (
-        <BigButton
-          color="#53917E"
-          title="Start Recognition (Web Speech API)"
-          onPress={startListeningWeb}
-        />
-      ) : (
-        <View style={[styles.row, styles.gap1]}>
-          <BigButton
-            color="#B1B695"
-            title="Stop Recognition"
-            onPress={() => recognizer.stop()}
-          />
-          <BigButton
-            color="#B1B695"
-            title="Abort Recognition"
-            onPress={() => recognizer.abort()}
-          />
-        </View>
-      )}
-
-      <Text style={styles.text}>Errors: {JSON.stringify(error)}</Text>
-
-      <ScrollView>
-        <Text style={styles.text}>
-          {transcription?.transcript || "Transcripts goes here"}
-        </Text>
-      </ScrollView>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    gap: 10,
-    paddingHorizontal: 10,
-    backgroundColor: "#eee",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  card: {
-    backgroundColor: "#eee",
-    padding: 10,
-    borderRadius: 10,
-    borderColor: "#ccc",
-    borderWidth: 2,
-    width: "100%",
-  },
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",

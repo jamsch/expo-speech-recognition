@@ -41,15 +41,7 @@ export function TabButton(props: {
   return (
     <Pressable
       onPress={props.onPress}
-      style={[
-        {
-          borderBottomWidth: 2,
-          borderColor: "transparent",
-          padding: 4,
-          minWidth: 40,
-        },
-        props.active && styles.borderBlue,
-      ]}
+      style={[styles.tabButton, props.active && styles.borderBlue]}
       android_ripple={{ color: "#333" }}
     >
       <Text style={[styles.fontBold, { textAlign: "center" }]}>
@@ -163,5 +155,11 @@ const styles = StyleSheet.create({
   smallButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  tabButton: {
+    borderBottomWidth: 2,
+    borderColor: "transparent",
+    padding: 4,
+    minWidth: 40,
   },
 });
