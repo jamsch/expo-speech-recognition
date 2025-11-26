@@ -239,7 +239,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       startHandler()
 
       // If user has opted in to recording, emit an "audiostart" event with the path
-      audioStartHandler(outputFileUrl?.path)
+      audioStartHandler(outputFileUrl?.absoluteString)
     } catch {
       errorHandler(error)
       reset(andEmitEnd: true)
@@ -399,9 +399,14 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let baseDir: URL
 
     if let outputDirectory = outputDirectory {
-      baseDir = URL(fileURLWithPath: outputDirectory, isDirectory: true)
+      guard let resolvedURL = Self.resolveOutputDirectoryURL(outputDirectory) else {
+        print("expo-speech-recognition: ERROR - Invalid outputDirectory: \(outputDirectory)")
+        return nil
+      }
+      baseDir = resolvedURL
     } else {
-      guard let dirPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+      guard
+        let dirPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       else {
         print("Failed to get cache directory path.")
         return nil
@@ -409,10 +414,20 @@ actor ExpoSpeechRecognizer: ObservableObject {
       baseDir = dirPath
     }
 
+    do {
+      try FileManager.default.createDirectory(
+        at: baseDir,
+        withIntermediateDirectories: true
+      )
+    } catch {
+      print("expo-speech-recognition: ERROR - Failed to create output directory: \(error)")
+      return nil
+    }
+
     let fileName = outputFileName ?? "recording_\(UUID().uuidString).wav"
     let filePath = baseDir.appendingPathComponent(fileName)
 
-    _ = ExtAudioFileCreateWithURL(
+    let status = ExtAudioFileCreateWithURL(
       filePath as CFURL,
       kAudioFileWAVEType,
       audioFormat.streamDescription,
@@ -420,6 +435,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
       AudioFileFlags.eraseFile.rawValue,
       &audioFileRef
     )
+
+    guard status == noErr else {
+      print("expo-speech-recognition: ERROR - Failed to create audio file: \(status)")
+      audioFileRef = nil
+      return nil
+    }
 
     // Note: using `AVAudioFile()` doesn't seem to work
     // when downsampling pcmFloat32 to pcmInt16
@@ -432,13 +453,29 @@ actor ExpoSpeechRecognizer: ObservableObject {
     return filePath
   }
 
+  private static func resolveOutputDirectoryURL(_ directory: String) -> URL? {
+    if let url = URL(string: directory.trimmingCharacters(in: .whitespacesAndNewlines)),
+      let scheme = url.scheme,
+      !scheme.isEmpty
+    {
+      guard url.isFileURL else {
+        print("expo-speech-recognition: ERROR - Output directory must be a file URL.")
+        return nil
+      }
+      return url.hasDirectoryPath ? url : url.appendingPathComponent("")
+    }
+
+    let expandedDirectory = (directory as NSString).expandingTildeInPath
+    return URL(fileURLWithPath: expandedDirectory, isDirectory: true)
+  }
+
   private func handleSpeechStart() {
     speechStartHandler?()
     speechStartHandler = nil
   }
 
   private func end() {
-    let filePath = self.outputFileUrl?.path
+    let filePath = self.outputFileUrl?.absoluteString
     outputFileUrl = nil
     Task {
       await MainActor.run {
