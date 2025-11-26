@@ -236,16 +236,16 @@ public class ExpoSpeechRecognitionModule: Module {
             },
             audioStartHandler: { [weak self] filePath in
               if let filePath: String {
-                // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav"
-                self?.sendEvent("audiostart", ["uri": "file://" + filePath])
+                let uri = filePath.hasPrefix("file://") ? filePath : "file://" + filePath
+                self?.sendEvent("audiostart", ["uri": uri])
               } else {
                 self?.sendEvent("audiostart", ["uri": nil])
               }
             },
             audioEndHandler: { [weak self] filePath in
               if let filePath: String {
-                // "file:///Users/..../Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav"
-                self?.sendEvent("audioend", ["uri": "file://" + filePath])
+                let uri = filePath.hasPrefix("file://") ? filePath : "file://" + filePath
+                self?.sendEvent("audioend", ["uri": uri])
               } else {
                 self?.sendEvent("audioend", ["uri": nil])
               }
