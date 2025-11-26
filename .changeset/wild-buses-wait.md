@@ -7,6 +7,7 @@
 You can now do the following on Android and iOS:
 
 ```ts
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import { Directory, Paths } from "expo-file-system";
 
 const outputDirectory = new Directory(Paths.join(Paths.cache, "recordings"));
@@ -19,6 +20,7 @@ ExpoSpeechRecognitionModule.start({
   lang: "en-US",
   recordingOptions: {
     persist: true,
+    // e.g. "file:///data/user/0/com.yourapp.app/cache/recordings/"
     outputDirectory: outputDirectory.uri,
   },
 });
