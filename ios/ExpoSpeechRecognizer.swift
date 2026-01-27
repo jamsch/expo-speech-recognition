@@ -534,7 +534,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     audioEngine?.inputNode.reset()
     audioEngine?.reset()
     audioEngine = nil
-    for observer in [audioSessionInterruptionObserver, audioSessionRouteChangeObserver].compactMap({ $0 }) {
+    for observer in [audioSessionInterruptionObserver, audioSessionRouteChangeObserver].compactMap({
+      $0
+    }) {
       NotificationCenter.default.removeObserver(observer)
     }
     audioSessionInterruptionObserver = nil
@@ -729,8 +731,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
         let type = typeValue.flatMap(AVAudioSession.InterruptionType.init(rawValue:))
         let taskState = await self?.task?.state
         if type == .began && (taskState == .running || taskState == .starting) {
+          // Emit "interrupted" error event
           await self?.emitError(.audioSessionInterrupted)
-          await self?.stopListening()
+          // Force-stop the recognition task and emit the "end" event
           await self?.reset(andEmitEnd: true)
         }
       }
@@ -748,7 +751,6 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
 
   }
-
 
   private func handleAudioRouteChange(
     taskState: SFSpeechRecognitionTaskState?
