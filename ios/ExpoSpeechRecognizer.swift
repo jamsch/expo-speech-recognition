@@ -10,6 +10,8 @@ enum RecognizerError: Error {
   case recognizerIsUnavailable
   case invalidAudioSource
   case audioInputBusy
+  case audioSessionInterrupted
+  case audioRouteChanged
 
   var message: String {
     switch self {
@@ -20,6 +22,8 @@ enum RecognizerError: Error {
     case .recognizerIsUnavailable: return "Recognizer is unavailable"
     case .invalidAudioSource: return "Invalid audio source"
     case .audioInputBusy: return "The audio input is busy"
+    case .audioSessionInterrupted: return "Audio session was interrupted"
+    case .audioRouteChanged: return "Audio route changed and failed to restart the audio engine"
     }
   }
 }
@@ -33,6 +37,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private var speechStartHandler: (() -> Void)?
   private var audioFileRef: ExtAudioFileRef?
   private var outputFileUrl: URL?
+  private var audioSessionInterruptionObserver: NSObjectProtocol?
+  private var audioSessionRouteChangeObserver: NSObjectProtocol?
   /// Whether the recognizer has been stopped by the user or the timer has timed out
   private var stoppedListening = false
 
@@ -42,6 +48,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
   @MainActor var endHandler: (() -> Void)?
   @MainActor var audioEndHandler: ((String?) -> Void)?
   @MainActor var volumeChangeHandler: ((Float) -> Void)?
+  @MainActor var errorHandler: ((Error) -> Void)?
 
   /// Initializes a new speech recognizer. If this is the first time you've used the class, it
   /// requests access to the speech recognizer and the microphone.
@@ -128,6 +135,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     self.endHandler = endHandler
     self.audioEndHandler = audioEndHandler
     self.volumeChangeHandler = volumeChangeHandler
+    self.errorHandler = errorHandler
     Task {
       await startRecognizer(
         options: options,
@@ -327,6 +335,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     options: SpeechRecognitionOptions
   ) throws {
     try Self.setupAudioSession(options.iosCategory)
+    registerAudioSessionObservers()
     self.audioEngine = AVAudioEngine()
 
     guard let audioEngine = self.audioEngine else {
@@ -525,6 +534,13 @@ actor ExpoSpeechRecognizer: ObservableObject {
     audioEngine?.inputNode.reset()
     audioEngine?.reset()
     audioEngine = nil
+    for observer in [audioSessionInterruptionObserver, audioSessionRouteChangeObserver].compactMap({
+      $0
+    }) {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    audioSessionInterruptionObserver = nil
+    audioSessionRouteChangeObserver = nil
 
     if let audioFileRef = audioFileRef {
       ExtAudioFileDispose(audioFileRef)
@@ -541,6 +557,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     // (e.g. in the case of a setup error)
     print("SpeechRecognizer: end")
     if shouldEmitEndEvent {
+      Task { @MainActor in
+        self.errorHandler = nil
+      }
       end()
     }
   }
@@ -696,6 +715,101 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     audioEngine.prepare()
     try audioEngine.start()
+  }
+
+  private func registerAudioSessionObservers() {
+    guard audioSessionInterruptionObserver == nil else {
+      return
+    }
+    audioSessionInterruptionObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.interruptionNotification,
+      object: AVAudioSession.sharedInstance(),
+      queue: .main
+    ) { [weak self] notification in
+      Task { [weak self] in
+        let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+        let type = typeValue.flatMap(AVAudioSession.InterruptionType.init(rawValue:))
+        let taskState = await self?.task?.state
+        if type == .began && (taskState == .running || taskState == .starting) {
+          // Emit "interrupted" error event
+          await self?.emitError(.audioSessionInterrupted)
+          // Force-stop the recognition task and emit the "end" event
+          await self?.reset(andEmitEnd: true)
+        }
+      }
+    }
+
+    audioSessionRouteChangeObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.routeChangeNotification,
+      object: AVAudioSession.sharedInstance(),
+      queue: .main
+    ) { [weak self] _ in
+      Task { [weak self] in
+        let taskState = await self?.task?.state
+        await self?.handleAudioRouteChange(taskState: taskState)
+      }
+    }
+
+  }
+
+  private func handleAudioRouteChange(
+    taskState: SFSpeechRecognitionTaskState?
+  ) {
+    // We only care about route changes when the recognizer is active
+    if taskState == .running || taskState == .starting {
+      guard !restartAudioEngineForRouteChange() else {
+        return
+      }
+      emitError(.audioRouteChanged)
+      stopListening()
+      reset(andEmitEnd: true)
+    }
+  }
+
+  private func restartAudioEngineForRouteChange() -> Bool {
+    guard let request = request, let options = options else {
+      return false
+    }
+
+    // Stop and clean up the old audio engine before creating a new one
+    if let oldEngine = self.audioEngine {
+      oldEngine.stop()
+      oldEngine.inputNode.removeTap(onBus: 0)
+      oldEngine.inputNode.reset()
+      oldEngine.reset()
+    }
+
+    let newEngine = AVAudioEngine()
+    let inputNode = newEngine.inputNode
+    let audioFormat = Self.getAudioFormat(forEngine: newEngine)
+    let mixerNode = AVAudioMixerNode()
+    newEngine.attach(mixerNode)
+    newEngine.connect(inputNode, to: mixerNode, format: audioFormat)
+
+    do {
+      try Self.prepareEngine(
+        audioEngine: newEngine,
+        mixerNode: mixerNode,
+        options: options,
+        request: request,
+        audioFileRef: self.audioFileRef,
+        volumeChangeHandler: { volume in
+          Task { @MainActor in
+            self.volumeChangeHandler?(volume)
+          }
+        }
+      )
+      self.audioEngine = newEngine
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private func emitError(_ error: RecognizerError) {
+    Task { @MainActor in
+      self.errorHandler?(error)
+    }
   }
 
   private static func calculatePower(buffer: AVAudioPCMBuffer) -> Float? {

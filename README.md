@@ -393,6 +393,7 @@ The error code is based on the [Web Speech API error codes](https://developer.mo
 | ------------------------ | ------------------------------------------------------------------------------- |
 | `aborted`                | The user called `ExpoSpeechRecognitionModule.abort()`                           |
 | `audio-capture`          | Audio recording error.                                                          |
+| `interrupted`            | (iOS) The audio session was interrupted (phone call, Siri, alarm).              |
 | `bad-grammar`            | Provided grammar is invalid. (Web only)                                         |
 | `language-not-supported` | Locale is not supported by the speech recognizer.                               |
 | `network`                | Network communication required for completing the recognition failed.           |

@@ -538,6 +538,10 @@ public class ExpoSpeechRecognitionModule: Module {
         sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
       case .audioInputBusy:
         sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
+      case .audioSessionInterrupted:
+        sendEvent("error", ["error": "interrupted", "message": recognitionError.message])
+      case .audioRouteChanged:
+        sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
       }
       return
     }

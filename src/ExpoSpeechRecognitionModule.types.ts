@@ -72,6 +72,8 @@ export type ExpoSpeechRecognitionErrorCode =
   | "aborted"
   /** Audio recording error. */
   | "audio-capture"
+  /** (iOS) The audio session was interrupted (phone call, Siri, alarm). */
+  | "interrupted"
   /** There was an error in the speech recognition grammar or semantic tags, or the chosen grammar format or semantic tag format was unsupported. */
   | "bad-grammar"
   /** Locale is not supported by the speech recognizer. */
