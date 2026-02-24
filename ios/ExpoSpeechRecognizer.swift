@@ -782,6 +782,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
     let newEngine = AVAudioEngine()
     let inputNode = newEngine.inputNode
     let audioFormat = Self.getAudioFormat(forEngine: newEngine)
+
+    guard !Self.audioInputIsBusy(audioFormat) else {
+      return false
+    }
+
     let mixerNode = AVAudioMixerNode()
     newEngine.attach(mixerNode)
     newEngine.connect(inputNode, to: mixerNode, format: audioFormat)
