@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 3.1.1
+
+### Patch Changes
+
+- 356a4d7: (iOS) Fixed a crash on audio route changes when the audio input node isn't ready
+
 ## 3.1.0
 
 ### Minor Changes
