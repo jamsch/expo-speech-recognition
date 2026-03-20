@@ -1,5 +1,13 @@
 # expo-speech-recognition
 
+## 3.1.2
+
+### Patch Changes
+
+- 5f3bd93: Avoid restarting the iOS audio engine during audio route changes while the app
+  is leaving the foreground, which could still crash some speech-recognition
+  sessions after the 3.1.1 input-node readiness fix.
+
 ## 3.1.1
 
 ### Patch Changes
