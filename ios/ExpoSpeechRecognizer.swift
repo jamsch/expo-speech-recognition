@@ -2,6 +2,7 @@ import AVFoundation
 import Accelerate
 import Foundation
 import Speech
+import UIKit
 
 enum RecognizerError: Error {
   case nilRecognizer
@@ -744,19 +745,30 @@ actor ExpoSpeechRecognizer: ObservableObject {
       object: AVAudioSession.sharedInstance(),
       queue: .main
     ) { [weak self] _ in
+      let appState = UIApplication.shared.applicationState
       Task { [weak self] in
         let taskState = await self?.task?.state
-        await self?.handleAudioRouteChange(taskState: taskState)
+        await self?.handleAudioRouteChange(taskState: taskState, appState: appState)
       }
     }
 
   }
 
   private func handleAudioRouteChange(
-    taskState: SFSpeechRecognitionTaskState?
+    taskState: SFSpeechRecognitionTaskState?,
+    appState: UIApplication.State
   ) {
     // We only care about route changes when the recognizer is active
     if taskState == .running || taskState == .starting {
+      // App deactivation can emit a route change while the audio session is
+      // being torn down. In that case we should stop recognition instead of
+      // trying to reconnect the engine again.
+      guard appState == .active else {
+        emitError(.audioSessionInterrupted)
+        stopListening()
+        reset(andEmitEnd: true)
+        return
+      }
       guard !restartAudioEngineForRouteChange() else {
         return
       }
