@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 3.1.3
+
+### Patch Changes
+
+- 8c06f3e: Removed tvOS from the podspec, as Speech API is not available there
+
 ## 3.1.2
 
 ### Patch Changes
