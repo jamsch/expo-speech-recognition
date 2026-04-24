@@ -1,56 +1,68 @@
-import ExpoModulesCore
+import AVFoundation
+import Foundation
 import Speech
 
-struct SpeechRecognitionOptions: Record {
-  @Field
+struct SpeechRecognitionOptions {
   var interimResults: Bool = false
-
-  @Field
   var lang: String = "en-US"
-
-  @Field
   var continuous: Bool = false
-
-  @Field
   var maxAlternatives: Int = 5
-
-  @Field
   var contextualStrings: [String]? = nil
-
-  @Field
   var requiresOnDeviceRecognition: Bool = false
-
-  @Field
   var addsPunctuation: Bool = false
-
-  @Field
   var recordingOptions: RecordingOptions? = nil
-
-  @Field
   var audioSource: AudioSourceOptions? = nil
-
-  @Field
   var iosTaskHint: IOSTaskHint? = nil
-
-  @Field
   var iosCategory: SetCategoryOptions? = nil
-
-  @Field
   var volumeChangeEventOptions: VolumeChangeEventOptions? = nil
-
-  @Field
   var iosVoiceProcessingEnabled: Bool? = false
+
+  init(dictionary: [String: Any]) {
+    interimResults = dictionary["interimResults"] as? Bool ?? false
+    lang = dictionary["lang"] as? String ?? "en-US"
+    continuous = dictionary["continuous"] as? Bool ?? false
+    maxAlternatives = dictionary["maxAlternatives"] as? Int ?? 5
+    contextualStrings = dictionary["contextualStrings"] as? [String]
+    requiresOnDeviceRecognition =
+      dictionary["requiresOnDeviceRecognition"] as? Bool ?? false
+    addsPunctuation = dictionary["addsPunctuation"] as? Bool ?? false
+    iosVoiceProcessingEnabled =
+      dictionary["iosVoiceProcessingEnabled"] as? Bool ?? false
+
+    // 这里把 RN 透传进来的弱类型字典收敛成强类型结构，避免识别核心层继续到处判断 Any。
+    if let recordingOptions = dictionary["recordingOptions"] as? [String: Any] {
+      self.recordingOptions = RecordingOptions(dictionary: recordingOptions)
+    }
+
+    if let audioSource = dictionary["audioSource"] as? [String: Any] {
+      self.audioSource = AudioSourceOptions(dictionary: audioSource)
+    }
+
+    if let iosTaskHintValue = dictionary["iosTaskHint"] as? String {
+      iosTaskHint = IOSTaskHint(rawValue: iosTaskHintValue)
+    }
+
+    if let iosCategory = dictionary["iosCategory"] as? [String: Any] {
+      self.iosCategory = SetCategoryOptions(dictionary: iosCategory)
+    }
+
+    if let volumeOptions = dictionary["volumeChangeEventOptions"] as? [String: Any] {
+      volumeChangeEventOptions = VolumeChangeEventOptions(dictionary: volumeOptions)
+    }
+  }
 }
 
-struct VolumeChangeEventOptions: Record {
-  @Field
+struct VolumeChangeEventOptions {
   var enabled: Bool? = false
-
-  @Field
   var intervalMillis: Int? = nil
+
+  init(dictionary: [String: Any]) {
+    enabled = dictionary["enabled"] as? Bool ?? false
+    intervalMillis = dictionary["intervalMillis"] as? Int
+  }
 }
 
-enum IOSTaskHint: String, Enumerable {
+enum IOSTaskHint: String {
   case unspecified
   case dictation
   case search
@@ -66,46 +78,49 @@ enum IOSTaskHint: String, Enumerable {
   }
 }
 
-struct RecordingOptions: Record {
-  @Field
+struct RecordingOptions {
   var persist: Bool = false
-
-  @Field
   var outputDirectory: String? = nil
-
-  @Field
   var outputFileName: String? = nil
-
-  @Field
   var outputSampleRate: Double? = nil
-
-  @Field
   var outputEncoding: String? = nil
+
+  init(dictionary: [String: Any]) {
+    persist = dictionary["persist"] as? Bool ?? false
+    outputDirectory = dictionary["outputDirectory"] as? String
+    outputFileName = dictionary["outputFileName"] as? String
+
+    if let outputSampleRate = dictionary["outputSampleRate"] as? Double {
+      self.outputSampleRate = outputSampleRate
+    } else if let outputSampleRate = dictionary["outputSampleRate"] as? NSNumber {
+      self.outputSampleRate = outputSampleRate.doubleValue
+    }
+
+    outputEncoding = dictionary["outputEncoding"] as? String
+  }
 }
 
-struct AudioSourceOptions: Record {
-  @Field
+struct AudioSourceOptions {
   var uri: String = ""
-
-  @Field
   var audioEncoding: Int? = nil
-
-  @Field
   var sampleRate: Int? = 16000
-
-  @Field
   var audioChannels: Int? = 1
-
-  @Field
   var chunkDelayMillis: Int? = nil
+
+  init(dictionary: [String: Any]) {
+    uri = dictionary["uri"] as? String ?? ""
+    audioEncoding = dictionary["audioEncoding"] as? Int
+    sampleRate = dictionary["sampleRate"] as? Int ?? 16000
+    audioChannels = dictionary["audioChannels"] as? Int ?? 1
+    chunkDelayMillis = dictionary["chunkDelayMillis"] as? Int
+  }
 }
 
-struct GetSupportedLocaleOptions: Record {
-  @Field
+struct GetSupportedLocaleOptions {
   var androidRecognitionServicePackage: String? = nil
 }
 
-enum CategoryParam: String, Enumerable {
+enum CategoryParam: String {
   case ambient
   case soloAmbient
   case playback
@@ -125,7 +140,7 @@ enum CategoryParam: String, Enumerable {
   }
 }
 
-enum CategoryOptionsParam: String, Enumerable {
+enum CategoryOptionsParam: String {
   case mixWithOthers
   case duckOthers
   case interruptSpokenAudioAndMixWithOthers
@@ -154,7 +169,7 @@ enum CategoryOptionsParam: String, Enumerable {
   }
 }
 
-enum ModeParam: String, Enumerable {
+enum ModeParam: String {
   case `default`
   case gameChat
   case measurement
@@ -180,18 +195,33 @@ enum ModeParam: String, Enumerable {
   }
 }
 
-struct SetCategoryOptions: Record {
-  @Field
+struct SetCategoryOptions {
   var category: CategoryParam = .playAndRecord
-
-  @Field
   var categoryOptions: [CategoryOptionsParam] = [.duckOthers]
-
-  @Field
   var mode: ModeParam = .measurement
+
+  init(dictionary: [String: Any]) {
+    if let categoryValue = dictionary["category"] as? String,
+      let category = CategoryParam(rawValue: categoryValue)
+    {
+      self.category = category
+    }
+
+    if let optionValues = dictionary["categoryOptions"] as? [String] {
+      let parsedOptions = optionValues.compactMap(CategoryOptionsParam.init(rawValue:))
+      if !parsedOptions.isEmpty {
+        categoryOptions = parsedOptions
+      }
+    }
+
+    if let modeValue = dictionary["mode"] as? String,
+      let mode = ModeParam(rawValue: modeValue)
+    {
+      self.mode = mode
+    }
+  }
 }
 
-struct SetAudioSessionActiveOptions: Record {
-  @Field
+struct SetAudioSessionActiveOptions {
   var notifyOthersOnDeactivation: Bool? = true
 }

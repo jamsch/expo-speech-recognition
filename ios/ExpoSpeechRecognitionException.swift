@@ -1,4 +1,4 @@
-import ExpoModulesCore
+import Foundation
 
 /*
 no-speech
@@ -26,59 +26,41 @@ language-not-supported
 The user agent does not support the language specified in the value of lang attribute of the SpeechRecognition object. The set of supported languages is browser-dependent, and from frontend code there is no way to programmatically determine what languages a user's browser supports for speech recognition.
 */
 
-internal final class NilRecognizerException: Exception {
-  override var code: String {
-    "audio-capture"
-  }
-
-  override var reason: String {
-    "Can't initialize speech recognizer"
-  }
+protocol ExpoSpeechRecognitionException: Error {
+  var code: String { get }
+  var reason: String { get }
 }
 
-internal final class PermissionException: Exception {
-  override var code: String {
-    "not-allowed"
-  }
-  override var reason: String {
-    "Speech recognition permissions have not been granted"
-  }
+internal struct NilRecognizerException: ExpoSpeechRecognitionException {
+  let code = "audio-capture"
+  let reason = "Can't initialize speech recognizer"
 }
 
-internal final class NotAuthorizedException: Exception {
-  override var code: String {
-    "not-allowed"
-  }
-
-  override var reason: String {
-    "Not authorized to recognize speech"
-  }
+internal struct PermissionException: ExpoSpeechRecognitionException {
+  let code = "not-allowed"
+  let reason = "Speech recognition permissions have not been granted"
 }
 
-internal final class NotPermittedToRecordException: Exception {
-  override var code: String {
-    "not-allowed"
-  }
-  override var reason: String {
-    "Recording permission has not been granted"
-  }
+internal struct NotAuthorizedException: ExpoSpeechRecognitionException {
+  let code = "not-allowed"
+  let reason = "Not authorized to recognize speech"
 }
 
-internal final class InvalidAudioModeException: GenericException<String> {
-  override var code: String {
-    "audio-capture"
-  }
-  override var reason: String {
+internal struct NotPermittedToRecordException: ExpoSpeechRecognitionException {
+  let code = "not-allowed"
+  let reason = "Recording permission has not been granted"
+}
+
+internal struct InvalidAudioModeException: ExpoSpeechRecognitionException {
+  let param: String
+  let code = "audio-capture"
+
+  var reason: String {
     "Impossible audio mode: \(param)"
   }
 }
 
-internal final class RecognizerUnavilableException: Exception {
-  override var code: String {
-    "service-not-allowed"
-  }
-
-  override var reason: String {
-    "Recognizer is unavailable"
-  }
+internal struct RecognizerUnavilableException: ExpoSpeechRecognitionException {
+  let code = "service-not-allowed"
+  let reason = "Recognizer is unavailable"
 }

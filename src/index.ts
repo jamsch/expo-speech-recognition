@@ -1,10 +1,3 @@
-// Export the SpeechRecognition APIs
-export {
-  ExpoWebSpeechRecognition,
-  ExpoWebSpeechGrammar,
-  ExpoWebSpeechGrammarList,
-} from "./ExpoWebSpeechRecognition";
-
 // Native module
 export { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
 

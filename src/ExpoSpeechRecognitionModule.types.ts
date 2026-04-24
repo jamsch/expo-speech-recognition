@@ -1,5 +1,13 @@
-import type { PermissionResponse } from "expo-modules-core";
-import type { NativeModule } from "expo";
+import type { EmitterSubscription } from "react-native";
+
+export type PermissionStatus = "undetermined" | "granted" | "denied";
+
+export type PermissionResponse = {
+  status: PermissionStatus;
+  granted: boolean;
+  canAskAgain: boolean;
+  expires: "never";
+};
 
 export type ExpoSpeechRecognitionPermissionResponse = PermissionResponse & {
   /**
@@ -574,13 +582,7 @@ export type AndroidIntentOptions = {
   EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: number;
 };
 
-export type ExpoSpeechRecognitionNativeEvents = {
-  [K in keyof ExpoSpeechRecognitionNativeEventMap]: (
-    event: ExpoSpeechRecognitionNativeEventMap[K],
-  ) => void;
-};
-
-export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSpeechRecognitionNativeEvents> {
+export type ExpoSpeechRecognitionModuleType = {
   /**
    * Starts speech recognition.
    */
@@ -609,6 +611,11 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * You may also use `getMicrophonePermissionsAsync` and `getSpeechRecognizerPermissionsAsync` to get the permissions separately.
    */
   getPermissionsAsync(): Promise<ExpoSpeechRecognitionPermissionResponse>;
+  addListener<K extends keyof ExpoSpeechRecognitionNativeEventMap>(
+    eventName: K,
+    listener: (event: ExpoSpeechRecognitionNativeEventMap[K]) => void,
+  ): EmitterSubscription;
+  removeListeners(count: number): void;
   /**
    * Returns the current permission status for the microphone.
    */
@@ -758,7 +765,7 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * Returns the current state of the speech recognizer.
    */
   getStateAsync(): Promise<SpeechRecognitionState>;
-}
+};
 
 export type SetCategoryOptions = {
   category: AVAudioSessionCategoryValue;

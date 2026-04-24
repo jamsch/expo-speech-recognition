@@ -1,8 +1,22 @@
 {
-  "extends": "expo-module-scripts/tsconfig.base",
   "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2020"],
     "outDir": "./build"
   },
   "include": ["./src"],
-  "exclude": ["**/__mocks__/*", "**/__tests__/*"]
+  "exclude": [
+    "**/__mocks__/*",
+    "**/__tests__/*",
+    "./src/ExpoWebSpeechRecognition.ts",
+    "./src/ExpoWebSpeechRecognition.web.ts",
+    "./src/ExpoSpeechRecognitionModule.web.ts"
+  ]
 }

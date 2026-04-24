@@ -15,13 +15,13 @@ Pod::Spec.new do |s|
   s.source         = { git: 'https://github.com/jamsch/expo-speech-recognition' }
   s.static_framework = true
 
-  s.dependency 'ExpoModulesCore'
+  s.source_files = '**/*.{h,m,mm,swift}'
+  s.dependency 'React-Core'
+  s.frameworks = 'AVFoundation', 'Speech'
 
   # Swift/Objective-C compatibility
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'SWIFT_COMPILATION_MODE' => 'wholemodule'
   }
-  
-  s.source_files = "**/*.{h,m,swift}"
 end

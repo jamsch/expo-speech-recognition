@@ -398,7 +398,13 @@ class ExpoSpeechService(
             val field = RecognizerIntent::class.java.getDeclaredField(key)
             val fieldValue = field.get(null) as? String
 
-            log("Resolved key $key -> $fieldValue with value: $value (${value.javaClass.name})")
+            // 中文注释：只在成功解析出 RecognizerIntent 常量后再写入 extra，避免把空 key 传给 Intent。
+            if (fieldValue == null) {
+                throw IllegalArgumentException("Unsupported RecognizerIntent extra key: $key")
+            }
+
+            val valueClassName = value?.javaClass?.name ?: "null"
+            log("Resolved key $key -> $fieldValue with value: $value ($valueClassName)")
             when (value) {
                 is Boolean -> intent.putExtra(fieldValue, value)
                 is Int -> intent.putExtra(fieldValue, value)
@@ -409,7 +415,10 @@ class ExpoSpeechService(
                     }
                 }
                 is Double -> intent.putExtra(fieldValue, value.toInt())
-                else -> throw IllegalArgumentException("Unsupported type for androidIntentOptions.$key: ${value.javaClass.name}")
+                else ->
+                    throw IllegalArgumentException(
+                        "Unsupported type for androidIntentOptions.$key: $valueClassName",
+                    )
             }
         }
 

@@ -1,14 +1,26 @@
-import { requireNativeModule } from "expo";
+import {
+  NativeEventEmitter,
+  NativeModules,
+  type EmitterSubscription,
+  type NativeModule,
+} from "react-native";
 
 import type { ExpoSpeechRecognitionModuleType } from "./ExpoSpeechRecognitionModule.types";
 
-// It loads the native module object from the JSI or falls back to
-// the bridge module (from NativeModulesProxy) if the remote debugger is on.
-export const ExpoSpeechRecognitionModule =
-  requireNativeModule<ExpoSpeechRecognitionModuleType>("ExpoSpeechRecognition");
+const rawNativeModule = NativeModules.ExpoSpeechRecognition as unknown;
 
-const stop = ExpoSpeechRecognitionModule.stop;
-const abort = ExpoSpeechRecognitionModule.abort;
+if (!rawNativeModule) {
+  throw new Error(
+    "ExpoSpeechRecognition native module is not linked. Verify the React Native iOS/Android native module integration.",
+  );
+}
 
-ExpoSpeechRecognitionModule.abort = () => abort();
-ExpoSpeechRecognitionModule.stop = () => stop();
+const nativeModule = rawNativeModule as ExpoSpeechRecognitionModuleType;
+const nativeEventEmitter = new NativeEventEmitter(rawNativeModule as NativeModule);
+
+export const ExpoSpeechRecognitionModule: ExpoSpeechRecognitionModuleType = {
+  ...nativeModule,
+  addListener(eventName, listener): EmitterSubscription {
+    return nativeEventEmitter.addListener(eventName, listener);
+  },
+};

@@ -1,494 +1,258 @@
 package expo.modules.speechrecognition
 
 import android.Manifest.permission.RECORD_AUDIO
-import android.annotation.SuppressLint
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.provider.Settings
-import android.speech.ModelDownloadListener
-import android.speech.RecognitionService
-import android.speech.RecognitionSupport
-import android.speech.RecognitionSupportCallback
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
+import android.content.pm.PackageManager
 import android.util.Log
-import androidx.annotation.RequiresApi
-import expo.modules.interfaces.permissions.PermissionsResponse
-import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
-import expo.modules.interfaces.permissions.Permissions.getPermissionsWithPermissionsManager
-import expo.modules.kotlin.Promise
-import expo.modules.kotlin.modules.Module
-import expo.modules.kotlin.modules.ModuleDefinition
-import java.util.concurrent.Executors
+import androidx.core.content.ContextCompat
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.LifecycleEventListener
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.WritableArray
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.facebook.react.modules.core.PermissionAwareActivity
+import com.facebook.react.modules.core.PermissionListener
 
-private const val TAG = "ESRModule"
+private const val TAG = "ExpoSpeechRecognition"
+private const val REQUEST_RECORD_AUDIO = 9224
 
-class ExpoSpeechRecognitionModule : Module() {
+@ReactModule(name = ExpoSpeechRecognitionModule.NAME)
+class ExpoSpeechRecognitionModule(
+    private val reactContext: ReactApplicationContext,
+) : ReactContextBaseJavaModule(reactContext), PermissionListener, LifecycleEventListener {
+    private var permissionPromise: Promise? = null
+
     private val expoSpeechService by lazy {
-        ExpoSpeechService(appContext.reactContext!!) { name, body ->
-            val nonNullBody = body ?: emptyMap()
-            try {
-                sendEvent(name, nonNullBody)
-            } catch (e: IllegalArgumentException) {
-                // "Cannot create an event emitter for the module that isn't present in the module registry."
-                // Likely can occur after destroying the module
-                Log.e(TAG, "Failed to send event: $name", e)
-            }
+        ExpoSpeechService(reactContext) { name, body ->
+            emitEvent(name, body)
         }
     }
 
-    // Each module class must implement the definition function. The definition consists of components
-    // that describes the module's functionality and behavior.
-    // See https://docs.expo.dev/modules/module-api for more details about available components.
-    @RequiresApi(Build.VERSION_CODES.FROYO)
-    override fun definition() =
-        ModuleDefinition {
-            // Sets the name of the module that JavaScript code will use to refer to the module. Takes a
-            // string as an argument.
-            // Can be inferred from module's class name, but it's recommended to set it explicitly for
-            // clarity.
-            // The module will be accessible from `requireNativeModule('ExpoSpeechRecognition')` in
-            // JavaScript.
-            Name("ExpoSpeechRecognition")
+    companion object {
+        const val NAME = "ExpoSpeechRecognition"
+    }
 
-            OnDestroy {
-                expoSpeechService.destroy()
-            }
+    init {
+        reactContext.addLifecycleEventListener(this)
+    }
 
-            // Defines event names that the module can send to JavaScript.
-            Events(
-                // Fired when the user agent has started to capture audio.
-                "audiostart",
-                // Fired when the user agent has finished capturing audio.
-                "audioend",
-                // Fired when the speech recognition service has disconnected.
-                "end",
-                // Fired when a speech recognition error occurs.
+    override fun getName(): String = NAME
+
+    @ReactMethod
+    fun start(options: ReadableMap?) {
+        val parsedOptions = SpeechRecognitionOptionsParser.fromReadableMap(options)
+
+        if (!hasRecordPermission()) {
+            emitEvent(
                 "error",
-                // Fired when the speech recognition service returns a final result with no significant
-                // recognition. This may involve some degree of recognition, which doesn't meet or
-                // exceed the confidence threshold.
-                "nomatch",
-                // Fired when the speech recognition service returns a result — a word or phrase has been
-                // positively recognized and this has been communicated back to the app.
-                "result",
-                // Fired when any sound — recognizable speech or not — has been detected.
-                "soundstart",
-                // Fired when any sound — recognizable speech or not — has stopped being detected.
-                "soundend",
-                // Fired when sound that is recognized by the speech recognition service as speech
-                // has been detected.
-                "speechstart",
-                // Fired when speech recognized by the speech recognition service has stopped being
-                // detected.
-                "speechend",
-                // Fired when the speech recognition service has begun listening to incoming audio with
-                // intent to recognize grammars associated with the current SpeechRecognition
-                "start",
-                // Called when there's results (as a string array, not API compliant)
-                "results",
-                // Called when the language detection (and switching) results are available.
-                "languagedetection",
-                // Fired when the input volume changes
-                "volumechange",
+                mapOf(
+                    "error" to "not-allowed",
+                    "message" to "Missing RECORD_AUDIO permission.",
+                    "code" to -1,
+                ),
             )
-
-            Function("getDefaultRecognitionService") {
-                val defaultRecognitionService = getDefaultVoiceRecognitionService()?.packageName ?: ""
-                return@Function mapOf(
-                    "packageName" to defaultRecognitionService,
-                )
-            }
-
-            Function("getAssistantService") {
-                val assistantServicePackage = getDefaultAssistantService()?.packageName ?: ""
-                return@Function mapOf(
-                    "packageName" to assistantServicePackage,
-                )
-            }
-
-            Function("getSpeechRecognitionServices") {
-                val packageManager = appContext.reactContext?.packageManager
-                val serviceNames = mutableListOf<String>()
-
-                if (packageManager == null) {
-                    return@Function serviceNames
-                }
-
-                val services =
-                    packageManager.queryIntentServices(
-                        Intent(RecognitionService.SERVICE_INTERFACE),
-                        0,
-                    )
-
-                for (service in services) {
-                    serviceNames.add(service.serviceInfo.packageName)
-                }
-
-                return@Function serviceNames
-            }
-
-            AsyncFunction("requestPermissionsAsync") { promise: Promise ->
-                askForPermissionsWithPermissionsManager(
-                    appContext.permissions,
-                    promise,
-                    RECORD_AUDIO,
-                )
-            }
-
-            AsyncFunction("getPermissionsAsync") { promise: Promise ->
-                getPermissionsWithPermissionsManager(
-                    appContext.permissions,
-                    promise,
-                    RECORD_AUDIO,
-                )
-            }
-
-            AsyncFunction("requestMicrophonePermissionsAsync") { promise: Promise ->
-                askForPermissionsWithPermissionsManager(
-                    appContext.permissions,
-                    promise,
-                    RECORD_AUDIO,
-                )
-            }
-
-            AsyncFunction("getMicrophonePermissionsAsync") { promise: Promise ->
-                getPermissionsWithPermissionsManager(
-                    appContext.permissions,
-                    promise,
-                    RECORD_AUDIO,
-                )
-            }
-
-            AsyncFunction("getSpeechRecognizerPermissionsAsync") { promise: Promise ->
-                Log.w(TAG, "getSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
-                promise.resolve(
-                    Bundle().apply {
-                        putString(PermissionsResponse.EXPIRES_KEY, "never")
-                        putString(PermissionsResponse.STATUS_KEY, "granted")
-                        putBoolean(PermissionsResponse.CAN_ASK_AGAIN_KEY, false)
-                        putBoolean(PermissionsResponse.GRANTED_KEY, true)
-                    }
-                )
-            }
-
-            AsyncFunction("requestSpeechRecognizerPermissionsAsync") { promise: Promise ->
-                Log.w(TAG, "requestSpeechRecognizerPermissionsAsync is not supported on Android. Returning a granted permission response.")
-                promise.resolve(
-                    Bundle().apply {
-                        putString(PermissionsResponse.EXPIRES_KEY, "never")
-                        putString(PermissionsResponse.STATUS_KEY, "granted")
-                        putBoolean(PermissionsResponse.CAN_ASK_AGAIN_KEY, false)
-                        putBoolean(PermissionsResponse.GRANTED_KEY, true)
-                    }
-                )
-            }
-
-            AsyncFunction("getStateAsync") { promise: Promise ->
-                val state =
-                    when (expoSpeechService.recognitionState) {
-                        RecognitionState.INACTIVE -> "inactive"
-                        RecognitionState.STARTING -> "starting"
-                        RecognitionState.ACTIVE -> "recognizing"
-                        RecognitionState.STOPPING -> "stopping"
-                        else -> "inactive"
-                    }
-
-                promise.resolve(state)
-            }
-
-            /** Start recognition with args: lang, interimResults, maxAlternatives */
-            Function("start") { options: SpeechRecognitionOptions ->
-                if (hasNotGrantedRecordPermissions()) {
-                    sendEvent("error", mapOf("error" to "not-allowed", "message" to "Missing RECORD_AUDIO permissions.", "code" to -1))
-                    sendEvent("end")
-                    return@Function
-                }
-                expoSpeechService.start(options)
-            }
-
-            Function("stop") {
-                expoSpeechService.stop()
-            }
-
-            Function("abort") {
-                sendEvent("error", mapOf("error" to "aborted", "message" to "Speech recognition aborted.", "code" to -1))
-                expoSpeechService.abort()
-            }
-
-            AsyncFunction("getSupportedLocales") { options: GetSupportedLocaleOptions, promise: Promise ->
-                getSupportedLocales(options, appContext.reactContext!!, promise)
-            }
-
-            Function("supportsOnDeviceRecognition") {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext.reactContext!!)
-                } else {
-                    false
-                }
-            }
-
-            Function("isRecognitionAvailable") {
-                SpeechRecognizer.isRecognitionAvailable(appContext.reactContext!!)
-            }
-
-            Function("supportsRecording") {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-            }
-
-            // Not necessary for Android
-            Function("setCategoryIOS") { _: Any ->
-                // Do nothing
-            }
-
-            Function("getAudioSessionCategoryAndOptionsIOS") {
-                // Just return dummy data, not necessary for Android
-                return@Function mapOf(
-                    "category" to "playAndRecord",
-                    "categoryOptions" to listOf("defaultToSpeaker", "allowBluetooth"),
-                    "mode" to "measurement",
-                )
-            }
-
-            Function("setAudioSessionActiveIOS") { _: Any ->
-                // Do nothing
-            }
-
-            var isDownloadingModel = false
-
-            AsyncFunction("androidTriggerOfflineModelDownload") { options: TriggerOfflineModelDownloadOptions, promise: Promise ->
-                if (isDownloadingModel) {
-                    promise.reject(
-                        "download_in_progress",
-                        "An offline model download is already in progress.",
-                        Throwable(),
-                    )
-                    return@AsyncFunction
-                }
-
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                    promise.reject(
-                        "not_supported",
-                        "Android version is too old to trigger offline model download.",
-                        Throwable(),
-                    )
-                    return@AsyncFunction
-                }
-
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, options.locale)
-
-                // API 33 (Android 13) -- Trigger the model download but resolve immediately
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    Handler(appContext.reactContext!!.mainLooper).post {
-                        val recognizer =
-                            SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
-                        recognizer.triggerModelDownload(intent)
-                    }
-                    promise.resolve(
-                        mapOf(
-                            "status" to "opened_dialog",
-                            "message" to "Opened the model download dialog.",
-                        ),
-                    )
-                    return@AsyncFunction
-                }
-
-                // API 34+ (Android 14+) -- Trigger the model download and listen to the progress
-                isDownloadingModel = true
-                Handler(appContext.reactContext!!.mainLooper).post {
-                    val recognizer =
-                        SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
-                    recognizer.triggerModelDownload(
-                        intent,
-                        Executors.newSingleThreadExecutor(),
-                        @SuppressLint("NewApi")
-                        object : ModelDownloadListener {
-                            override fun onProgress(p0: Int) {
-                                // Todo: let user know the progress
-                            }
-
-                            override fun onSuccess() {
-                                promise.resolve(
-                                    mapOf(
-                                        "status" to "download_success",
-                                        "message" to "Offline model download completed successfully.",
-                                    ),
-                                )
-                                isDownloadingModel = false
-                                recognizer.destroy()
-                            }
-
-                            override fun onScheduled() {
-                                promise.resolve(
-                                    mapOf(
-                                        "status" to "download_canceled",
-                                        "message" to "The offline model download was canceled.",
-                                    ),
-                                )
-                            }
-
-                            override fun onError(error: Int) {
-                                Log.e("ExpoSpeechService", "Error downloading model with code: $error")
-                                isDownloadingModel = false
-                                promise.reject(
-                                    "error_$error",
-                                    "Failed to download offline model download with error: $error",
-                                    Throwable(),
-                                )
-                                recognizer.destroy()
-                            }
-                        },
-                    )
-                }
-            }
+            emitEvent("end", null)
+            return
         }
 
-    private fun hasNotGrantedRecordPermissions(): Boolean = appContext.permissions?.hasGrantedPermissions(RECORD_AUDIO)?.not() ?: false
-
-    @RequiresApi(Build.VERSION_CODES.CUPCAKE)
-    private fun getDefaultAssistantService(): ComponentName? {
-        val contentResolver = appContext.reactContext?.contentResolver ?: return null
-        val defaultAssistant = Settings.Secure.getString(contentResolver, "assistant")
-        if (defaultAssistant.isNullOrEmpty()) {
-            return null
-        }
-        return ComponentName.unflattenFromString(defaultAssistant)
+        expoSpeechService.start(parsedOptions)
     }
 
-    @RequiresApi(Build.VERSION_CODES.CUPCAKE)
-    private fun getDefaultVoiceRecognitionService(): ComponentName? {
-        val contentResolver = appContext.reactContext?.contentResolver ?: return null
-        val defaultVoiceRecognitionService = Settings.Secure.getString(contentResolver, "voice_recognition_service")
-        if (defaultVoiceRecognitionService.isNullOrEmpty()) {
-            return null
-        }
-        return ComponentName.unflattenFromString(defaultVoiceRecognitionService)
+    @ReactMethod
+    fun stop() {
+        expoSpeechService.stop()
     }
 
-    private fun getSupportedLocales(
-        options: GetSupportedLocaleOptions,
-        appContext: Context,
-        promise: Promise,
-    ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            promise.resolve(
-                mapOf(
-                    "locales" to mutableListOf<String>(),
-                    "installedLocales" to mutableListOf<String>(),
-                ),
-            )
+    @ReactMethod
+    fun abort() {
+        emitEvent(
+            "error",
+            mapOf(
+                "error" to "aborted",
+                "message" to "Speech recognition aborted.",
+                "code" to -1,
+            ),
+        )
+        expoSpeechService.abort()
+    }
+
+    @ReactMethod
+    fun getPermissionsAsync(promise: Promise) {
+        promise.resolve(createPermissionResponse(hasRecordPermission(), canAskAgain()))
+    }
+
+    @ReactMethod
+    fun requestPermissionsAsync(promise: Promise) {
+        if (hasRecordPermission()) {
+            promise.resolve(createPermissionResponse(granted = true, canAskAgain = false))
             return
         }
 
-        if (options.androidRecognitionServicePackage == null && !SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)) {
-            promise.resolve(
-                mapOf(
-                    "locales" to mutableListOf<String>(),
-                    "installedLocales" to mutableListOf<String>(),
-                ),
-            )
-            return
-        }
-
-        if (options.androidRecognitionServicePackage != null && !SpeechRecognizer.isRecognitionAvailable(appContext)) {
-            promise.resolve(
-                mapOf(
-                    "locales" to mutableListOf<String>(),
-                    "installedLocales" to mutableListOf<String>(),
-                ),
-            )
-            return
-        }
-
-        var serviceComponent: ComponentName? = null
-        try {
-            if (options.androidRecognitionServicePackage != null) {
-                serviceComponent =
-                    ExpoSpeechService.findComponentNameByPackageName(
-                        appContext,
-                        options.androidRecognitionServicePackage,
-                    )
-            }
-        } catch (e: Exception) {
-            Log.e("ExpoSpeechService", "Couldn't resolve package: ${options.androidRecognitionServicePackage}")
+        val activity = currentActivity as? PermissionAwareActivity
+        if (activity == null) {
             promise.reject(
-                "package_not_found",
-                "Failed to retrieve recognition service package",
-                e,
+                "no_activity",
+                "Cannot request RECORD_AUDIO permission because the current activity does not support PermissionAwareActivity.",
             )
             return
         }
 
-        var didResolve = false
+        if (permissionPromise != null) {
+            promise.reject("permission_in_progress", "A permission request is already in progress.")
+            return
+        }
 
-        // Speech Recognizer can only be ran on main thread
-        Handler(appContext.mainLooper).post {
-            val recognizer =
-                if (serviceComponent != null) {
-                    SpeechRecognizer.createSpeechRecognizer(
-                        appContext,
-                        serviceComponent,
-                    )
-                } else {
-                    SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
-                }
+        permissionPromise = promise
+        markRequested()
+        activity.requestPermissions(arrayOf(RECORD_AUDIO), REQUEST_RECORD_AUDIO, this)
+    }
 
-            val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    @ReactMethod
+    fun addListener(eventName: String) {
+        // RN 的 NativeEventEmitter 会调用这个方法，这里不需要额外逻辑，只保留桥接契约。
+    }
 
-            recognizer?.checkRecognitionSupport(
-                recognizerIntent,
-                Executors.newSingleThreadExecutor(),
-                @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-                object : RecognitionSupportCallback {
-                    override fun onSupportResult(recognitionSupport: RecognitionSupport) {
-                        Log.d("ExpoSpeechService", "onSupportResult() called with recognitionSupport: $recognitionSupport")
-                        // Seems to get called twice when using `createSpeechRecognizer()`
-                        if (didResolve) {
-                            return
-                        }
-                        didResolve = true
-                        // These languages are supported but need to be downloaded before use.
-                        val installedLocales = recognitionSupport.installedOnDeviceLanguages
+    @ReactMethod
+    fun removeListeners(count: Double) {
+        // RN 的 NativeEventEmitter 会调用这个方法，这里不需要额外逻辑，只保留桥接契约。
+    }
 
-                        val locales =
-                            recognitionSupport.supportedOnDeviceLanguages
-                                .union(installedLocales)
-                                .union(recognitionSupport.onlineLanguages)
-                                .sorted()
-                        promise.resolve(
-                            mapOf(
-                                "locales" to locales,
-                                "installedLocales" to installedLocales,
-                            ),
-                        )
-                        recognizer.destroy()
-                    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray,
+    ): Boolean {
+        if (requestCode != REQUEST_RECORD_AUDIO) {
+            return false
+        }
 
-                    override fun onError(error: Int) {
-                        Log.e("ExpoSpeechService", "getSupportedLocales.onError() called with error code: $error")
-                        // This is a workaround for when both the onSupportResult and onError callbacks are called
-                        // This occurs when providing some packages such as com.google.android.tts
-                        // com.samsung.android.bixby.agent usually errors though
-                        Handler(appContext.mainLooper).postDelayed({
-                            if (didResolve) {
-                                return@postDelayed
-                            }
-                            promise.reject(
-                                "error_$error",
-                                "Failed to retrieve supported locales with error: $error",
-                                Throwable(),
-                            )
-                        }, 50)
+        val promise = permissionPromise
+        permissionPromise = null
 
-                        recognizer.destroy()
-                    }
-                },
-            )
+        if (promise == null) {
+            return true
+        }
+
+        val granted =
+            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+
+        promise.resolve(
+            createPermissionResponse(
+                granted = granted,
+                canAskAgain = if (granted) false else canAskAgain(),
+            ),
+        )
+
+        return true
+    }
+
+    override fun onHostResume() = Unit
+
+    override fun onHostPause() = Unit
+
+    override fun onHostDestroy() {
+        expoSpeechService.destroy()
+    }
+
+    private fun hasRecordPermission(): Boolean =
+        ContextCompat.checkSelfPermission(reactContext, RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    private fun canAskAgain(): Boolean {
+        val activity = currentActivity ?: return false
+        return activity.shouldShowRequestPermissionRationale(RECORD_AUDIO) || !hasRequestedBefore()
+    }
+
+    private fun hasRequestedBefore(): Boolean =
+        reactContext
+            .getSharedPreferences("expo_speech_recognition", 0)
+            .getBoolean("record_audio_requested", false)
+
+    private fun markRequested() {
+        reactContext
+            .getSharedPreferences("expo_speech_recognition", 0)
+            .edit()
+            .putBoolean("record_audio_requested", true)
+            .apply()
+    }
+
+    private fun createPermissionResponse(granted: Boolean, canAskAgain: Boolean): WritableMap =
+        Arguments.createMap().apply {
+            putString("status", if (granted) "granted" else if (canAskAgain) "undetermined" else "denied")
+            putBoolean("granted", granted)
+            putBoolean("canAskAgain", canAskAgain)
+            putString("expires", "never")
+        }
+
+    private fun emitEvent(name: String, body: Map<String, Any?>?) {
+        if (!reactContext.hasActiveCatalystInstance()) {
+            Log.w(TAG, "Skipping event $name because Catalyst instance is not active.")
+            return
+        }
+
+        val payload = body?.toWritableMap()
+        reactContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit(name, payload)
+    }
+
+    private fun Map<String, Any?>.toWritableMap(): WritableMap =
+        Arguments.createMap().also { map ->
+            for ((key, value) in entries) {
+                map.putDynamicValue(key, value)
+            }
+        }
+
+    private fun List<Any?>.toWritableArray(): WritableArray =
+        Arguments.createArray().also { array ->
+            for (value in this) {
+                array.pushDynamicValue(value)
+            }
+        }
+
+    private fun WritableMap.putDynamicValue(key: String, value: Any?) {
+        when (value) {
+            null -> putNull(key)
+            is Boolean -> putBoolean(key, value)
+            is Int -> putInt(key, value)
+            is Long -> putDouble(key, value.toDouble())
+            is Float -> putDouble(key, value.toDouble())
+            is Double -> putDouble(key, value)
+            is String -> putString(key, value)
+            is Map<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                putMap(key, (value as Map<String, Any?>).toWritableMap())
+            }
+            is List<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                putArray(key, (value as List<Any?>).toWritableArray())
+            }
+            else -> putString(key, value.toString())
+        }
+    }
+
+    private fun WritableArray.pushDynamicValue(value: Any?) {
+        when (value) {
+            null -> pushNull()
+            is Boolean -> pushBoolean(value)
+            is Int -> pushInt(value)
+            is Long -> pushDouble(value.toDouble())
+            is Float -> pushDouble(value.toDouble())
+            is Double -> pushDouble(value)
+            is String -> pushString(value)
+            is Map<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                pushMap((value as Map<String, Any?>).toWritableMap())
+            }
+            is List<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                pushArray((value as List<Any?>).toWritableArray())
+            }
+            else -> pushString(value.toString())
         }
     }
 }

@@ -1,5 +1,5 @@
 import AVFoundation
-import ExpoModulesCore
+import React
 import Speech
 
 struct Segment {
@@ -9,7 +9,7 @@ struct Segment {
   let confidence: Float
 
   func toDictionary() -> [String: Any] {
-    return [
+    [
       "startTimeMillis": startTimeMillis,
       "endTimeMillis": endTimeMillis,
       "segment": segment,
@@ -24,7 +24,7 @@ struct TranscriptionResult {
   let segments: [Segment]
 
   func toDictionary() -> [String: Any] {
-    return [
+    [
       "transcript": transcript,
       "confidence": confidence,
       "segments": segments.map { $0.toDictionary() },
@@ -32,387 +32,225 @@ struct TranscriptionResult {
   }
 }
 
-public class ExpoSpeechRecognitionModule: Module {
+private enum IOSPermissionStatus: String {
+  case undetermined
+  case denied
+  case granted
+}
 
-  var speechRecognizer: ExpoSpeechRecognizer?
+@objc(ExpoSpeechRecognition)
+final class ExpoSpeechRecognition: RCTEventEmitter {
+  private var speechRecognizer: ExpoSpeechRecognizer?
+  private var hasListeners = false
 
   // Hack for iOS 18 to detect final results
   // See: https://forums.developer.apple.com/forums/thread/762952 for more info
-  // This is a temporary workaround until the issue is fixed in a future iOS release
-  var hasSeenFinalResult: Bool = false
+  private var hasSeenFinalResult = false
 
   // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
-  // Example event order emitted in iOS 18:
-  // [
-  //   { isFinal: false, transcripts: ["actually", "final", "results"], metadata: { duration: 1500 } },
-  //   { isFinal: true, transcripts: [] }
-  // ]
-  var previousResult: SFSpeechRecognitionResult?
+  private var previousResult: SFSpeechRecognitionResult?
 
-  public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoSpeechRecognition')` in JavaScript.
-    Name("ExpoSpeechRecognition")
+  @objc
+  override static func requiresMainQueueSetup() -> Bool {
+    true
+  }
 
-    OnDestroy {
-      // Cancel any running speech recognizers
-      Task {
-        await speechRecognizer?.abort()
-      }
-    }
-
-    // Defines event names that the module can send to JavaScript.
-    Events(
-      // Fired when the user agent has started to capture audio.
+  override func supportedEvents() -> [String]! {
+    [
       "audiostart",
-      // Fired when the user agent has finished capturing audio.
       "audioend",
-      // Fired when the speech recognition service has disconnected.
       "end",
-      // Fired when a speech recognition error occurs.
       "error",
-      // Fired when the speech recognition service returns a final result with no significant
-      // recognition. This may involve some degree of recognition, which doesn't meet or
-      // exceed the confidence threshold.
       "nomatch",
-      // Fired when the speech recognition service returns a result — a word or phrase has been
-      // positively recognized and this has been communicated back to the app.
       "result",
-      // Fired when any sound — recognizable speech or not — has been detected.
       "soundstart",
-      // Fired when any sound — recognizable speech or not — has stopped being detected.
       "soundend",
-      // Fired when sound that is recognized by the speech recognition service as speech
-      // has been detected.
       "speechstart",
-      // Fired when speech recognized by the speech recognition service has stopped being
-      // detected.
       "speechend",
-      // Fired when the speech recognition service has begun listening to incoming audio with
-      // intent to recognize grammars associated with the current SpeechRecognition
       "start",
-      // Called when the language detection (and switching) results are available.
       "languagedetection",
-      // Fired when the input volume changes
-      "volumechange"
+      "volumechange",
+    ]
+  }
+
+  override func startObserving() {
+    hasListeners = true
+  }
+
+  override func stopObserving() {
+    hasListeners = false
+  }
+
+  deinit {
+    Task {
+      await speechRecognizer?.abort()
+    }
+  }
+
+  @objc(start:)
+  func start(options: NSDictionary) {
+    let parsedOptions = SpeechRecognitionOptions(
+      dictionary: options as? [String: Any] ?? [:]
     )
 
-    OnCreate {
-      guard let permissionsManager = appContext?.permissions else {
-        return
-      }
-      permissionsManager.register([
-        EXSpeechRecognitionPermissionRequester(),
-        MicrophoneRequester(),
-        SpeechRecognizerRequester(),
-      ])
-    }
+    Task {
+      do {
+        let currentLocale = await speechRecognizer?.getLocale()
+        previousResult = nil
 
-    AsyncFunction("requestPermissionsAsync") { (promise: Promise) in
-      guard let permissions = appContext?.permissions else {
-        throw Exceptions.PermissionsModuleNotFound()
-      }
-      permissions.askForPermission(
-        usingRequesterClass: EXSpeechRecognitionPermissionRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
+        if speechRecognizer == nil || currentLocale != parsedOptions.lang {
+          guard let locale = resolveLocale(localeIdentifier: parsedOptions.lang) else {
+            let availableLocales = SFSpeechRecognizer.supportedLocales().map(\.identifier)
+              .joined(separator: ", ")
 
-    AsyncFunction("getPermissionsAsync") { (promise: Promise) in
-      guard let permissions = self.appContext?.permissions else {
-        throw Exceptions.PermissionsModuleNotFound()
-      }
-      permissions.getPermissionUsingRequesterClass(
-        EXSpeechRecognitionPermissionRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
-
-    AsyncFunction("getMicrophonePermissionsAsync") { (promise: Promise) in
-      appContext?.permissions?.getPermissionUsingRequesterClass(
-        MicrophoneRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
-
-    AsyncFunction("requestMicrophonePermissionsAsync") { (promise: Promise) in
-      appContext?.permissions?.askForPermission(
-        usingRequesterClass: MicrophoneRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
-
-    AsyncFunction("getSpeechRecognizerPermissionsAsync") { (promise: Promise) in
-      appContext?.permissions?.getPermissionUsingRequesterClass(
-        SpeechRecognizerRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
-
-    AsyncFunction("requestSpeechRecognizerPermissionsAsync") { (promise: Promise) in
-      appContext?.permissions?.askForPermission(
-        usingRequesterClass: SpeechRecognizerRequester.self,
-        resolve: promise.resolver,
-        reject: promise.legacyRejecter
-      )
-    }
-
-    AsyncFunction("getStateAsync") { (promise: Promise) in
-      Task {
-        let state = await speechRecognizer?.getState()
-        promise.resolve(state ?? "inactive")
-      }
-    }
-
-    /** Start recognition with args: lang, interimResults, maxAlternatives */
-    Function("start") { (options: SpeechRecognitionOptions) in
-      Task {
-        do {
-          let currentLocale = await speechRecognizer?.getLocale()
-
-          // Reset the previous result
-          self.previousResult = nil
-
-          // Re-create the speech recognizer when locales change
-          if self.speechRecognizer == nil || currentLocale != options.lang {
-            guard let locale = resolveLocale(localeIdentifier: options.lang) else {
-              let availableLocales = SFSpeechRecognizer.supportedLocales().map { $0.identifier }
-                .joined(separator: ", ")
-
-              sendErrorAndStop(
-                error: "language-not-supported",
-                message:
-                  "Locale \(options.lang) is not supported by the speech recognizer. Available locales: \(availableLocales)"
-              )
-              return
-            }
-
-            self.speechRecognizer = try await ExpoSpeechRecognizer(
-              locale: locale
-            )
-          }
-
-          if !options.requiresOnDeviceRecognition {
-            guard await SFSpeechRecognizer.hasAuthorizationToRecognize() else {
-              sendErrorAndStop(
-                error: "not-allowed",
-                message: RecognizerError.notAuthorizedToRecognize.message
-              )
-              return
-            }
-          }
-
-          guard await AVAudioSession.sharedInstance().hasPermissionToRecord() else {
             sendErrorAndStop(
-              error: "not-allowed",
-              message: RecognizerError.notPermittedToRecord.message
+              error: "language-not-supported",
+              message:
+                "Locale \(parsedOptions.lang) is not supported by the speech recognizer. Available locales: \(availableLocales)"
             )
             return
           }
 
-          // Start recognition!
-          await speechRecognizer?.start(
-            options: options,
-            resultHandler: { [weak self] result in
-              self?.handleRecognitionResult(result, maxAlternatives: options.maxAlternatives)
-            },
-            errorHandler: { [weak self] error in
-              self?.handleRecognitionError(error)
-            },
-            endHandler: { [weak self] in
-              self?.handleEnd()
-            },
-            startHandler: { [weak self] in
-              self?.sendEvent("start")
-            },
-            speechStartHandler: { [weak self] in
-              self?.sendEvent("speechstart")
-            },
-            audioStartHandler: { [weak self] filePath in
-              if let filePath: String {
-                let uri = filePath.hasPrefix("file://") ? filePath : "file://" + filePath
-                self?.sendEvent("audiostart", ["uri": uri])
-              } else {
-                self?.sendEvent("audiostart", ["uri": nil])
-              }
-            },
-            audioEndHandler: { [weak self] filePath in
-              if let filePath: String {
-                let uri = filePath.hasPrefix("file://") ? filePath : "file://" + filePath
-                self?.sendEvent("audioend", ["uri": uri])
-              } else {
-                self?.sendEvent("audioend", ["uri": nil])
-              }
-            },
-            volumeChangeHandler: { [weak self] value in
-              self?.sendEvent("volumechange", ["value": value])
-            }
+          speechRecognizer = try await ExpoSpeechRecognizer(locale: locale)
+        }
+
+        if !parsedOptions.requiresOnDeviceRecognition {
+          let speechPermission = await getSpeechPermissionResponse()
+          guard speechPermission["granted"] as? Bool == true else {
+            sendErrorAndStop(
+              error: "not-allowed",
+              message: RecognizerError.notAuthorizedToRecognize.message
+            )
+            return
+          }
+        }
+
+        let microphonePermission = await getMicrophonePermissionResponse()
+        guard microphonePermission["granted"] as? Bool == true else {
+          sendErrorAndStop(
+            error: "not-allowed",
+            message: RecognizerError.notPermittedToRecord.message
           )
-        } catch {
-          self.sendEvent(
-            "error",
-            [
-              "error": "not-allowed",
-              "message": error.localizedDescription,
-            ]
-          )
+          return
         }
+
+        await speechRecognizer?.start(
+          options: parsedOptions,
+          resultHandler: { [weak self] result in
+            self?.handleRecognitionResult(result, maxAlternatives: parsedOptions.maxAlternatives)
+          },
+          errorHandler: { [weak self] error in
+            self?.handleRecognitionError(error)
+          },
+          endHandler: { [weak self] in
+            self?.handleEnd()
+          },
+          startHandler: { [weak self] in
+            self?.emitEvent(name: "start")
+          },
+          speechStartHandler: { [weak self] in
+            self?.emitEvent(name: "speechstart")
+          },
+          audioStartHandler: { [weak self] filePath in
+            self?.emitEvent(name: "audiostart", body: ["uri": self?.normalizeUri(filePath)])
+          },
+          audioEndHandler: { [weak self] filePath in
+            self?.emitEvent(name: "audioend", body: ["uri": self?.normalizeUri(filePath)])
+          },
+          volumeChangeHandler: { [weak self] value in
+            self?.emitEvent(name: "volumechange", body: ["value": value])
+          }
+        )
+      } catch {
+        emitEvent(
+          name: "error",
+          body: [
+            "error": "not-allowed",
+            "message": error.localizedDescription,
+          ]
+        )
       }
-    }
-
-    Function("setCategoryIOS") { (options: SetCategoryOptions) in
-      // Convert the array of category options to a bitmask
-      let categoryOptions = options.categoryOptions.reduce(AVAudioSession.CategoryOptions()) {
-        result, option in
-        result.union(option.avCategoryOption)
-      }
-
-      try AVAudioSession.sharedInstance().setCategory(
-        options.category.avCategory,
-        mode: options.mode.avMode,
-        options: categoryOptions
-      )
-    }
-
-    Function("getAudioSessionCategoryAndOptionsIOS") { () -> [String: Any] in
-      let instance = AVAudioSession.sharedInstance()
-
-      let categoryOptions: AVAudioSession.CategoryOptions = instance.categoryOptions
-
-      var allCategoryOptions: [(option: AVAudioSession.CategoryOptions, string: String)] = [
-        (.mixWithOthers, "mixWithOthers"),
-        (.duckOthers, "duckOthers"),
-        (.allowBluetooth, "allowBluetooth"),
-        (.defaultToSpeaker, "defaultToSpeaker"),
-        (.interruptSpokenAudioAndMixWithOthers, "interruptSpokenAudioAndMixWithOthers"),
-        (.allowBluetoothA2DP, "allowBluetoothA2DP"),
-        (.allowAirPlay, "allowAirPlay"),
-      ]
-
-      // Define a mapping from CategoryOptions to their string representations
-      if #available(iOS 14.5, *) {
-        allCategoryOptions.append(
-          (.overrideMutedMicrophoneInterruption, "overrideMutedMicrophoneInterruption"))
-      }
-
-      // Filter and map the options that are set
-      let categoryOptionsStrings =
-        allCategoryOptions
-        .filter { categoryOptions.contains($0.option) }
-        .map { $0.string }
-
-      let categoryMapping: [AVAudioSession.Category: String] = [
-        .ambient: "ambient",
-        .playback: "playback",
-        .record: "record",
-        .playAndRecord: "playAndRecord",
-        .multiRoute: "multiRoute",
-        .soloAmbient: "soloAmbient",
-      ]
-
-      let modeMapping: [AVAudioSession.Mode: String] = [
-        .default: "default",
-        .gameChat: "gameChat",
-        .measurement: "measurement",
-        .moviePlayback: "moviePlayback",
-        .spokenAudio: "spokenAudio",
-        .videoChat: "videoChat",
-        .videoRecording: "videoRecording",
-        .voiceChat: "voiceChat",
-        .voicePrompt: "voicePrompt",
-      ]
-
-      return [
-        "category": categoryMapping[instance.category] ?? instance.category.rawValue,
-        "categoryOptions": categoryOptionsStrings,
-        "mode": modeMapping[instance.mode] ?? instance.mode.rawValue,
-      ]
-    }
-
-    Function("setAudioSessionActiveIOS") {
-      (value: Bool, options: SetAudioSessionActiveOptions?) throws in
-      let setActiveOptions: AVAudioSession.SetActiveOptions =
-        options?.notifyOthersOnDeactivation == true ? .notifyOthersOnDeactivation : []
-
-      try AVAudioSession.sharedInstance().setActive(value, options: setActiveOptions)
-    }
-
-    Function("supportsOnDeviceRecognition") { () -> Bool in
-      let recognizer = SFSpeechRecognizer()
-      return recognizer?.supportsOnDeviceRecognition ?? false
-    }
-
-    Function("supportsRecording") { () -> Bool in
-      return true
-    }
-
-    Function("isRecognitionAvailable") { () -> Bool in
-      let recognizer = SFSpeechRecognizer()
-      return recognizer?.isAvailable ?? false
-    }
-
-    Function("stop") { () -> Void in
-      Task {
-        if let recognizer = speechRecognizer {
-          await recognizer.stop()
-        } else {
-          sendEvent("end")
-        }
-      }
-    }
-
-    Function("abort") { () -> Void in
-      Task {
-        sendEvent("error", ["error": "aborted", "message": "Speech recognition aborted."])
-
-        if let recognizer = speechRecognizer {
-          await recognizer.abort()
-        } else {
-          sendEvent("end")
-        }
-      }
-    }
-
-    Function("getSpeechRecognitionServices") { () -> [String] in
-      // Return an empty array on iOS
-      return []
-    }
-
-    AsyncFunction("getSupportedLocales") { (options: GetSupportedLocaleOptions, promise: Promise) in
-      let supportedLocales = SFSpeechRecognizer.supportedLocales().map { $0.identifier }.sorted()
-      let installedLocales = supportedLocales
-
-      // Return as an object
-      promise.resolve([
-        "locales": supportedLocales,
-        // On iOS, the installed locales are the same as the supported locales
-        "installedLocales": installedLocales,
-      ])
-    }
-
-    Function("getDefaultRecognitionService") { () -> [String: Any] in
-      return [
-        "packageName": ""
-      ]
-    }
-
-    Function("getAssistantService") { () -> [String: Any] in
-      return [
-        "packageName": ""
-      ]
     }
   }
 
-  /** Normalizes the locale for compatibility between Android and iOS */
-  func resolveLocale(localeIdentifier: String) -> Locale? {
-    // The supportedLocales() method returns the locales in the format with dashes, e.g. "en-US"
-    // However, we shouldn't mind if the user passes in the locale with underscores, e.g. "en_US"
+  @objc
+  func stop() {
+    Task {
+      if let recognizer = speechRecognizer {
+        await recognizer.stop()
+      } else {
+        emitEvent(name: "end")
+      }
+    }
+  }
+
+  @objc
+  func abort() {
+    Task {
+      emitEvent(
+        name: "error",
+        body: ["error": "aborted", "message": "Speech recognition aborted."]
+      )
+
+      if let recognizer = speechRecognizer {
+        await recognizer.abort()
+      } else {
+        emitEvent(name: "end")
+      }
+    }
+  }
+
+  @objc(requestPermissionsAsync:rejecter:)
+  func requestPermissionsAsync(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Task {
+      let microphoneStatus = await requestMicrophonePermission()
+      let speechStatus = await requestSpeechPermission()
+      resolve(combinePermissionResponses(microphone: microphoneStatus, speech: speechStatus))
+    }
+  }
+
+  @objc(getPermissionsAsync:rejecter:)
+  func getPermissionsAsync(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Task {
+      let microphoneStatus = await getMicrophonePermissionResponse()
+      let speechStatus = await getSpeechPermissionResponse()
+      resolve(combinePermissionResponses(microphone: microphoneStatus, speech: speechStatus))
+    }
+  }
+
+  @objc(addListener:)
+  override func addListener(_ eventName: String!) {
+    super.addListener(eventName)
+  }
+
+  @objc(removeListeners:)
+  override func removeListeners(_ count: Double) {
+    super.removeListeners(count)
+  }
+
+  private func normalizeUri(_ filePath: String?) -> String? {
+    guard let filePath else {
+      return nil
+    }
+
+    return filePath.hasPrefix("file://") ? filePath : "file://" + filePath
+  }
+
+  private func emitEvent(name: String, body: Any? = nil) {
+    guard hasListeners else {
+      return
+    }
+
+    sendEvent(withName: name, body: body)
+  }
+
+  private func resolveLocale(localeIdentifier: String) -> Locale? {
     let normalizedIdentifier = localeIdentifier.replacingOccurrences(of: "_", with: "-")
     let localesToCheck = [localeIdentifier, normalizedIdentifier]
     let supportedLocales = SFSpeechRecognizer.supportedLocales()
@@ -426,30 +264,24 @@ public class ExpoSpeechRecognitionModule: Module {
     return nil
   }
 
-  func sendErrorAndStop(error: String, message: String) {
+  private func sendErrorAndStop(error: String, message: String) {
     hasSeenFinalResult = false
     previousResult = nil
-    sendEvent("error", ["error": error, "message": message])
-    sendEvent("end")
+    emitEvent(name: "error", body: ["error": error, "message": message])
+    emitEvent(name: "end")
   }
 
-  func handleEnd() {
+  private func handleEnd() {
     hasSeenFinalResult = false
     previousResult = nil
-    sendEvent("end")
+    emitEvent(name: "end")
   }
 
-  func handleRecognitionResult(_ result: SFSpeechRecognitionResult, maxAlternatives: Int) {
+  private func handleRecognitionResult(_ result: SFSpeechRecognitionResult, maxAlternatives: Int) {
     var results: [TranscriptionResult] = []
-
-    // Limit the number of transcriptions to the maxAlternatives
     let transcriptionSubsequence = result.transcriptions.prefix(maxAlternatives)
-
     var isFinal = result.isFinal
 
-    // Hack for iOS 18 to detect final results
-    // See: https://forums.developer.apple.com/forums/thread/762952 for more info
-    // This is a temporary workaround until the issue is fixed in a future iOS release
     if #available(iOS 18.0, *), !isFinal {
       isFinal = result.speechRecognitionMetadata?.speechDuration ?? 0 > 0
     }
@@ -457,15 +289,12 @@ public class ExpoSpeechRecognitionModule: Module {
     for transcription in transcriptionSubsequence {
       var transcript = transcription.formattedString
 
-      // Prepend an empty space if the hacky workaround is applied
-      // So that the user can append the transcript to the previous result,
-      // matching the behavior of Android & Web Speech API
       if hasSeenFinalResult {
         transcript = " " + transcription.formattedString
       }
 
       let segments = transcription.segments.map { segment in
-        return Segment(
+        Segment(
           startTimeMillis: segment.timestamp * 1000,
           endTimeMillis: (segment.timestamp * 1000) + segment.duration * 1000,
           segment: segment.substring,
@@ -474,8 +303,8 @@ public class ExpoSpeechRecognitionModule: Module {
       }
 
       let confidence =
-        transcription.segments.map { $0.confidence }.reduce(0, +)
-        / Float(transcription.segments.count)
+        transcription.segments.map(\.confidence).reduce(0, +)
+        / Float(max(transcription.segments.count, 1))
 
       let item = TranscriptionResult(
         transcript: transcript,
@@ -488,32 +317,27 @@ public class ExpoSpeechRecognitionModule: Module {
       }
     }
 
-    // Apply the "workaround"
     if #available(iOS 18.0, *), !result.isFinal, isFinal {
       hasSeenFinalResult = true
     }
 
     if isFinal && results.isEmpty {
-      // Hack for iOS 18 to avoid sending a "nomatch" event after the final-final result
       var previousResultWasFinal = false
       var previousResultHadTranscriptions = false
-      if #available(iOS 18.0, *), let previousResult = previousResult {
+      if #available(iOS 18.0, *), let previousResult {
         previousResultWasFinal = previousResult.speechRecognitionMetadata?.speechDuration ?? 0 > 0
         previousResultHadTranscriptions = !previousResult.transcriptions.isEmpty
       }
 
       if !previousResultWasFinal || !previousResultHadTranscriptions {
-        // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
-        // The nomatch event of the Web Speech API is fired
-        // when the speech recognition service returns a final result with no significant recognition.
-        sendEvent("nomatch")
+        emitEvent(name: "nomatch")
         return
       }
     }
 
-    sendEvent(
-      "result",
-      [
+    emitEvent(
+      name: "result",
+      body: [
         "isFinal": isFinal,
         "results": results.map { $0.toDictionary() },
       ]
@@ -522,82 +346,159 @@ public class ExpoSpeechRecognitionModule: Module {
     previousResult = result
   }
 
-  func handleRecognitionError(_ error: Error) {
-    if let recognitionError = error as? RecognizerError {
-      switch recognitionError {
-      case .nilRecognizer:
-        sendEvent(
-          "error", ["error": "language-not-supported", "message": recognitionError.message])
-      case .notAuthorizedToRecognize:
-        sendEvent("error", ["error": "not-allowed", "message": recognitionError.message])
-      case .notPermittedToRecord:
-        sendEvent("error", ["error": "not-allowed", "message": recognitionError.message])
-      case .recognizerIsUnavailable:
-        sendEvent("error", ["error": "service-not-allowed", "message": recognitionError.message])
-      case .invalidAudioSource:
-        sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
-      case .audioInputBusy:
-        sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
-      case .audioSessionInterrupted:
-        sendEvent("error", ["error": "interrupted", "message": recognitionError.message])
-      case .audioRouteChanged:
-        sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
+  private func handleRecognitionError(_ error: Error) {
+    let expoSpeechError = error as? ExpoSpeechRecognitionException
+    let code = expoSpeechError?.code ?? "unknown"
+    let message = expoSpeechError?.reason ?? error.localizedDescription
+
+    emitEvent(
+      name: "error",
+      body: [
+        "error": code,
+        "message": message,
+      ]
+    )
+  }
+
+  private func requestMicrophonePermission() async -> [String: Any] {
+    let granted = await withCheckedContinuation { continuation in
+      AVAudioSession.sharedInstance().requestRecordPermission { isGranted in
+        continuation.resume(returning: isGranted)
       }
-      return
     }
 
-    // Other errors thrown by SFSpeechRecognizer / SFSpeechRecognitionTask
+    return await getMicrophonePermissionResponse(grantedOverride: granted)
+  }
 
-    /*
-     Error Code | Error Domain | Description
-     102 | kLSRErrorDomain | Assets are not installed.
-     201 | kLSRErrorDomain | Siri or Dictation is disabled.
-     300 | kLSRErrorDomain | Failed to initialize recognizer.
-     301 | kLSRErrorDomain | Request was canceled.
-     203 | kAFAssistantErrorDomain | Failure occurred during speech recognition.
-     1100 | kAFAssistantErrorDomain | Trying to start recognition while an earlier instance is still active.
-     1101 | kAFAssistantErrorDomain | Connection to speech process was invalidated.
-     1107 | kAFAssistantErrorDomain | Connection to speech process was interrupted.
-     1110 | kAFAssistantErrorDomain | Failed to recognize any speech.
-     1700 | kAFAssistantErrorDomain | Request is not authorized.
-     */
-    let nsError = error as NSError
-    let errorCode = nsError.code
+  private func requestSpeechPermission() async -> [String: Any] {
+    let status = await withCheckedContinuation { continuation in
+      SFSpeechRecognizer.requestAuthorization { authorizationStatus in
+        continuation.resume(returning: authorizationStatus)
+      }
+    }
 
-    let errorTypes: [(codes: [Int], code: String, message: String)] = [
-      (
-        [102, 201], "service-not-allowed",
-        "Assets are not installed, Siri or Dictation is disabled."
-      ),
-      ([203], "audio-capture", "Failure occurred during speech recognition."),
-      ([1100], "busy", "Trying to start recognition while an earlier instance is still active."),
-      ([1101, 1107], "network", "Connection to speech process was invalidated or interrupted."),
-      ([1110], "no-speech", "No speech was detected."),
-      ([1700], "not-allowed", "Request is not authorized."),
+    return speechPermissionResponse(from: status)
+  }
+
+  private func getMicrophonePermissionResponse(grantedOverride: Bool? = nil) async -> [String: Any] {
+    let granted: Bool
+    let status: IOSPermissionStatus
+
+    if let grantedOverride {
+      granted = grantedOverride
+      status = grantedOverride ? .granted : .denied
+    } else if #available(iOS 17.0, *) {
+      switch AVAudioApplication.shared.recordPermission {
+      case .granted:
+        granted = true
+        status = .granted
+      case .denied:
+        granted = false
+        status = .denied
+      case .undetermined:
+        granted = false
+        status = .undetermined
+      @unknown default:
+        granted = false
+        status = .undetermined
+      }
+    } else {
+      switch AVAudioSession.sharedInstance().recordPermission {
+      case .granted:
+        granted = true
+        status = .granted
+      case .denied:
+        granted = false
+        status = .denied
+      case .undetermined:
+        granted = false
+        status = .undetermined
+      @unknown default:
+        granted = false
+        status = .undetermined
+      }
+    }
+
+    return permissionResponse(
+      status: status,
+      granted: granted,
+      canAskAgain: status == .undetermined
+    )
+  }
+
+  private func getSpeechPermissionResponse() async -> [String: Any] {
+    speechPermissionResponse(from: SFSpeechRecognizer.authorizationStatus())
+  }
+
+  private func speechPermissionResponse(from status: SFSpeechRecognizerAuthorizationStatus) -> [String: Any] {
+    switch status {
+    case .authorized:
+      return permissionResponse(status: .granted, granted: true, canAskAgain: false)
+    case .denied:
+      return permissionResponse(status: .denied, granted: false, canAskAgain: false)
+    case .restricted:
+      return permissionResponse(
+        status: .denied,
+        granted: false,
+        canAskAgain: false,
+        restricted: true
+      )
+    case .notDetermined:
+      return permissionResponse(status: .undetermined, granted: false, canAskAgain: true)
+    @unknown default:
+      return permissionResponse(status: .undetermined, granted: false, canAskAgain: true)
+    }
+  }
+
+  private func combinePermissionResponses(
+    microphone: [String: Any],
+    speech: [String: Any]
+  ) -> [String: Any] {
+    let microphoneGranted = microphone["granted"] as? Bool ?? false
+    let speechGranted = speech["granted"] as? Bool ?? false
+    let microphoneStatus = microphone["status"] as? String ?? IOSPermissionStatus.undetermined.rawValue
+    let speechStatus = speech["status"] as? String ?? IOSPermissionStatus.undetermined.rawValue
+    let restricted = speech["restricted"] as? Bool ?? false
+
+    let combinedStatus: IOSPermissionStatus
+    if microphoneGranted && speechGranted {
+      combinedStatus = .granted
+    } else if microphoneStatus == IOSPermissionStatus.denied.rawValue
+      || speechStatus == IOSPermissionStatus.denied.rawValue
+    {
+      combinedStatus = .denied
+    } else {
+      combinedStatus = .undetermined
+    }
+
+    // 这里合并麦克风和语音识别两个权限结果，确保 JS 层只拿到一个可直接判定是否可启动识别的响应。
+    return permissionResponse(
+      status: combinedStatus,
+      granted: microphoneGranted && speechGranted,
+      canAskAgain:
+        (microphone["canAskAgain"] as? Bool ?? false)
+        || (speech["canAskAgain"] as? Bool ?? false),
+      restricted: restricted
+    )
+  }
+
+  private func permissionResponse(
+    status: IOSPermissionStatus,
+    granted: Bool,
+    canAskAgain: Bool,
+    restricted: Bool = false
+  ) -> [String: Any] {
+    var response: [String: Any] = [
+      "status": status.rawValue,
+      "granted": granted,
+      "canAskAgain": canAskAgain,
+      "expires": "never",
     ]
 
-    for (codes, code, message) in errorTypes {
-      if codes.contains(errorCode) {
-        // Handle nomatch error for the underlying error:
-        // +[AFAggregator logDictationFailedWithErrr:] Error Domain=kAFAssistantErrorDomain Code=203 "Retry" UserInfo={NSLocalizedDescription=Retry, NSUnderlyingError=0x600000d0ca50 {Error Domain=SiriSpeechErrorDomain Code=1 "(null)"}}
-        if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
-          if errorCode == 203 && underlyingError.domain == "SiriSpeechErrorDomain"
-            && underlyingError.code == 1
-          {
-            sendEvent("nomatch")
-          } else {
-            sendEvent("error", ["error": code, "message": message])
-          }
-        } else {
-          sendEvent("error", ["error": code, "message": message])
-        }
-        return
-      }
+    if restricted {
+      response["restricted"] = true
     }
 
-    // Unknown error (but not a canceled request)
-    if errorCode != 301 {
-      sendEvent("error", ["error": "audio-capture", "message": error.localizedDescription])
-    }
+    return response
   }
 }

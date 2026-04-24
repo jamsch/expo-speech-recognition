@@ -1,9 +1,0 @@
-{
-  "platforms": ["ios", "android", "web"],
-  "ios": {
-    "modules": ["ExpoSpeechRecognitionModule"]
-  },
-  "android": {
-    "modules": ["expo.modules.speechrecognition.ExpoSpeechRecognitionModule"]
-  }
-}
