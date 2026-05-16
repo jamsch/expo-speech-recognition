@@ -161,6 +161,7 @@ export class ExpoWebSpeechRecognition implements SpeechRecognition {
   grammars: SpeechGrammarList = new ExpoWebSpeechGrammarList();
   maxAlternatives = 1;
   continuous = false;
+  processLocally = false;
 
   #interimResults = false;
 
