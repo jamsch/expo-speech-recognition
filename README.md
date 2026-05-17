@@ -64,8 +64,8 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 npm install expo-speech-recognition
 
 # Or for older SDKs:
-npm install expo-speech-recognition@sdk-51
-npm install expo-speech-recognition@sdk-50
+npm install expo-speech-recognition@sdk-54
+npm install expo-speech-recognition@sdk-53
 ```
 
 2. Configure the config plugin.
