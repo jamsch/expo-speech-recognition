@@ -8,5 +8,10 @@ __tests__
 /android/src/androidTest/
 /android/src/test/
 /android/build/
+/android/.gradle/
 /example/
 /images/
+/.eslintrc.js
+/.prettierignore
+/eslint.config.mjs
+/CHANGELOG.md

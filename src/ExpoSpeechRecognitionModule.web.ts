@@ -1,6 +1,7 @@
 import type { EventSubscription, PermissionResponse } from "expo-modules-core";
 import { registerWebModule, NativeModule } from "expo";
 import type {
+  ExpoSpeechRecognitionErrorCode,
   ExpoSpeechRecognitionNativeEventMap,
   ExpoSpeechRecognitionNativeEvents,
   ExpoSpeechRecognitionOptions,
@@ -311,7 +312,11 @@ const webToNativeEventMap: {
   audioend: (ev) => ({ uri: null }),
   audiostart: (ev) => ({ uri: null }),
   end: (ev) => null,
-  error: (ev) => ({ error: ev.error, message: ev.message }),
+  error: (ev) => ({
+    // TODO: add "phrases-not-supported" support to the type
+    error: ev.error as ExpoSpeechRecognitionErrorCode,
+    message: ev.message,
+  }),
   nomatch: (ev) => null,
   result: (ev): ExpoSpeechRecognitionNativeEventMap["result"] => {
     const isFinal = Boolean(ev.results[ev.resultIndex]?.isFinal);
