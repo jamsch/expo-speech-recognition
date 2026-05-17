@@ -1,6 +1,6 @@
 # expo-speech-recognition
 
-## 56.0.0-nightly.0
+## 56.0.0
 
 ### Major Changes
 
