@@ -49,6 +49,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean)
   - [supportsRecording()](#supportsrecording-boolean)
   - [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload)
+  - [useAndroidModelDownload()](#useandroidmodeldownloadlocale-string)
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
   - [setAudioSessionActiveIOS()](#setaudiosessionactiveiosvalue-boolean-options--notifyothersondeactivation-boolean--void)
@@ -1150,22 +1151,79 @@ ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
         console.log("Offline model download dialog opened.");
         break;
       case "download_success":
-        // On Android 14+, model was succesfully downloaded.
+        // On Android 14+, model was successfully downloaded immediately.
         console.log("Offline model downloaded successfully!");
         break;
-      case "download_canceled":
-        // On Android 14+, the download was canceled by a user interaction.
-        console.log("Offline model download was canceled.");
+      case "download_scheduled":
+        // On Android 14+, the download was queued (e.g., waiting for WiFi) and will complete later.
+        console.log("Offline model download has been scheduled.");
         break;
+    }
   })
   .catch((err) => {
     console.log("Failed to download offline model!", err.message);
   });
 ```
 
+On Android 14+, the promise may return `download_scheduled` while the download continues in the background. For full lifecycle visibility (scheduled → progress → success/error), use [`useAndroidModelDownload()`](#useandroidmodeldownloadlocale-string) instead.
+
 The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
 
 ![On Device Recognition](./images/on-device-recognition.jpg)
+
+### `useAndroidModelDownload(locale: string)`
+
+This hook subscribes to the native `modelDownloadUpdate` event and wraps [`androidTriggerOfflineModelDownload()`](#androidtriggerofflinemodeldownload) so you can listen to the full lifecycle.
+
+On Android 14+, the hook reports the full lifecycle: scheduled → downloading (with progress) → success or error. On Android 13, `download()` resolves immediately with status `"opened_dialog"` and no progress events are emitted (so progress will always be zero).
+
+Returns:
+
+- `status` — `"idle"` | `"scheduled"` | `"downloading"` | `"success"` | `"error"`
+- `progress` — `0`–`100` (only meaningful while `status === "downloading"`)
+- `error` — Android error code when `status === "error"`, otherwise `null`
+- `download()` — Triggers the offline model download for the given locale
+
+```tsx
+import {
+  useAndroidModelDownload,
+  SpeechRecognizerErrorAndroid,
+} from "expo-speech-recognition";
+
+function MyComponent() {
+  const { status, progress, error, download } =
+    useAndroidModelDownload("en-US");
+
+  // Example error handling
+  let errorMessage: string | null = null;
+  if (status === "error" && error !== null) {
+    switch (error) {
+      case SpeechRecognizerErrorAndroid.ERROR_NETWORK:
+        errorMessage = "Network error. Check your connection and try again.";
+        break;
+      case SpeechRecognizerErrorAndroid.ERROR_CANNOT_LISTEN_TO_DOWNLOAD_EVENTS:
+        errorMessage = "Download events are not supported on this device.";
+        break;
+      default:
+        errorMessage = `Download failed (code ${error})`;
+    }
+  }
+
+  return (
+    <View>
+      <Button
+        onPress={download}
+        title={
+          status === "downloading"
+            ? `Downloading... ${progress}%`
+            : "Download model"
+        }
+      />
+      {errorMessage && <Text>{errorMessage}</Text>}
+    </View>
+  );
+}
+```
 
 ### `setCategoryIOS({...}): void` (iOS only)
 

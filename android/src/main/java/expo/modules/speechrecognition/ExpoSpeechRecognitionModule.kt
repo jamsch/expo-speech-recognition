@@ -24,6 +24,7 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "ESRModule"
 
@@ -258,10 +259,10 @@ class ExpoSpeechRecognitionModule : Module() {
                 // Do nothing
             }
 
-            var isDownloadingModel = false
+            val isDownloadingModel = AtomicBoolean(false)
 
             AsyncFunction("androidTriggerOfflineModelDownload") { options: TriggerOfflineModelDownloadOptions, promise: Promise ->
-                if (isDownloadingModel) {
+                if (isDownloadingModel.get()) {
                     promise.reject(
                         "download_in_progress",
                         "An offline model download is already in progress.",
@@ -299,7 +300,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 }
 
                 // API 34+ (Android 14+) -- Trigger the model download and listen to the progress
-                isDownloadingModel = true
+                val settled = AtomicBoolean(false)
+                isDownloadingModel.set(true)
                 Handler(appContext.reactContext!!.mainLooper).post {
                     val recognizer =
                         SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
@@ -313,34 +315,40 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onSuccess() {
-                                promise.resolve(
-                                    mapOf(
-                                        "status" to "download_success",
-                                        "message" to "Offline model download completed successfully.",
-                                    ),
-                                )
-                                isDownloadingModel = false
+                                isDownloadingModel.set(false)
                                 recognizer.destroy()
+                                if (settled.compareAndSet(false, true)) {
+                                    promise.resolve(
+                                        mapOf(
+                                            "status" to "download_success",
+                                            "message" to "Offline model download completed successfully.",
+                                        ),
+                                    )
+                                }
                             }
 
                             override fun onScheduled() {
-                                promise.resolve(
-                                    mapOf(
-                                        "status" to "download_canceled",
-                                        "message" to "The offline model download was canceled.",
-                                    ),
-                                )
+                                if (settled.compareAndSet(false, true)) {
+                                    promise.resolve(
+                                        mapOf(
+                                            "status" to "download_scheduled",
+                                            "message" to "Offline model download has been scheduled.",
+                                        ),
+                                    )
+                                }
                             }
 
                             override fun onError(error: Int) {
                                 Log.e("ExpoSpeechService", "Error downloading model with code: $error")
-                                isDownloadingModel = false
-                                promise.reject(
-                                    "error_$error",
-                                    "Failed to download offline model download with error: $error",
-                                    Throwable(),
-                                )
+                                isDownloadingModel.set(false)
                                 recognizer.destroy()
+                                if (settled.compareAndSet(false, true)) {
+                                    promise.reject(
+                                        "error_$error",
+                                        "Failed to download offline model download with error: $error",
+                                        Throwable(),
+                                    )
+                                }
                             }
                         },
                     )
@@ -424,7 +432,7 @@ class ExpoSpeechRecognitionModule : Module() {
             return
         }
 
-        var didResolve = false
+        val settled = AtomicBoolean(false)
 
         // Speech Recognizer can only be ran on main thread
         Handler(appContext.mainLooper).post {
@@ -447,11 +455,9 @@ class ExpoSpeechRecognitionModule : Module() {
                 object : RecognitionSupportCallback {
                     override fun onSupportResult(recognitionSupport: RecognitionSupport) {
                         Log.d("ExpoSpeechService", "onSupportResult() called with recognitionSupport: $recognitionSupport")
-                        // Seems to get called twice when using `createSpeechRecognizer()`
-                        if (didResolve) {
+                        if (!settled.compareAndSet(false, true)) {
                             return
                         }
-                        didResolve = true
                         // These languages are supported but need to be downloaded before use.
                         val installedLocales = recognitionSupport.installedOnDeviceLanguages
 
@@ -471,11 +477,10 @@ class ExpoSpeechRecognitionModule : Module() {
 
                     override fun onError(error: Int) {
                         Log.e("ExpoSpeechService", "getSupportedLocales.onError() called with error code: $error")
-                        // This is a workaround for when both the onSupportResult and onError callbacks are called
-                        // This occurs when providing some packages such as com.google.android.tts
-                        // com.samsung.android.bixby.agent usually errors though
+                        // Workaround: some packages (e.g. com.google.android.tts) fire both
+                        // onSupportResult and onError. Delay gives onSupportResult time to win the CAS.
                         Handler(appContext.mainLooper).postDelayed({
-                            if (didResolve) {
+                            if (!settled.compareAndSet(false, true)) {
                                 return@postDelayed
                             }
                             promise.reject(

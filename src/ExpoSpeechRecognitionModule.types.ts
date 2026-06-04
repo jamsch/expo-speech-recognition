@@ -713,11 +713,11 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
     locale: string;
   }): Promise<{
     /**
-     * On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
-     * On Android 14+, the status will be "download_success" indicating that the model download was successful.
-     * On Android 14+, "download_canceled" will be returned if the download was canceled by a user interaction.
+     * On Android 13, "opened_dialog" — the model download dialog was shown (fire-and-forget, no events emitted).
+     * On Android 14+, "download_success" if the model downloaded immediately,
+     * or "download_scheduled" if the download was queued (e.g., waiting for WiFi).
      */
-    status: "download_success" | "opened_dialog" | "download_canceled";
+    status: "download_success" | "opened_dialog" | "download_scheduled";
     message: string;
   }>;
   /**
