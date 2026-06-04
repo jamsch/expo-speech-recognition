@@ -259,18 +259,7 @@ class ExpoSpeechRecognitionModule : Module() {
                 // Do nothing
             }
 
-            val isDownloadingModel = AtomicBoolean(false)
-
             AsyncFunction("androidTriggerOfflineModelDownload") { options: TriggerOfflineModelDownloadOptions, promise: Promise ->
-                if (isDownloadingModel.get()) {
-                    promise.reject(
-                        "download_in_progress",
-                        "An offline model download is already in progress.",
-                        Throwable(),
-                    )
-                    return@AsyncFunction
-                }
-
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                     promise.reject(
                         "not_supported",
@@ -301,7 +290,6 @@ class ExpoSpeechRecognitionModule : Module() {
 
                 // API 34+ (Android 14+) -- Trigger the model download and listen to the progress
                 val settled = AtomicBoolean(false)
-                isDownloadingModel.set(true)
                 Handler(appContext.reactContext!!.mainLooper).post {
                     val recognizer =
                         SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext.reactContext!!)
@@ -315,7 +303,6 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onSuccess() {
-                                isDownloadingModel.set(false)
                                 recognizer.destroy()
                                 if (settled.compareAndSet(false, true)) {
                                     promise.resolve(
@@ -340,7 +327,6 @@ class ExpoSpeechRecognitionModule : Module() {
 
                             override fun onError(error: Int) {
                                 Log.e("ExpoSpeechService", "Error downloading model with code: $error")
-                                isDownloadingModel.set(false)
                                 recognizer.destroy()
                                 if (settled.compareAndSet(false, true)) {
                                     promise.reject(
