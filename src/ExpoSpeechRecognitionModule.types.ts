@@ -713,7 +713,7 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
     locale: string;
   }): Promise<{
     /**
-     * On Android 13, "opened_dialog" — the model download dialog was shown (fire-and-forget, no events emitted).
+     * On Android 13, "opened_dialog" - the model download dialog was shown (fire-and-forget, no events emitted).
      * On Android 14+, "download_success" if the model downloaded immediately,
      * or "download_scheduled" if the download was queued (e.g., waiting for WiFi).
      */

@@ -1164,8 +1164,6 @@ ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
   });
 ```
 
-On Android 14+, the promise may return `download_scheduled` while the download continues in the background.
-
 The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
 
 ![On Device Recognition](./images/on-device-recognition.jpg)
