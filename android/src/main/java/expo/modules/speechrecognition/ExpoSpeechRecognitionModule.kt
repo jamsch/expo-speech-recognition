@@ -465,6 +465,7 @@ class ExpoSpeechRecognitionModule : Module() {
                         Log.e("ExpoSpeechService", "getSupportedLocales.onError() called with error code: $error")
                         // Workaround: some packages (e.g. com.google.android.tts) fire both
                         // onSupportResult and onError. Delay gives onSupportResult time to win the CAS.
+                        // note: if you're using com.samsung.android.bixby.agent, it usually errors though
                         Handler(appContext.mainLooper).postDelayed({
                             if (!settled.compareAndSet(false, true)) {
                                 return@postDelayed
