@@ -927,22 +927,22 @@ function OtherSettings(props: {
       <TranscribeLocalAudioFileDemo />
 
       <TranscribeRemoteAudioFileDemo
-        fileName="remote-en-us-sentence-16000hz-pcm_s16le.wav"
-        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz-pcm_s16le.wav"
+        fileName="remote_en_us_sentence-16000hz-pcm_s16le.wav"
+        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote_en_us_sentence-16000hz-pcm_s16le.wav"
         audioEncoding={AudioEncodingAndroid.ENCODING_PCM_16BIT}
         description="16000hz 16-bit 1-channel PCM audio file"
       />
 
       <TranscribeRemoteAudioFileDemo
-        fileName="remote-en-us-sentence-16000hz.mp3"
-        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.mp3"
+        fileName="remote_en_us_sentence-16000hz.mp3"
+        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote_en_us_sentence-16000hz.mp3"
         audioEncoding={AudioEncodingAndroid.ENCODING_MP3}
         description="16000hz MP3 1-channel audio file"
       />
 
       <TranscribeRemoteAudioFileDemo
-        fileName="remote-en-us-sentence-16000hz.ogg"
-        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote-en-us-sentence-16000hz.ogg"
+        fileName="remote_en_us_sentence-16000hz.ogg"
+        remoteUrl="https://github.com/jamsch/expo-speech-recognition/raw/main/example/assets/audio-remote/remote_en_us_sentence-16000hz.ogg"
         audioEncoding={AudioEncodingAndroid.ENCODING_OPUS}
         description="(May not work on iOS) 16000hz ogg vorbis 1-channel audio file"
       />

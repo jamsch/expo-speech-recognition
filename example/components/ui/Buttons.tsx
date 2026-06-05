@@ -85,6 +85,7 @@ export function SmallButton(props: {
   return (
     <Pressable
       onPress={props.onPress}
+      disabled={props.disabled}
       style={({ pressed }) => [
         styles.button,
         styles.smallButton,
