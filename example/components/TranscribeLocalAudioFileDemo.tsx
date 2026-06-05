@@ -12,7 +12,7 @@ import { MonoText } from "./ui/MonoText";
 
 export function TranscribeLocalAudioFileDemo() {
   const [busy, setBusy] = useState(false);
-  const [assets] = useAssets([require("../assets/audio/en-us-sentence.wav")]);
+  const [assets] = useAssets([require("../assets/audio/en_us_sentence.wav")]);
 
   const localUri = assets?.[0]?.localUri;
 

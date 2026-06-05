@@ -43,7 +43,7 @@
     "@changesets/cli": "^2.31.0",
     "@types/dom-speech-recognition": "^0.0.11",
     "@types/react": "~19.2.14",
-    "expo": "^56.0.0-preview.12",
+    "expo": "~56.0.8",
     "expo-module-scripts": "^55.0.2",
     "globals": "17.6.0",
     "typescript": "~6.0.3",

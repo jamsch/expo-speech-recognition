@@ -1,6 +1,6 @@
 # Audio files
 
-## `en-us-sentence.wav`
+## `en_us_sentence.wav`
 
 - Sampling rate: 16000
 - PCM 16 bit little endian
