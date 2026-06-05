@@ -1,5 +1,12 @@
 # expo-speech-recognition
 
+## 56.0.1
+
+### Patch Changes
+
+- e3f0fdf: - Fix `getSupportedLocales` and `androidTriggerOfflineModelDownload` double-resolve issue for Android when called multiple times.
+  - Type breakages: `androidTriggerOfflineModelDownload()` has a renamed status enum (from `download_canceled` to `download_scheduled`).
+
 ## 56.0.0
 
 ### Major Changes
