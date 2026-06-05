@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.AutoCloseOutputStream
 import android.os.Build
@@ -134,7 +135,7 @@ class ExpoAudioRecorder(
     @SuppressLint("MissingPermission")
     private fun createRecorder(): AudioRecord =
         AudioRecord(
-            MediaRecorder.AudioSource.VOICE_RECOGNITION,
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION,
             sampleRateInHz,
             channelConfig,
             AudioFormat.ENCODING_PCM_16BIT,
@@ -148,6 +149,10 @@ class ExpoAudioRecorder(
             // First check whether the above object actually initialized
             if (this.state != AudioRecord.STATE_INITIALIZED) {
                 return
+            }
+
+            if (AcousticEchoCanceler.isAvailable()) {
+                AcousticEchoCanceler.create(recorder.audioSessionId)?.enabled = true
             }
 
             this.startRecording()
