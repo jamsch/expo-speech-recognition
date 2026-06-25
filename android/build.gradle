@@ -1,7 +1,10 @@
 apply plugin: 'com.android.library'
 
 group = 'expo.modules.speechrecognition'
-version = '0.1.0'
+
+// Read version from package.json
+def packageJson = new groovy.json.JsonSlurper().parseText(file('../package.json').text)
+version = packageJson.version
 
 def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
 apply from: expoModulesCorePlugin
@@ -35,7 +38,7 @@ android {
   namespace "expo.modules.speechrecognition"
   defaultConfig {
     versionCode 1
-    versionName "0.1.0"
+    versionName packageJson.version
   }
   lintOptions {
     abortOnError false

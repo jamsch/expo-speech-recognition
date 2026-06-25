@@ -107,5 +107,5 @@ const withExpoSpeechRecognition = (config, props) => {
 module.exports = createRunOncePlugin(
   withExpoSpeechRecognition,
   "expo-speech-recognition",
-  "1.0.0",
+  "56.0.1",
 );
