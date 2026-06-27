@@ -1,5 +1,14 @@
 # expo-speech-recognition
 
+## 56.0.2
+
+### Patch Changes
+
+- a7a6c68: chore: expo bump
+  - Bump expo version to latest
+  - Bump module-scripts to v56 to match expo
+  - Update lockfile to fix vulnerabilities
+
 ## 56.0.1
 
 ### Patch Changes
