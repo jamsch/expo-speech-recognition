@@ -68,6 +68,16 @@ npm install expo-speech-recognition@sdk-54
 npm install expo-speech-recognition@sdk-53
 ```
 
+| Expo version | expo-speech-recognition version |
+| ------------ | ------------------------------- |
+| `sdk-56`     | 56.0.0 - 56.0.1                 |
+| `sdk-55`     | 3.1.3                           |
+| `sdk-54`     | 3.1.3                           |
+| `sdk-53`     | 2.1.5 - 3.1.2                   |
+| `sdk-52`     | 1.1.1- 2.1.4                    |
+| `sdk-51`     | 0.3.2                           |
+| `sdk-50`     | 0.0.26                          |
+
 2. Configure the config plugin.
 
 > The config plugin updates the Android App Manifest to include package visibility filtering for `com.google.android.googlequicksearchbox` (Google's Speech Recognition) along with the required permissions for Android and iOS.
