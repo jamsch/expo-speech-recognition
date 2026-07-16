@@ -175,6 +175,16 @@ export type ExpoSpeechRecognitionNativeEventMap = {
      */
     value: number;
   };
+  /**
+   * Fired during `androidTriggerOfflineModelDownload` (Android 14+ only) to report the
+   * download lifecycle. The `locale` field identifies which locale the update belongs to.
+   * Prefer `downloadAndroidOfflineModel()` to subscribe conveniently.
+   */
+  modelDownloadUpdate:
+    | { locale: string; status: "download_scheduled" }
+    | { locale: string; status: "download_progress"; progress: number }
+    | { locale: string; status: "download_success" }
+    | { locale: string; status: "download_error"; error: number };
 };
 
 export type ExpoSpeechRecognitionOptions = {
@@ -638,7 +648,8 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * Not supported on Android 12 and below (API level 31), this will return an empty array of locales.
    *
    * @throws {"package_not_found"} If the service package is not found.
-   * @throws {"error_[number]"} If there was an error retrieving the supported locales.
+   * @throws {string} A numeric string matching a `SpeechRecognizerErrorAndroid` value (e.g. `"7"` for `ERROR_NETWORK`)
+   * if the recognizer reported an error. Use `Number(err.code)` to compare against the enum.
    */
   getSupportedLocales(options: {
     /**
@@ -697,6 +708,13 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * This mostly applies to Android devices, to check if it's greater than Android 13.
    */
   supportsRecording(): boolean;
+  /**
+   * Whether offline speech recognition model download is available.
+   *
+   * Only true on Android 13+ (API 33+). Use before calling
+   * `androidTriggerOfflineModelDownload` or `downloadAndroidOfflineModel`.
+   */
+  supportsOfflineModelDownload(): boolean;
   /**
    * Whether on-device speech recognition is available.
    *

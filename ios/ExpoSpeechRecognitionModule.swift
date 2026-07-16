@@ -358,6 +358,10 @@ public class ExpoSpeechRecognitionModule: Module {
       return true
     }
 
+    Function("supportsOfflineModelDownload") { () -> Bool in
+      return false
+    }
+
     Function("isRecognitionAvailable") { () -> Bool in
       let recognizer = SFSpeechRecognizer()
       return recognizer?.isAvailable ?? false

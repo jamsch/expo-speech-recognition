@@ -263,6 +263,10 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
     return false;
   }
 
+  supportsOfflineModelDownload() {
+    return false;
+  }
+
   androidTriggerOfflineModelDownload() {
     console.warn(
       "androidTriggerOfflineModelDownload is not supported on web. Returning false.",

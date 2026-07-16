@@ -96,6 +96,8 @@ class ExpoSpeechRecognitionModule : Module() {
                 "languagedetection",
                 // Fired when the input volume changes
                 "volumechange",
+                // Fired during androidTriggerOfflineModelDownload to report download lifecycle
+                "modelDownloadUpdate",
             )
 
             Function("getDefaultRecognitionService") {
@@ -241,6 +243,10 @@ class ExpoSpeechRecognitionModule : Module() {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
             }
 
+            Function("supportsOfflineModelDownload") {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            }
+
             // Not necessary for Android
             Function("setCategoryIOS") { _: Any ->
                 // Do nothing
@@ -298,11 +304,22 @@ class ExpoSpeechRecognitionModule : Module() {
                         Executors.newSingleThreadExecutor(),
                         @SuppressLint("NewApi")
                         object : ModelDownloadListener {
-                            override fun onProgress(p0: Int) {
-                                // Todo: let user know the progress
+                            override fun onProgress(progress: Int) {
+                                sendEvent(
+                                    "modelDownloadUpdate",
+                                    mapOf(
+                                        "locale" to options.locale,
+                                        "status" to "download_progress",
+                                        "progress" to progress,
+                                    ),
+                                )
                             }
 
                             override fun onSuccess() {
+                                sendEvent(
+                                    "modelDownloadUpdate",
+                                    mapOf("locale" to options.locale, "status" to "download_success"),
+                                )
                                 recognizer.destroy()
                                 if (settled.compareAndSet(false, true)) {
                                     promise.resolve(
@@ -315,6 +332,10 @@ class ExpoSpeechRecognitionModule : Module() {
                             }
 
                             override fun onScheduled() {
+                                sendEvent(
+                                    "modelDownloadUpdate",
+                                    mapOf("locale" to options.locale, "status" to "download_scheduled"),
+                                )
                                 if (settled.compareAndSet(false, true)) {
                                     promise.resolve(
                                         mapOf(
@@ -327,11 +348,19 @@ class ExpoSpeechRecognitionModule : Module() {
 
                             override fun onError(error: Int) {
                                 Log.e("ExpoSpeechService", "Error downloading model with code: $error")
+                                sendEvent(
+                                    "modelDownloadUpdate",
+                                    mapOf(
+                                        "locale" to options.locale,
+                                        "status" to "download_error",
+                                        "error" to error,
+                                    ),
+                                )
                                 recognizer.destroy()
                                 if (settled.compareAndSet(false, true)) {
                                     promise.reject(
-                                        "error_$error",
-                                        "Failed to download offline model download with error: $error",
+                                        "$error",
+                                        "Failed to download offline model with error: $error",
                                         Throwable(),
                                     )
                                 }
@@ -471,7 +500,7 @@ class ExpoSpeechRecognitionModule : Module() {
                                 return@postDelayed
                             }
                             promise.reject(
-                                "error_$error",
+                                "$error",
                                 "Failed to retrieve supported locales with error: $error",
                                 Throwable(),
                             )

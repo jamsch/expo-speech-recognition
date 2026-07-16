@@ -48,7 +48,9 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [isRecognitionAvailable()](#isrecognitionavailable-boolean)
   - [supportsOnDeviceRecognition()](#supportsondevicerecognition-boolean)
   - [supportsRecording()](#supportsrecording-boolean)
+  - [supportsOfflineModelDownload()](#supportsofflinemodoldownload-boolean)
   - [androidTriggerOfflineModelDownload()](#androidtriggerofflinemodeldownload)
+  - [downloadAndroidOfflineModel()](#downloadandroidofflinemodellocale-string)
   - [setCategoryIOS()](#setcategoryios-void-ios-only)
   - [getAudioSessionCategoryAndOptionsIOS()](#getaudiosessioncategoryandoptionsios-ios-only)
   - [setAudioSessionActiveIOS()](#setaudiosessionactiveiosvalue-boolean-options--notifyothersondeactivation-boolean--void)
@@ -1058,9 +1060,17 @@ ExpoSpeechRecognitionModule.getSupportedLocales({
     );
   })
   .catch((error) => {
-    // If the service package is not found
-    // or there was an error retrieving the supported locales
-    console.error("Error getting supported locales:", error);
+    if (error.code === "package_not_found") {
+      console.error("Service package not found.");
+    } else {
+      // error.code is a numeric string matching a SpeechRecognizerErrorAndroid value
+      // Use Number(error.code) to compare against the enum
+      console.error(
+        "Error getting supported locales:",
+        Number(error.code),
+        error.message,
+      );
+    }
   });
 ```
 
@@ -1130,13 +1140,22 @@ const available = ExpoSpeechRecognitionModule.supportsRecording();
 console.log("Recording available:", available);
 ```
 
+### `supportsOfflineModelDownload(): boolean`
+
+Whether offline speech recognition model download is available. Only returns `true` on Android 13+ (API 33+). Use this to gate download UI before calling [`downloadAndroidOfflineModel()`](#downloadandroidofflinemodellocale-string).
+
+```ts
+const available = ExpoSpeechRecognitionModule.supportsOfflineModelDownload();
+console.log("Offline model download available:", available);
+```
+
 ### `androidTriggerOfflineModelDownload()`
 
 Users on Android devices will first need to download the offline model for the locale they want to use in order to use on-device speech recognition (i.e. the `requiresOnDeviceRecognition` setting in the `start` options).
 
 You can see which locales are supported and installed on your device by running `getSupportedLocales()`.
 
-To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function.
+To download the offline model for a specific locale, use the `androidTriggerOfflineModelDownload` function. For event-based lifecycle tracking, prefer [`downloadAndroidOfflineModel()`](#downloadandroidofflinemodellocale-string).
 
 ```ts
 // Download the offline model for the specified locale
@@ -1160,13 +1179,35 @@ ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
     }
   })
   .catch((err) => {
-    console.log("Failed to download offline model!", err.message);
+    // err.code is a numeric string matching a SpeechRecognizerErrorAndroid value
+    // Use Number(err.code) to compare against the enum
+    const errorCode = Number(err.code);
+    console.log("Failed to download offline model!", err.message, errorCode);
   });
 ```
 
 The device will display a dialog to download the model. Once the model is downloaded, you can use the `getSupportedLocales` function to get the list of installed locales.
 
 ![On Device Recognition](./images/on-device-recognition.jpg)
+
+### `downloadAndroidOfflineModel(locale: string)`
+
+High-level helper around [`androidTriggerOfflineModelDownload()`](#androidtriggerofflinemodeldownload) that returns a chainable event handle.
+
+On Android 14+, listen for `progress`, `scheduled`, `success`, and `error`. On Android 13, `opened_dialog` fires when the system dialog is shown; `success` fires if the locale is already installed (checked via [`getSupportedLocales()`](#getsupportedlocales)).
+
+```ts
+import { downloadAndroidOfflineModel } from "expo-speech-recognition";
+
+downloadAndroidOfflineModel("en-US")
+  .on("progress", (progress) => console.log(`Downloading… ${progress}%`))
+  .on("scheduled", () => console.log("Download scheduled"))
+  .on("success", () => console.log("Model installed"))
+  .on("error", (code) => console.error("Download failed", code))
+  .on("opened_dialog", () =>
+    console.log("Complete the download in the system dialog"),
+  );
+```
 
 ### `setCategoryIOS({...}): void` (iOS only)
 
