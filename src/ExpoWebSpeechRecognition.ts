@@ -426,14 +426,19 @@ export class ExpoWebSpeechGrammarList implements SpeechGrammarList {
   }
 
   item(index: number): ExpoWebSpeechGrammar {
-    return this.#grammars[index];
+    const grammar = this.#grammars[index];
+    if (!grammar) {
+      throw new RangeError(`Index ${index} is out of range.`);
+    }
+    return grammar;
   }
 
   addFromString = (grammar: string, weight?: number) => {
     // TODO: parse grammar to html entities (data:application/xml,....)
-    this.#grammars.push(new ExpoWebSpeechGrammar(grammar, weight));
+    const nextGrammar = new ExpoWebSpeechGrammar(grammar, weight);
+    this.#grammars.push(nextGrammar);
     // Set key on this object for compatibility with web SpeechGrammarList API
-    this[this.length - 1] = this.#grammars[this.length - 1];
+    this[this.length - 1] = nextGrammar;
   };
 }
 
@@ -457,7 +462,11 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
   }
   length: number;
   item(index: number): SpeechRecognitionResult {
-    return this.#results[index];
+    const result = this.#results[index];
+    if (!result) {
+      throw new RangeError(`Index ${index} is out of range.`);
+    }
+    return result;
   }
   [index: number]: SpeechRecognitionResult;
 
@@ -465,7 +474,10 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
     this.#results = results;
     this.length = results.length;
     for (let i = 0; i < this.#results.length; i++) {
-      this[i] = this.#results[i];
+      const result = this.#results[i];
+      if (result) {
+        this[i] = result;
+      }
     }
   }
 }
@@ -478,7 +490,11 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
   length: number;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/item) */
   item(index: number): SpeechRecognitionAlternative {
-    return this.#alternatives[index];
+    const alternative = this.#alternatives[index];
+    if (!alternative) {
+      throw new RangeError(`Index ${index} is out of range.`);
+    }
+    return alternative;
   }
   [index: number]: SpeechRecognitionAlternative;
   [Symbol.iterator](): ArrayIterator<SpeechRecognitionAlternative> {
@@ -495,7 +511,10 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
     this.length = alternatives.length;
     this.#alternatives = alternatives;
     for (let i = 0; i < alternatives.length; i++) {
-      this[i] = alternatives[i];
+      const alternative = alternatives[i];
+      if (alternative) {
+        this[i] = alternative;
+      }
     }
   }
 }
