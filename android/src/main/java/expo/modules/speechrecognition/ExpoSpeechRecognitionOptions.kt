@@ -108,4 +108,7 @@ class GetSupportedLocaleOptions : Record {
 class TriggerOfflineModelDownloadOptions : Record {
     @Field
     val locale: String = "en-US"
+
+    @Field
+    val requestId: String = ""
 }

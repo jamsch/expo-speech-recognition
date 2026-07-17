@@ -177,14 +177,25 @@ export type ExpoSpeechRecognitionNativeEventMap = {
   };
   /**
    * Fired during `androidTriggerOfflineModelDownload` (Android 14+ only) to report the
-   * download lifecycle. The `locale` field identifies which locale the update belongs to.
-   * Prefer `downloadAndroidOfflineModel()` to subscribe conveniently.
+   * download lifecycle. The `locale` and internal `requestId` fields identify the
+   * operation the update belongs to. Prefer `downloadAndroidOfflineModel()` to
+   * subscribe conveniently.
    */
   modelDownloadUpdate:
-    | { locale: string; status: "download_scheduled" }
-    | { locale: string; status: "download_progress"; progress: number }
-    | { locale: string; status: "download_success" }
-    | { locale: string; status: "download_error"; error: number };
+    | { locale: string; requestId: string; status: "download_scheduled" }
+    | {
+        locale: string;
+        requestId: string;
+        status: "download_progress";
+        progress: number;
+      }
+    | { locale: string; requestId: string; status: "download_success" }
+    | {
+        locale: string;
+        requestId: string;
+        status: "download_error";
+        error: number;
+      };
 };
 
 export type ExpoSpeechRecognitionOptions = {
@@ -648,8 +659,9 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
    * Not supported on Android 12 and below (API level 31), this will return an empty array of locales.
    *
    * @throws {"package_not_found"} If the service package is not found.
-   * @throws {string} A numeric string matching a `SpeechRecognizerErrorAndroid` value (e.g. `"7"` for `ERROR_NETWORK`)
-   * if the recognizer reported an error. Use `Number(err.code)` to compare against the enum.
+   * @throws {string} A numeric string matching a `SpeechRecognizerErrorAndroid`
+   * value (e.g. `"7"` for `ERROR_NETWORK`). Use `Number(err.code)` to compare
+   * against the enum.
    */
   getSupportedLocales(options: {
     /**
@@ -729,6 +741,8 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
   androidTriggerOfflineModelDownload(options: {
     /** The locale to download the model for, e.g. "en-US" */
     locale: string;
+    /** @internal Correlates native lifecycle events with a high-level download handle. */
+    requestId?: string;
   }): Promise<{
     /**
      * On Android 13, "opened_dialog" - the model download dialog was shown (fire-and-forget, no events emitted).

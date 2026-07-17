@@ -244,7 +244,10 @@ class ExpoSpeechRecognitionModule : Module() {
             }
 
             Function("supportsOfflineModelDownload") {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    appContext.reactContext?.let { context ->
+                        SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+                    } == true
             }
 
             // Not necessary for Android
@@ -309,6 +312,7 @@ class ExpoSpeechRecognitionModule : Module() {
                                     "modelDownloadUpdate",
                                     mapOf(
                                         "locale" to options.locale,
+                                        "requestId" to options.requestId,
                                         "status" to "download_progress",
                                         "progress" to progress,
                                     ),
@@ -318,7 +322,11 @@ class ExpoSpeechRecognitionModule : Module() {
                             override fun onSuccess() {
                                 sendEvent(
                                     "modelDownloadUpdate",
-                                    mapOf("locale" to options.locale, "status" to "download_success"),
+                                    mapOf(
+                                        "locale" to options.locale,
+                                        "requestId" to options.requestId,
+                                        "status" to "download_success",
+                                    ),
                                 )
                                 recognizer.destroy()
                                 if (settled.compareAndSet(false, true)) {
@@ -334,7 +342,11 @@ class ExpoSpeechRecognitionModule : Module() {
                             override fun onScheduled() {
                                 sendEvent(
                                     "modelDownloadUpdate",
-                                    mapOf("locale" to options.locale, "status" to "download_scheduled"),
+                                    mapOf(
+                                        "locale" to options.locale,
+                                        "requestId" to options.requestId,
+                                        "status" to "download_scheduled",
+                                    ),
                                 )
                                 if (settled.compareAndSet(false, true)) {
                                     promise.resolve(
@@ -352,6 +364,7 @@ class ExpoSpeechRecognitionModule : Module() {
                                     "modelDownloadUpdate",
                                     mapOf(
                                         "locale" to options.locale,
+                                        "requestId" to options.requestId,
                                         "status" to "download_error",
                                         "error" to error,
                                     ),

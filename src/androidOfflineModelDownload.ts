@@ -11,12 +11,15 @@ export type AndroidModelDownloadEventMap = {
 
 type EventKey = keyof AndroidModelDownloadEventMap;
 
+let nextModelDownloadRequestId = 0;
+
 /**
  * Handle returned by {@link downloadAndroidOfflineModel}.
  * Chain `.on(...)` listeners; each `.on` returns the handle for fluency.
  *
  * Call {@link dispose} to stop listening early (e.g. on React unmount).
- * Terminal events (`success`, `error`, `scheduled`) dispose automatically.
+ * Terminal events (`success`, `error`, `scheduled`, `opened_dialog`) dispose
+ * automatically.
  */
 export class AndroidModelDownloadHandle {
   #listeners = new Map<EventKey, Set<(value: never) => void>>();
@@ -57,7 +60,7 @@ export class AndroidModelDownloadHandle {
   /**
    * Stops listening for download updates and clears all `.on` listeners.
    * Safe to call multiple times. Invoked automatically after terminal events
-   * (`success`, `error`, `scheduled`).
+   * (`success`, `error`, `scheduled`, `opened_dialog`).
    */
   dispose(): void {
     if (this.#disposed) return;
@@ -84,8 +87,8 @@ function rejectCodeToError(err: unknown): number {
     err && typeof err === "object" && "code" in err
       ? String((err as { code: unknown }).code)
       : "";
-  const numeric = Number(code);
-  if (code !== "" && !Number.isNaN(numeric)) return numeric;
+  const match = /^(?:error_)?(-?\d+)$/.exec(code);
+  if (match?.[1]) return Number(match[1]);
   return SpeechRecognizerErrorAndroid.ERROR_CLIENT;
 }
 
@@ -107,9 +110,9 @@ function rejectCodeToError(err: unknown): number {
  * (fire-and-forget — no further events; handle is disposed). `success` still
  * fires if the locale is already installed.
  *
- * Terminal events (`success`, `error`, `scheduled`) dispose the handle
- * automatically. Call {@link AndroidModelDownloadHandle.dispose} to abort
- * listening early (e.g. component unmount).
+ * Terminal events (`success`, `error`, `scheduled`, `opened_dialog`) dispose
+ * the handle automatically. Call {@link AndroidModelDownloadHandle.dispose}
+ * to abort listening early (e.g. component unmount).
  *
  * @example
  * ```ts
@@ -131,11 +134,18 @@ export function downloadAndroidOfflineModel(
   locale: string,
 ): AndroidModelDownloadHandle {
   const handle = new AndroidModelDownloadHandle();
+  const requestId = `model-download-${++nextModelDownloadRequestId}`;
 
   const subscription = ExpoSpeechRecognitionModule.addListener(
     "modelDownloadUpdate",
     (e) => {
-      if (e.locale !== locale || handle.disposed) return;
+      if (
+        e.locale !== locale ||
+        e.requestId !== requestId ||
+        handle.disposed
+      ) {
+        return;
+      }
       switch (e.status) {
         case "download_scheduled":
           // Android: no further updates on this listener after onScheduled().
@@ -163,22 +173,25 @@ export function downloadAndroidOfflineModel(
     value: AndroidModelDownloadEventMap[K],
   ) => {
     if (handle.disposed) return;
-    handle._emit(event, value);
-    handle.dispose();
+    try {
+      handle._emit(event, value);
+    } finally {
+      handle.dispose();
+    }
   };
 
   void ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
     locale,
+    requestId,
   })
     .then(async (result) => {
       if (handle.disposed) return;
 
-      if (result.status === "opened_dialog") {
-        handle._emit("opened_dialog", undefined);
-      } else if (result.status === "download_success") {
+      if (result.status === "download_success") {
         finish("success", undefined);
         return;
-      } else if (result.status === "download_scheduled") {
+      }
+      if (result.status === "download_scheduled") {
         // Android: no further updates on this listener after onScheduled().
         finish("scheduled", undefined);
         return;
@@ -196,10 +209,8 @@ export function downloadAndroidOfflineModel(
         // ignore — install state unknown
       }
 
-      // Android 13: dialog shown, model not installed yet — stop listening.
-      if (result.status === "opened_dialog") {
-        handle.dispose();
-      }
+      // Android 13: dialog shown, model not installed yet — no further events.
+      finish("opened_dialog", undefined);
     })
     .catch((err: unknown) => {
       finish("error", rejectCodeToError(err));

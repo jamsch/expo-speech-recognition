@@ -1,6 +1,10 @@
 ---
-"expo-speech-recognition": patch
+"expo-speech-recognition": major
 ---
+
+Support for Expo 57
+
+Breaking: Changed Android recognizer rejection codes from `error_<number>` strings to numeric strings. Existing callers that inspect `error.code` should convert it with `Number(error.code)` before comparing it with `SpeechRecognizerErrorAndroid`.
 
 Added `downloadAndroidOfflineModel` with event emitters to listen to model download status. The handle exposes `dispose()` to stop listening early; terminal events dispose automatically.
 
@@ -17,6 +21,6 @@ const download = downloadAndroidOfflineModel("en-US")
   );
 
 // Optional: stop listening early (e.g. effect cleanup on unmount).
-// `success` / `error` / `scheduled` dispose the handle automatically.
+// `success` / `error` / `scheduled` / `opened_dialog` dispose automatically.
 download.dispose();
 ```

@@ -2,9 +2,9 @@
   "extends": "expo-module-scripts/tsconfig.base",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./build"
+    "outDir": "./build",
+    "types": ["@types/dom-speech-recognition"]
   },
-  "types": ["@types/dom-speech-recognition"],
   "include": ["./src"],
   "exclude": ["**/__mocks__/*", "**/__tests__/*"]
 }
