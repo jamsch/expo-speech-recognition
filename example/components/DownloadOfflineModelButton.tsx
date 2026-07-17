@@ -1,5 +1,5 @@
-import type { AndroidModelDownloadHandle } from "expo-speech-recognition";
 import {
+  type AndroidModelDownloadHandle,
   downloadAndroidOfflineModel,
   SpeechRecognizerErrorAndroid,
 } from "expo-speech-recognition";
