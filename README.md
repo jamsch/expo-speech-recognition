@@ -1199,14 +1199,18 @@ On Android 14+, listen for `progress`, `scheduled`, `success`, and `error`. On A
 ```ts
 import { downloadAndroidOfflineModel } from "expo-speech-recognition";
 
-downloadAndroidOfflineModel("en-US")
-  .on("progress", (progress) => console.log(`Downloading… ${progress}%`))
+const download = downloadAndroidOfflineModel("en-US")
+  .on("progress", (progress) => console.log(`Downloading... ${progress}%`))
   .on("scheduled", () => console.log("Download scheduled"))
   .on("success", () => console.log("Model installed"))
   .on("error", (code) => console.error("Download failed", code))
   .on("opened_dialog", () =>
     console.log("Complete the download in the system dialog"),
   );
+
+// Optional: stop listening early (e.g. effect cleanup component unmount).
+// `success` / `error` dispose the handle automatically.
+download.dispose();
 ```
 
 ### `setCategoryIOS({...}): void` (iOS only)
