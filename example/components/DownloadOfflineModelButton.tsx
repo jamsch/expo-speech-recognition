@@ -31,11 +31,12 @@ export function DownloadOfflineModelButton(props: { locale: string }) {
         setProgress(value);
       })
       .on("scheduled", () => {
-        console.log("Download scheduled");
-        Alert.alert(
-          "Download scheduled",
-          "The offline model download was scheduled and will start soon.",
+        console.log(
+          "Download queued for later (e.g. waiting for Wi‑Fi). No further events on this handle — check getSupportedLocales() later.",
         );
+        downloadRef.current = null;
+        setDownloading(false);
+        setProgress(null);
       })
       .on("success", () => {
         console.log("Offline model downloaded successfully!");
@@ -60,10 +61,13 @@ export function DownloadOfflineModelButton(props: { locale: string }) {
         setProgress(null);
       })
       .on("opened_dialog", () => {
-        console.log("Complete the download in the system dialog");
+        // Android 13 only — fire-and-forget; no progress events follow.
+        console.log(
+          "Android 13: system download dialog opened (fire-and-forget). Complete it there, then check getSupportedLocales().",
+        );
         Alert.alert(
           "Complete the download in the system dialog",
-          "The offline model download dialog was opened.",
+          "Android 13 opened the offline model download dialog. No further events will fire here — finish the download in the dialog, then check installed locales.",
         );
         downloadRef.current = null;
         setDownloading(false);

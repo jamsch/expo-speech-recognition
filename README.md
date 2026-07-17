@@ -1194,22 +1194,32 @@ The device will display a dialog to download the model. Once the model is downlo
 
 High-level helper around [`androidTriggerOfflineModelDownload()`](#androidtriggerofflinemodeldownload) that returns a chainable event handle.
 
-On Android 14+, listen for `progress`, `scheduled`, `success`, and `error`. On Android 13, `opened_dialog` fires when the system dialog is shown; `success` fires if the locale is already installed (checked via [`getSupportedLocales()`](#getsupportedlocales)).
+| Event           | Platform        | Meaning                                                                                                                                                                                                                                       |
+| --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `progress`      | Android 14+     | Download started. May fire zero or more times, then `success`.                                                                                                                                                                                |
+| `success`       | Android 13+     | Model is installed and ready (or was already available).                                                                                                                                                                                      |
+| `scheduled`     | Android 14+     | Android queued the download for later (e.g. waiting for Wi‑Fi). **Terminal — no `progress` / `success` / `error` will follow on this handle.** Poll [`getSupportedLocales()`](#getsupportedlocales) later to see when the model is installed. |
+| `error`         | Android 14+     | Download failed.                                                                                                                                                                                                                              |
+| `opened_dialog` | Android 13 only | Fire-and-forget: the system download dialog was shown. No further events on this handle — complete the download in the dialog, then check [`getSupportedLocales()`](#getsupportedlocales).                                                    |
+
+`success`, `error`, and `scheduled` dispose the handle automatically. After `opened_dialog`, the handle is also disposed (no progress tracking on Android 13).
 
 ```ts
 import { downloadAndroidOfflineModel } from "expo-speech-recognition";
 
 const download = downloadAndroidOfflineModel("en-US")
   .on("progress", (progress) => console.log(`Downloading... ${progress}%`))
-  .on("scheduled", () => console.log("Download scheduled"))
+  .on("scheduled", () =>
+    console.log("Queued for later — check getSupportedLocales() later"),
+  )
   .on("success", () => console.log("Model installed"))
   .on("error", (code) => console.error("Download failed", code))
+  // Android 13 only — fire-and-forget system dialog
   .on("opened_dialog", () =>
     console.log("Complete the download in the system dialog"),
   );
 
-// Optional: stop listening early (e.g. effect cleanup component unmount).
-// `success` / `error` dispose the handle automatically.
+// Optional: stop listening early (e.g. effect cleanup on unmount).
 download.dispose();
 ```
 

@@ -16,7 +16,7 @@ type EventKey = keyof AndroidModelDownloadEventMap;
  * Chain `.on(...)` listeners; each `.on` returns the handle for fluency.
  *
  * Call {@link dispose} to stop listening early (e.g. on React unmount).
- * Terminal events (`success`, `error`) dispose automatically.
+ * Terminal events (`success`, `error`, `scheduled`) dispose automatically.
  */
 export class AndroidModelDownloadHandle {
   #listeners = new Map<EventKey, Set<(value: never) => void>>();
@@ -56,7 +56,8 @@ export class AndroidModelDownloadHandle {
 
   /**
    * Stops listening for download updates and clears all `.on` listeners.
-   * Safe to call multiple times. Invoked automatically after `success` / `error`.
+   * Safe to call multiple times. Invoked automatically after terminal events
+   * (`success`, `error`, `scheduled`).
    */
   dispose(): void {
     if (this.#disposed) return;
@@ -91,21 +92,35 @@ function rejectCodeToError(err: unknown): number {
 /**
  * Downloads an Android offline speech recognition model for `locale`.
  *
- * Returns a handle you can attach listeners to. Only Android 14+ emits
- * `progress` / `scheduled`; Android 13 emits `opened_dialog` when the system
- * dialog is shown. `success` is emitted when the model is installed (including
- * when it was already available).
+ * Returns a handle you can attach listeners to.
  *
- * Terminal events (`success`, `error`) dispose the handle automatically.
- * Call {@link AndroidModelDownloadHandle.dispose} yourself to abort listening
- * early (e.g. component unmount).
+ * **Android 14+ events**
+ * - `progress` — download started; may fire zero or more times, then `success`
+ * - `success` — model is installed and ready (or was already available)
+ * - `scheduled` — Android queued the download for later (e.g. waiting for Wi‑Fi).
+ *   This is terminal: you will **not** get `progress` / `success` / `error` on
+ *   this handle. Poll {@link ExpoSpeechRecognitionModule.getSupportedLocales}
+ *   later to see when the model is installed.
+ * - `error` — download failed
+ *
+ * **Android 13 only:** emits `opened_dialog` when the system dialog is shown
+ * (fire-and-forget — no further events; handle is disposed). `success` still
+ * fires if the locale is already installed.
+ *
+ * Terminal events (`success`, `error`, `scheduled`) dispose the handle
+ * automatically. Call {@link AndroidModelDownloadHandle.dispose} to abort
+ * listening early (e.g. component unmount).
  *
  * @example
  * ```ts
  * const download = downloadAndroidOfflineModel("en-US")
  *   .on("progress", (progress) => console.log(progress))
+ *   .on("scheduled", () =>
+ *     console.log("Queued for later — no further events; check getSupportedLocales()"),
+ *   )
  *   .on("success", () => console.log("done"))
  *   .on("error", (code) => console.error(code))
+ *   // Android 13 only — fire-and-forget system dialog
  *   .on("opened_dialog", () => console.log("complete the system dialog"));
  *
  * // Later / on unmount:
@@ -123,7 +138,8 @@ export function downloadAndroidOfflineModel(
       if (e.locale !== locale || handle.disposed) return;
       switch (e.status) {
         case "download_scheduled":
-          handle._emit("scheduled", undefined);
+          // Android: no further updates on this listener after onScheduled().
+          finish("scheduled", undefined);
           break;
         case "download_progress":
           handle._emit("progress", e.progress);
@@ -163,7 +179,9 @@ export function downloadAndroidOfflineModel(
         finish("success", undefined);
         return;
       } else if (result.status === "download_scheduled") {
-        handle._emit("scheduled", undefined);
+        // Android: no further updates on this listener after onScheduled().
+        finish("scheduled", undefined);
+        return;
       }
 
       try {
