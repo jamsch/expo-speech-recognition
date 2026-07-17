@@ -25,7 +25,7 @@ export function DownloadOfflineModelButton(props: { locale: string }) {
     setDownloading(true);
     setProgress(null);
 
-    const download = downloadAndroidOfflineModel(props.locale)
+    downloadRef.current = downloadAndroidOfflineModel(props.locale)
       .on("progress", (value) => {
         console.log(`Downloading... ${value}%`);
         setProgress(value);
@@ -40,7 +40,6 @@ export function DownloadOfflineModelButton(props: { locale: string }) {
       })
       .on("success", () => {
         console.log("Offline model downloaded successfully!");
-        Alert.alert("Offline model downloaded successfully!");
         downloadRef.current = null;
         setDownloading(false);
         setProgress(null);
@@ -61,20 +60,13 @@ export function DownloadOfflineModelButton(props: { locale: string }) {
         setProgress(null);
       })
       .on("opened_dialog", () => {
-        // Android 13 only — fire-and-forget; no progress events follow.
         console.log(
           "Android 13: system download dialog opened (fire-and-forget). Complete it there, then check getSupportedLocales().",
-        );
-        Alert.alert(
-          "Complete the download in the system dialog",
-          "Android 13 opened the offline model download dialog. No further events will fire here — finish the download in the dialog, then check installed locales.",
         );
         downloadRef.current = null;
         setDownloading(false);
         setProgress(null);
       });
-
-    downloadRef.current = download;
   };
 
   const label = downloading
