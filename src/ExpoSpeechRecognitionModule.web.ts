@@ -263,6 +263,10 @@ class ExpoSpeechRecognitionModuleWeb extends NativeModule<ExpoSpeechRecognitionN
     return false;
   }
 
+  supportsOfflineModelDownload() {
+    return false;
+  }
+
   androidTriggerOfflineModelDownload() {
     console.warn(
       "androidTriggerOfflineModelDownload is not supported on web. Returning false.",
@@ -324,14 +328,19 @@ const webToNativeEventMap: {
     if (isFinal) {
       const results: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
         [];
+      const resultList = ev.results[ev.resultIndex];
 
-      for (let i = 0; i < ev.results[ev.resultIndex].length; i++) {
-        const result = ev.results[ev.resultIndex][i];
-        results.push({
-          transcript: result.transcript,
-          confidence: result.confidence,
-          segments: [],
-        });
+      if (resultList) {
+        for (let i = 0; i < resultList.length; i++) {
+          const result = resultList[i];
+          if (result) {
+            results.push({
+              transcript: result.transcript,
+              confidence: result.confidence,
+              segments: [],
+            });
+          }
+        }
       }
       return {
         isFinal: true,
@@ -345,6 +354,9 @@ const webToNativeEventMap: {
 
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const resultList = ev.results[i];
+      if (!resultList) {
+        continue;
+      }
 
       for (let j = 0; j < resultList.length; j++) {
         const result = resultList[j];

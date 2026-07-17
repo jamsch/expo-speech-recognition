@@ -12,9 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "expo.modules.speechrecognition.example",
@@ -54,13 +52,11 @@
       [
         "expo-asset",
         {
-          "assets": [
-            "./assets/audio"
-          ]
+          "assets": ["./assets/audio"]
         }
       ],
       "expo-build-properties",
-      "expo-splash-screen"
+      "expo-status-bar"
     ]
   }
 }

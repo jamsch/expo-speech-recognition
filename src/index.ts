@@ -11,6 +11,13 @@ export { ExpoSpeechRecognitionModule } from "./ExpoSpeechRecognitionModule";
 // Hooks
 export { useSpeechRecognitionEvent } from "./useSpeechRecognitionEvent";
 
+// Android offline model download
+export {
+  downloadAndroidOfflineModel,
+  AndroidModelDownloadHandle,
+} from "./androidOfflineModelDownload";
+export type { AndroidModelDownloadEventMap } from "./androidOfflineModelDownload";
+
 // Constants
 export {
   AVAudioSessionCategory,

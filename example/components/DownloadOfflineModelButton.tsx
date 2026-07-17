@@ -1,43 +1,82 @@
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
-import { useState } from "react";
+import {
+  type AndroidModelDownloadHandle,
+  downloadAndroidOfflineModel,
+  SpeechRecognizerErrorAndroid,
+} from "expo-speech-recognition";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Text, TouchableNativeFeedback, View } from "react-native";
 
 export function DownloadOfflineModelButton(props: { locale: string }) {
-  const [downloading, setDownloading] = useState<{ locale: string } | null>(
-    null,
-  );
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
+  const downloadRef = useRef<AndroidModelDownloadHandle | null>(null);
+
+  useEffect(() => {
+    return () => {
+      downloadRef.current?.dispose();
+      downloadRef.current = null;
+    };
+  }, []);
 
   const handleDownload = () => {
-    setDownloading({ locale: props.locale });
+    downloadRef.current?.dispose();
+    downloadRef.current = null;
 
-    ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({
-      locale: props.locale,
-    })
-      .then((result) => {
-        if (result.status === "opened_dialog") {
-          // On Android 13, the status will be "opened_dialog" indicating that the model download dialog was opened.
-          Alert.alert("Offline model download dialog opened.");
-        } else if (result.status === "download_success") {
-          // On Android 14+, the status will be "download_success" indicating that the model download was successful.
-          Alert.alert("Offline model downloaded successfully!");
-        } else if (result.status === "download_canceled") {
-          // On Android 14+, the download was canceled by a user interaction.
-          Alert.alert("Offline model download was canceled.");
+    setDownloading(true);
+    setProgress(null);
+
+    downloadRef.current = downloadAndroidOfflineModel(props.locale)
+      .on("progress", (value) => {
+        console.log(`Downloading... ${value}%`);
+        setProgress(value);
+      })
+      .on("scheduled", () => {
+        console.log(
+          "Download queued for later (e.g. waiting for Wi‑Fi). No further events on this handle — check getSupportedLocales() later.",
+        );
+        downloadRef.current = null;
+        setDownloading(false);
+        setProgress(null);
+      })
+      .on("success", () => {
+        console.log("Offline model downloaded successfully!");
+        downloadRef.current = null;
+        setDownloading(false);
+        setProgress(null);
+      })
+      .on("error", (code) => {
+        switch (code) {
+          case SpeechRecognizerErrorAndroid.ERROR_CLIENT:
+            console.log("Cancelled by the user");
+            break;
+          default:
+            console.log(
+              `Failed to download offline model! Error code: ${code}`,
+            );
+            break;
         }
+        downloadRef.current = null;
+        setDownloading(false);
+        setProgress(null);
       })
-      .catch((err) => {
-        Alert.alert("Failed to download offline model!", err.message);
-      })
-      .finally(() => {
-        setDownloading(null);
+      .on("opened_dialog", () => {
+        console.log(
+          "Android 13: system download dialog opened (fire-and-forget). Complete it there, then check getSupportedLocales().",
+        );
+        downloadRef.current = null;
+        setDownloading(false);
+        setProgress(null);
       });
   };
 
+  const label = downloading
+    ? progress != null
+      ? `Downloading ${props.locale}… ${progress}%`
+      : `Downloading ${props.locale} model…`
+    : `Download ${props.locale} Offline Model`;
+
   return (
-    <TouchableNativeFeedback
-      disabled={Boolean(downloading)}
-      onPress={handleDownload}
-    >
+    <TouchableNativeFeedback disabled={downloading} onPress={handleDownload}>
       <View>
         <Text
           style={{
@@ -46,9 +85,7 @@ export function DownloadOfflineModelButton(props: { locale: string }) {
           }}
           adjustsFontSizeToFit
         >
-          {downloading
-            ? `Downloading ${props.locale} model...`
-            : `Download ${props.locale} Offline Model`}
+          {label}
         </Text>
       </View>
     </TouchableNativeFeedback>
