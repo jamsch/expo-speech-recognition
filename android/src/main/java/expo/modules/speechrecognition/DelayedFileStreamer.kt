@@ -6,7 +6,10 @@ import android.media.MediaFormat
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -25,20 +28,22 @@ class DelayedFileStreamer {
     private var pfd: ParcelFileDescriptor
     private var sink: ParcelFileDescriptor.AutoCloseOutputStream
     private var delayMillis: Long // Delay between the 4KB chunks
+    private var streamingJob: Job? = null
+    @Volatile
+    private var isClosed = false
 
     constructor(file: File, delayMillis: Long = 100L) {
         audioFile = file
         this.delayMillis = delayMillis
         val pipe = ParcelFileDescriptor.createPipe()
-        val source = ParcelFileDescriptor.AutoCloseInputStream(pipe[0])
+        pfd = pipe[0]
         sink = ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])
-        pfd = ParcelFileDescriptor.dup(source.fd)
     }
 
     fun getParcel(): ParcelFileDescriptor = pfd
 
     fun startStreaming() {
-        CoroutineScope(Dispatchers.IO).launch {
+        streamingJob = CoroutineScope(Dispatchers.IO).launch {
             streamAudioContents(audioFile, sink)
         }
     }
@@ -77,10 +82,12 @@ class DelayedFileStreamer {
     ) {
         // val cacheFile = File(file.parentFile, "cached_audio.pcm")
         // var cacheOutputStream: FileOutputStream? = null
+        var extractor: MediaExtractor? = null
+        var codec: MediaCodec? = null
 
         try {
             // cacheOutputStream = FileOutputStream(cacheFile)
-            val extractor = MediaExtractor()
+            extractor = MediaExtractor()
             extractor.setDataSource(file.absolutePath)
             val format = extractor.getTrackFormat(0)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return
@@ -88,12 +95,13 @@ class DelayedFileStreamer {
 
             extractor.selectTrack(0)
 
-            val codec = MediaCodec.createDecoderByType(mime)
+            codec = MediaCodec.createDecoderByType(mime)
             codec.configure(format, null, null, 0)
             codec.start()
             val bufferInfo = MediaCodec.BufferInfo()
 
             while (true) {
+                currentCoroutineContext().ensureActive()
                 val inputBufferIndex = codec.dequeueInputBuffer(10000)
                 if (inputBufferIndex >= 0) {
                     val inputBuffer = codec.getInputBuffer(inputBufferIndex)
@@ -147,7 +155,9 @@ class DelayedFileStreamer {
                                 // cacheOutputStream?.write(chunk)
                                 // cacheOutputStream?.flush()
                             } catch (e: IOException) {
-                                e.printStackTrace()
+                                if (!isClosed) {
+                                    e.printStackTrace()
+                                }
                             }
                         }
                     }
@@ -160,9 +170,6 @@ class DelayedFileStreamer {
                 }
             }
 
-            codec.stop()
-            codec.release()
-            extractor.release()
             // val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             // val channelCount = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             // val audioFormat =
@@ -175,9 +182,22 @@ class DelayedFileStreamer {
             // // Playback the cached file
             // playbackCachedFile(cacheFile, sampleRate, audioFormat)
         } catch (e: IOException) {
-            e.printStackTrace()
+            if (!isClosed) {
+                e.printStackTrace()
+            }
         } finally {
-            outputStream.close()
+            try {
+                codec?.stop()
+            } catch (_: IllegalStateException) {}
+            codec?.release()
+            extractor?.release()
+            try {
+                outputStream.close()
+            } catch (e: IOException) {
+                if (!isClosed) {
+                    e.printStackTrace()
+                }
+            }
             // cacheOutputStream?.close()
         }
     }
@@ -185,7 +205,19 @@ class DelayedFileStreamer {
     /**
      * Ensure to close the descriptor when done to free resources.
      */
+    @Synchronized
     fun close() {
+        if (isClosed) {
+            return
+        }
+        isClosed = true
+        streamingJob?.cancel()
+        streamingJob = null
+        try {
+            sink.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
         try {
             pfd.close()
         } catch (e: IOException) {

@@ -64,6 +64,8 @@ class ExpoSpeechService(
     private var lastLanguageConfidence: Float? = null
 
     var recognitionState = RecognitionState.INACTIVE
+    private var isAudioEndSent = false
+    private var isTearingDown = false
 
     companion object {
         @SuppressLint("QueryPermissionsNeeded")
@@ -129,6 +131,8 @@ class ExpoSpeechService(
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
             lastVolumeChangeEventTime = 0L
+            isAudioEndSent = false
+            isTearingDown = false
             try {
                 val intent = createSpeechIntent(options)
                 speech = createSpeechRecognizer(options)
@@ -167,6 +171,11 @@ class ExpoSpeechService(
      * Stops the audio recorder and sends the recorded audio file path to the app.
      */
     private fun stopRecording() {
+        if (isAudioEndSent) {
+            return
+        }
+        isAudioEndSent = true
+
         audioRecorder?.stop()
         if (audioRecorder?.outputFile != null) {
             val uri = audioRecorder?.outputFile?.absolutePath?.let { "file://$it" }
@@ -187,6 +196,14 @@ class ExpoSpeechService(
         audioRecorder = null
     }
 
+    private fun stopAudioInput() {
+        if (audioRecorder != null) {
+            stopRecording()
+        }
+        delayedFileStreamer?.close()
+        delayedFileStreamer = null
+    }
+
     /**
      * Stops the speech recognizer.
      * Attempts to emit a final result if the speech recognizer is still running.
@@ -195,6 +212,7 @@ class ExpoSpeechService(
         mainHandler.post {
             recognitionState = RecognitionState.STOPPING
             try {
+                stopAudioInput()
                 speech?.stopListening()
             } catch (e: Exception) {
                 // do nothing
@@ -226,6 +244,10 @@ class ExpoSpeechService(
      * Stops speech recognition, recording and updates state
      */
     private fun teardownAndEnd(state: RecognitionState = RecognitionState.INACTIVE) {
+        if (isTearingDown) {
+            return
+        }
+        isTearingDown = true
         recognitionState = RecognitionState.STOPPING
         mainHandler.post {
             try {
@@ -511,6 +533,10 @@ class ExpoSpeechService(
         // recognitionState = RecognitionState.INACTIVE
         sendEvent("speechend", null)
         log("onEndOfSpeech()")
+
+        if (options.continuous != true && audioRecorder != null) {
+            stopAudioInput()
+        }
     }
 
     override fun onError(error: Int) {
