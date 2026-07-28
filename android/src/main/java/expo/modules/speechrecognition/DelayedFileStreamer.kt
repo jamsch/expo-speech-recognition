@@ -29,6 +29,7 @@ class DelayedFileStreamer {
     private var sink: ParcelFileDescriptor.AutoCloseOutputStream
     private var delayMillis: Long // Delay between the 4KB chunks
     private var streamingJob: Job? = null
+
     @Volatile
     private var isClosed = false
 
@@ -41,6 +42,12 @@ class DelayedFileStreamer {
     }
 
     fun getParcel(): ParcelFileDescriptor = pfd
+
+    private fun logUnlessClosed(e: IOException) {
+        if (!isClosed) {
+            e.printStackTrace()
+        }
+    }
 
     fun startStreaming() {
         streamingJob = CoroutineScope(Dispatchers.IO).launch {
@@ -155,9 +162,7 @@ class DelayedFileStreamer {
                                 // cacheOutputStream?.write(chunk)
                                 // cacheOutputStream?.flush()
                             } catch (e: IOException) {
-                                if (!isClosed) {
-                                    e.printStackTrace()
-                                }
+                                logUnlessClosed(e)
                             }
                         }
                     }
@@ -182,9 +187,7 @@ class DelayedFileStreamer {
             // // Playback the cached file
             // playbackCachedFile(cacheFile, sampleRate, audioFormat)
         } catch (e: IOException) {
-            if (!isClosed) {
-                e.printStackTrace()
-            }
+            logUnlessClosed(e)
         } finally {
             try {
                 codec?.stop()
@@ -194,9 +197,7 @@ class DelayedFileStreamer {
             try {
                 outputStream.close()
             } catch (e: IOException) {
-                if (!isClosed) {
-                    e.printStackTrace()
-                }
+                logUnlessClosed(e)
             }
             // cacheOutputStream?.close()
         }
@@ -211,6 +212,7 @@ class DelayedFileStreamer {
             return
         }
         isClosed = true
+        // cancel() can't interrupt a write() blocked on a full pipe; closing the sink is what does
         streamingJob?.cancel()
         streamingJob = null
         try {

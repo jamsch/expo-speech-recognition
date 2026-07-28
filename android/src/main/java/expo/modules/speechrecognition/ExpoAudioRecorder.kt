@@ -68,6 +68,8 @@ class ExpoAudioRecorder(
     companion object {
         private const val TAG = "ExpoAudioRecorder"
 
+        private const val DRAIN_TIMEOUT_MS = 250L
+
         private fun shortReverseBytes(s: Short): Int =
             java.lang.Short
                 .reverseBytes(s)
@@ -166,19 +168,24 @@ class ExpoAudioRecorder(
         audioRecorder?.stop()
         audioRecorder?.release()
         audioRecorder = null
+
+        // The recording thread closes the streams itself; this join is only so that the WAV write
+        // below sees a complete temp PCM file.
+        val thread = recordingThread
         recordingThread = null
-        if (outputFilePath != null) {
-            try {
-                outputFile =
-                    appendWavHeader(
-                        outputFilePath,
-                        tempPcmFile,
-                        sampleRateInHz,
-                    )
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to append WAV header", e)
-                e.printStackTrace()
-            }
+        try {
+            thread?.join(DRAIN_TIMEOUT_MS)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+        val hasDrained = thread?.isAlive != true
+
+        // Backstop in case the recording thread never got there; this is what signals EOF
+        try {
+            outputStream?.close()
+            outputStream = null
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
         // Close the ParcelFileDescriptor
         try {
@@ -186,12 +193,23 @@ class ExpoAudioRecorder(
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        // And the output stream
-        try {
-            outputStream?.close()
-            outputStream = null
-        } catch (e: IOException) {
-            e.printStackTrace()
+        if (outputFilePath != null) {
+            if (hasDrained) {
+                try {
+                    outputFile =
+                        appendWavHeader(
+                            outputFilePath,
+                            tempPcmFile,
+                            sampleRateInHz,
+                        )
+                } catch (e: IOException) {
+                    Log.e(TAG, "Failed to append WAV header", e)
+                    e.printStackTrace()
+                }
+            } else {
+                // Still appending to the temp PCM file, so the WAV would be truncated
+                Log.w(TAG, "Recording thread did not drain within ${DRAIN_TIMEOUT_MS}ms; skipping the WAV write")
+            }
         }
     }
 
@@ -254,6 +272,12 @@ class ExpoAudioRecorder(
                 }
             }
         }
-        tempFileOutputStream.close()
+        // Closing here orders EOF after the final write(), so the tail can't be cut off mid-write
+        try {
+            tempFileOutputStream.close()
+            outputStream?.close()
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to close the audio output streams", e)
+        }
     }
 }
