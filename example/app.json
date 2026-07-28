@@ -60,7 +60,8 @@
         }
       ],
       "expo-build-properties",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-audio"
     ]
   }
 }

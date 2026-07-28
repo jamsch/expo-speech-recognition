@@ -16,6 +16,7 @@
     "babel-plugin-module-resolver": "^5.0.2",
     "expo": "~56.0.12",
     "expo-asset": "~56.0.15",
+    "expo-audio": "~56.0.13",
     "expo-build-properties": "~56.0.16",
     "expo-file-system": "~56.0.7",
     "expo-splash-screen": "~56.0.7",

@@ -43,6 +43,7 @@ import { Card } from "./components/ui/Card";
 import { DownloadOfflineModelButton } from "./components/DownloadOfflineModelButton";
 import { TranscribeLocalAudioFileDemo } from "./components/TranscribeLocalAudioFileDemo";
 import { TranscribeRemoteAudioFileDemo } from "./components/TranscribeRemoteAudioFileDemo";
+import { RecordingPlayer } from "./components/RecordingPlayer";
 
 const speechRecognitionServices =
   ExpoSpeechRecognitionModule.getSpeechRecognitionServices();
@@ -693,7 +694,7 @@ function AndroidSettings(props: {
                   title={model}
                   active={Boolean(
                     settings.androidIntentOptions?.EXTRA_LANGUAGE_MODEL ===
-                      model,
+                    model,
                   )}
                   onPress={() =>
                     handleChange("androidIntentOptions", {
@@ -755,6 +756,7 @@ function OtherSettings(props: {
   const { value: settings, onChange: handleChange } = props;
 
   const [recordingPath, setRecordingPath] = useState<string | null>(null);
+  const [recordingId, setRecordingId] = useState(0);
 
   useSpeechRecognitionEvent("audiostart", (event) => {
     // Note: don't use this file until the "audioend" event is emitted
@@ -770,6 +772,7 @@ function OtherSettings(props: {
     // iOS: Will be saved as a .wav file
     // e.g. "file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav"
     setRecordingPath(event.uri);
+    setRecordingId((id) => id + 1);
   });
 
   // Enable audio recording
@@ -896,6 +899,7 @@ function OtherSettings(props: {
                 <Text style={styles.text}>
                   Audio recording saved to {recordingPath}
                 </Text>
+                <RecordingPlayer key={recordingId} uri={recordingPath} />
                 <BigButton
                   title="Transcribe the recording"
                   color="#539bf5"
