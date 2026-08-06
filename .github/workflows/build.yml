@@ -1,6 +1,7 @@
 name: Build
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -24,3 +25,6 @@ jobs:
 
       - name: 🛠️ Run the build
         run: npm run prepare
+
+      - name: 🧪 Run tests
+        run: npm test -- --runInBand

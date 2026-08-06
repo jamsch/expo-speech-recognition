@@ -131,6 +131,65 @@ Now, you're ready to move on to the [Usage](#usage) section.
 
 </details>
 
+### HarmonyOS
+
+HarmonyOS support uses the same public JavaScript API as iOS, Android, and web.
+It requires an Expo SDK build that includes Expo's Harmony Route 3 runtime,
+autolinking, config plugins, and CLI support. The stock Expo Go app cannot load
+this native module.
+
+With a Harmony-enabled Expo SDK, install this package normally and run:
+
+```bash
+npx expo prebuild --platform harmony
+npx expo run:harmony
+```
+
+The Harmony implementation targets API 22 and declares the microphone,
+internet, Core Speech Kit, and Audio Capturer requirements through
+`expo-module.config.json`. No manual HAR copying or native project edits are
+required.
+
+Live microphone recognition uses the regular `start()`, `stop()`, and
+`abort()` methods. Local audio files use the community `audioSource` option
+and return transcription through `result` events:
+
+```ts
+import {
+  AudioEncodingAndroid,
+  ExpoSpeechRecognitionModule,
+} from "expo-speech-recognition";
+
+const resultSubscription = ExpoSpeechRecognitionModule.addListener(
+  "result",
+  ({ isFinal, results }) => {
+    if (isFinal) {
+      console.log(results[0]?.transcript);
+    }
+  },
+);
+const endSubscription = ExpoSpeechRecognitionModule.addListener("end", () => {
+  resultSubscription.remove();
+  endSubscription.remove();
+});
+
+ExpoSpeechRecognitionModule.start({
+  lang: "zh-CN",
+  interimResults: false,
+  audioSource: {
+    uri: "file:///path/to/16khz-mono-pcm.wav",
+    sampleRate: 16000,
+    audioChannels: 1,
+    audioEncoding: AudioEncodingAndroid.ENCODING_PCM_16BIT,
+  },
+});
+```
+
+Harmony file input currently supports local `asset://`, `file://`, and
+absolute paths containing raw PCM or WAV audio that is 16 kHz, mono, signed
+16-bit little-endian. Remote URLs and other codecs fail with an
+`audio-capture` error instead of reporting a false success.
+
 ## Usage
 
 ### Using Hooks
@@ -779,7 +838,7 @@ ExpoSpeechRecognitionModule.start({
 
 ## Platform Compatibility Table
 
-As of 12 July 2025, the following platforms are supported:
+The following platforms are supported:
 
 ### Mobile Platforms (React Native)
 
@@ -798,6 +857,21 @@ As of 12 July 2025, the following platforms are supported:
 | **Language Detection**              | ❌          | ❌         | ✅ \*       | ❌      | \*Android: only with on-device recognition                                      |
 | **Word Confidence & Timing**        | ❌          | ❌         | ✅ \*       | ✅      | \*Android: only with on-device recognition                                      |
 | **Offensive Word Masking**          | ❌          | ✅         | ✅          | ❌      | Android 13+ with `EXTRA_MASK_OFFENSIVE_WORDS` enabled in `androidIntentOptions` |
+
+### HarmonyOS API 22
+
+| Feature                              | Support | Notes                                                                                                    |
+| ------------------------------------ | ------- | -------------------------------------------------------------------------------------------------------- |
+| **Basic Speech Recognition**         | ✅      | Core Speech Kit with the public module API and event shapes                                              |
+| **Interim Results**                  | ✅      | Controlled by `interimResults`                                                                           |
+| **On-Device Recognition**            | ✅      | `requiresOnDeviceRecognition` selects the offline engine; the requested language model must be installed |
+| **Audio File Transcription**         | ✅      | Local 16 kHz mono signed-16 PCM/WAV through `audioSource`                                                |
+| **Continuous Recognition**           | Partial | Core Speech Kit owns utterance and session termination                                                   |
+| **Audio Recording**                  | ❌      | `supportsRecording()` returns false; `recordingOptions.persist` emits `audio-capture`                    |
+| **Multiple Alternatives**            | ❌      | Harmony returns one alternative with confidence `-1` and no word segments                                |
+| **Contextual Strings / Punctuation** | ❌      | Options are accepted for API compatibility but are not applied                                           |
+| **Volume / Language Detection**      | ❌      | Event names are registered, but Harmony does not synthesize unsupported native data                      |
+| **Remote Audio URLs / Other Codecs** | ❌      | Use a local 16 kHz mono signed-16 PCM/WAV file                                                           |
 
 ### Web Platforms
 

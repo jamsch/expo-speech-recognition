@@ -1,0 +1,7 @@
+{
+  module: {
+    name: "expo_speech_recognition_harmony",
+    type: "har",
+    deviceTypes: ["default"],
+  },
+}

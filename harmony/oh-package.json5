@@ -1,0 +1,13 @@
+{
+  modelVersion: "5.0.0",
+  name: "@bitfun/expo-speech-recognition-harmony",
+  version: "0.1.0",
+  main: "src/main/ets/Index.ets",
+  dependencies: {
+    "@rnoh/react-native-openharmony": "file:../../../expo/node_modules/@react-native-oh/react-native-harmony/react_native_openharmony.har",
+    "@expo/expo-modules-core": "file:../../expo-modules-core/harmony/build/default/outputs/default/expo_modules_core_harmony.har",
+  },
+  overrides: {
+    "@rnoh/react-native-openharmony": "file:../../../expo/node_modules/@react-native-oh/react-native-harmony/react_native_openharmony.har",
+  },
+}

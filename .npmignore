@@ -15,3 +15,12 @@ __tests__
 /.prettierignore
 /eslint.config.mjs
 /CHANGELOG.md
+
+# HarmonyOS build products and machine-local configuration
+/harmony/.hvigor/
+/harmony/build/
+/harmony/oh_modules/
+/harmony/local.properties
+/harmony/deveco-cli.toml
+*.har
+*.hap

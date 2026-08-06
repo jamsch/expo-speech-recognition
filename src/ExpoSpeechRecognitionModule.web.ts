@@ -324,9 +324,16 @@ const webToNativeEventMap: {
     if (isFinal) {
       const results: ExpoSpeechRecognitionNativeEventMap["result"]["results"] =
         [];
+      const resultList = ev.results[ev.resultIndex];
 
-      for (let i = 0; i < ev.results[ev.resultIndex].length; i++) {
-        const result = ev.results[ev.resultIndex][i];
+      if (!resultList) {
+        return { isFinal: true, results };
+      }
+      for (let i = 0; i < resultList.length; i++) {
+        const result = resultList[i];
+        if (!result) {
+          continue;
+        }
         results.push({
           transcript: result.transcript,
           confidence: result.confidence,
@@ -345,6 +352,9 @@ const webToNativeEventMap: {
 
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const resultList = ev.results[i];
+      if (!resultList) {
+        continue;
+      }
 
       for (let j = 0; j < resultList.length; j++) {
         const result = resultList[j];

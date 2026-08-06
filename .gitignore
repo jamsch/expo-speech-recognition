@@ -56,6 +56,14 @@ yarn-error.log
 # Expo
 .expo/*
 
+# HarmonyOS
+harmony/.hvigor/
+harmony/build/
+harmony/oh_modules/
+harmony/local.properties
+*.har
+*.hap
+
 # Test assets
 example/assets/audio/test/
 example/android/

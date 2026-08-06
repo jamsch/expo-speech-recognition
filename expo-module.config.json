@@ -1,9 +1,29 @@
 {
-  "platforms": ["ios", "android", "web"],
+  "platforms": ["ios", "android", "web", "harmony"],
   "ios": {
     "modules": ["ExpoSpeechRecognitionModule"]
   },
   "android": {
     "modules": ["expo.modules.speechrecognition.ExpoSpeechRecognitionModule"]
+  },
+  "harmony": {
+    "modules": ["ExpoSpeechRecognition"],
+    "arktsPackageClass": "ExpoSpeechRecognitionHarmonyPackage",
+    "ohPackageName": "@bitfun/expo-speech-recognition-harmony",
+    "harName": "expo_speech_recognition_harmony.har",
+    "requiredSysCaps": [
+      "SystemCapability.AI.SpeechRecognizer",
+      "SystemCapability.Multimedia.Audio.Capturer"
+    ],
+    "permissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.MICROPHONE",
+        "reason": "Allow the app to recognize speech from the microphone."
+      }
+    ],
+    "minApi": 22
   }
 }
