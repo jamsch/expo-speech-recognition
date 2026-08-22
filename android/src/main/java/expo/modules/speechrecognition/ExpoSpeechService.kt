@@ -43,13 +43,6 @@ enum class SoundState {
     SILENT,
 }
 
-private enum class EndReason {
-    NONE,
-    STOP,
-    ABORT,
-    ERROR,
-}
-
 class ExpoSpeechService(
     private val reactContext: Context,
     private var sendEvent: (name: String, body: Map<String, Any?>?) -> Unit,
@@ -72,30 +65,14 @@ class ExpoSpeechService(
 
     var recognitionState = RecognitionState.INACTIVE
 
-    private var pendingAudioUri: String? = null
-    private var isAudioInputStopped = false
-    private var isAudioStartSent = false
-    private var isAudioEndSent = false
-
-    /** Only reset in `start()`, so a late callback can't run a second teardown */
-    private var isTearingDown = false
-    private var endReason = EndReason.NONE
-
-    /**
-     * The session ends when the audio source reaches EOF, so `stop()` closes the source instead of
-     * calling `stopListening()`, which interrupts the recognizer mid-read and discards the segment.
-     */
-    private var endsOnAudioSourceEof = false
-    private var lastPartialResults: List<Map<String, Any>>? = null
-
-    private val stopTimeoutRunnable =
-        Runnable {
-            log("stop() timed out waiting for a final result")
-            teardownAndEnd()
-        }
+    private var currentSession: RecognitionSession? = null
 
     companion object {
-        private const val STOP_TIMEOUT_MS = 5000L
+        /**
+         * How long a stop waits for the recognizer's terminal callback before ending the session
+         * itself. Only a recognizer that never reports back should reach this.
+         */
+        private const val TERMINAL_CALLBACK_TIMEOUT_MS = 8_000L
 
         @SuppressLint("QueryPermissionsNeeded")
         fun findComponentNameByPackageName(
@@ -143,58 +120,90 @@ class ExpoSpeechService(
         return value
     }
 
+    /**
+     * Android may deliver callbacks after a recognizer has been destroyed. Capturing the session
+     * in a dedicated listener keeps those callbacks from mutating whichever session started next.
+     */
+    private fun createRecognitionListener(session: RecognitionSession): RecognitionListener =
+        object : RecognitionListener {
+            private inline fun ifCurrent(block: () -> Unit) {
+                if (currentSession === session && session.acceptsRecognizerCallbacks()) {
+                    block()
+                }
+            }
+
+            override fun onReadyForSpeech(params: Bundle?) =
+                ifCurrent { this@ExpoSpeechService.onReadyForSpeech(params) }
+
+            override fun onBeginningOfSpeech() = ifCurrent { this@ExpoSpeechService.onBeginningOfSpeech() }
+
+            override fun onRmsChanged(rmsdB: Float) = ifCurrent { this@ExpoSpeechService.onRmsChanged(rmsdB) }
+
+            override fun onBufferReceived(buffer: ByteArray?) =
+                ifCurrent { this@ExpoSpeechService.onBufferReceived(buffer) }
+
+            override fun onEndOfSpeech() = ifCurrent { this@ExpoSpeechService.onEndOfSpeech() }
+
+            override fun onError(error: Int) = ifCurrent { this@ExpoSpeechService.onError(error) }
+
+            override fun onResults(results: Bundle?) = ifCurrent { this@ExpoSpeechService.onResults(results) }
+
+            override fun onPartialResults(partialResults: Bundle?) =
+                ifCurrent { this@ExpoSpeechService.onPartialResults(partialResults) }
+
+            override fun onEvent(
+                eventType: Int,
+                params: Bundle?,
+            ) = ifCurrent { this@ExpoSpeechService.onEvent(eventType, params) }
+
+            override fun onSegmentResults(segmentResults: Bundle) =
+                ifCurrent { this@ExpoSpeechService.onSegmentResults(segmentResults) }
+
+            override fun onEndOfSegmentedSession() = ifCurrent { this@ExpoSpeechService.onEndOfSegmentedSession() }
+
+            override fun onLanguageDetection(results: Bundle) =
+                ifCurrent { this@ExpoSpeechService.onLanguageDetection(results) }
+        }
+
     /** Starts speech recognition */
     fun start(options: SpeechRecognitionOptions) {
         this.options = options
         mainHandler.post {
             log("Start recognition.")
 
-            // Destroy any previous SpeechRecognizer / audio recorder
-            mainHandler.removeCallbacks(stopTimeoutRunnable)
-            speech?.destroy()
+            destroyRecognizerResources()
             audioRecorder?.stop()
             audioRecorder = null
-            delayedFileStreamer?.close()
-            delayedFileStreamer = null
+            currentSession?.deactivate()
+            currentSession = null
             lastDetectedLanguage = null
             lastLanguageConfidence = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
             lastVolumeChangeEventTime = 0L
-            pendingAudioUri = null
-            lastPartialResults = null
-            isAudioInputStopped = false
-            isAudioStartSent = false
-            isAudioEndSent = false
-            isTearingDown = false
-            endReason = EndReason.NONE
-            endsOnAudioSourceEof = false
             try {
-                val intent = createSpeechIntent(options)
-                // Must follow createSpeechIntent(), which creates the recorder/streamer and applies
-                // any caller-supplied EXTRA_SEGMENTED_SESSION last.
-                endsOnAudioSourceEof =
-                    intent.getStringExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION) ==
-                        RecognizerIntent.EXTRA_AUDIO_SOURCE &&
-                        (audioRecorder != null || delayedFileStreamer != null)
+                val request = createSpeechRequest(options)
+                val session = RecognitionSession(request.stopMode, ::handleSessionEffect)
+                currentSession = session
                 speech = createSpeechRecognizer(options)
 
-                // Start the audio recorder
                 audioRecorder?.start()
 
-                // Start listening
-                speech?.setRecognitionListener(this)
-                speech?.startListening(intent)
+                speech?.setRecognitionListener(createRecognitionListener(session))
+                speech?.startListening(request.intent)
 
+                if (currentSession !== session) {
+                    return@post
+                }
                 delayedFileStreamer?.startStreaming()
 
+                session.onAudioStarted()
                 sendEvent(
                     "audiostart",
                     mapOf(
                         "uri" to audioRecorder?.outputFileUri,
                     ),
                 )
-                isAudioStartSent = true
             } catch (e: Exception) {
                 val errorMessage =
                     when {
@@ -205,46 +214,68 @@ class ExpoSpeechService(
                 e.printStackTrace()
                 log("Failed to create Speech Recognizer with error: $errorMessage")
                 sendEvent("error", mapOf("error" to "audio-capture", "message" to errorMessage, "code" to -1))
+                if (currentSession == null) {
+                    audioRecorder?.stop()
+                    audioRecorder = null
+                    destroyRecognizerResources()
+                }
                 teardownAndEnd()
             }
         }
     }
 
-    /**
-     * Stops the audio recorder / file streamer, which signals EOF to the recognizer.
-     *
-     * "audioend" is emitted during teardown instead, so that it follows the final result.
-     */
-    private fun stopAudioInput() {
-        if (isAudioInputStopped) {
+    private fun stopAudioInput(onStopped: (String?) -> Unit) {
+        val recorder = audioRecorder
+        audioRecorder = null
+        if (recorder == null) {
+            // Complete on the next loop turn, so this path is as asynchronous as the recorder's.
+            mainHandler.post {
+                onStopped(null)
+            }
             return
         }
-        isAudioInputStopped = true
-
-        audioRecorder?.let { recorder ->
-            recorder.stop()
-            pendingAudioUri = recorder.outputFile?.absolutePath?.let { "file://$it" }
+        recorder.stop {
+            val uri = recorder.outputFile?.absolutePath?.let { "file://$it" }
+            mainHandler.post {
+                onStopped(uri)
+            }
         }
-        audioRecorder = null
-        delayedFileStreamer?.close()
-        delayedFileStreamer = null
     }
 
-    /**
-     * Sends the "audioend" event, along with the uri of the persisted recording (if any).
-     * Skipped when "audiostart" was never emitted, i.e. `start()` threw before capturing began.
-     */
-    private fun sendAudioEnd() {
-        if (isAudioEndSent || !isAudioStartSent) {
-            return
+    private fun handleSessionEffect(
+        effect: RecognitionSessionEffect,
+        onAudioStopped: (String?) -> Unit,
+    ) {
+        when (effect) {
+            RecognitionSessionEffect.StopAudioInput -> stopAudioInput(onAudioStopped)
+            RecognitionSessionEffect.StopListening -> {
+                try {
+                    speech?.stopListening()
+                } catch (_: Exception) {}
+            }
+            RecognitionSessionEffect.ReleaseRecognizer -> releaseRecognizer()
+            RecognitionSessionEffect.AwaitTerminalCallback -> armTerminalCallbackWatchdog()
+            is RecognitionSessionEffect.EmitAudioEnd -> {
+                sendEvent("audioend", mapOf("uri" to effect.uri))
+            }
+            is RecognitionSessionEffect.EmitEnd -> {
+                soundState = SoundState.INACTIVE
+                sendEvent("end", null)
+                recognitionState = effect.state
+                currentSession = null
+            }
         }
-        isAudioEndSent = true
-        sendEvent(
-            "audioend",
-            mapOf(
-                "uri" to pendingAudioUri,
-            ),
-        )
+    }
+
+    /** Nothing obliges a recognizer to deliver the terminal callback a stop waits on. */
+    private fun armTerminalCallbackWatchdog() {
+        val session = currentSession ?: return
+        mainHandler.postDelayed({
+            if (currentSession === session) {
+                log("Timed out waiting for the recognizer's final result after stop().")
+                session.finish()
+            }
+        }, TERMINAL_CALLBACK_TIMEOUT_MS)
     }
 
     /**
@@ -253,20 +284,9 @@ class ExpoSpeechService(
      */
     fun stop() {
         mainHandler.post {
+            val session = currentSession ?: return@post
             recognitionState = RecognitionState.STOPPING
-            endReason = EndReason.STOP
-
-            if (endsOnAudioSourceEof) {
-                // EOF ends the session by itself (onSegmentResults -> onEndOfSegmentedSession)
-                stopAudioInput()
-                mainHandler.postDelayed(stopTimeoutRunnable, STOP_TIMEOUT_MS)
-            } else {
-                try {
-                    speech?.stopListening()
-                } catch (e: Exception) {
-                    // do nothing
-                }
-            }
+            session.requestStop()
         }
         // Wait for the onResults() / onError() handlers to be called
         // This is to ensure that the final result is emitted and the end event is sent
@@ -278,8 +298,9 @@ class ExpoSpeechService(
      * final result is emitted.
      */
     fun abort() {
-        endReason = EndReason.ABORT
-        teardownAndEnd()
+        mainHandler.post {
+            teardownAndEnd(abort = true)
+        }
     }
 
     /**
@@ -288,39 +309,69 @@ class ExpoSpeechService(
     fun destroy() {
         // Overwrite sendEvent to prevent sending events after destroy
         sendEvent = { _, _ -> }
-        endReason = EndReason.ABORT
-        teardownAndEnd()
+        mainHandler.post {
+            teardownAndEnd(abort = true)
+        }
+    }
+
+    /** Destroys the recognizer inline. Only safe outside the recognizer's own listener callbacks. */
+    private fun destroyRecognizerResources() {
+        speech?.destroy()
+        speech = null
+        delayedFileStreamer?.close()
+        delayedFileStreamer = null
+    }
+
+    /**
+     * Detaches the recognizer, then destroys it on a later loop turn: [SpeechRecognizer.destroy]
+     * must not run from inside one of the recognizer's own listener callbacks.
+     */
+    private fun releaseRecognizer() {
+        val recognizer = speech
+        speech = null
+        delayedFileStreamer?.close()
+        delayedFileStreamer = null
+        mainHandler.post {
+            try {
+                recognizer?.cancel()
+            } catch (_: Exception) {}
+            recognizer?.destroy()
+        }
     }
 
     /**
      * Stops speech recognition, recording and updates state
      */
-    private fun teardownAndEnd(state: RecognitionState = RecognitionState.INACTIVE) {
-        if (isTearingDown) {
-            return
-        }
-        isTearingDown = true
-        recognitionState = RecognitionState.STOPPING
-        mainHandler.removeCallbacks(stopTimeoutRunnable)
-        mainHandler.post {
-            try {
-                speech?.cancel()
-            } catch (e: Exception) {
-                // do nothing
-            }
-            speech?.destroy()
-            stopAudioInput()
-
-            recoverOpenSegment()
-
+    private fun teardownAndEnd(
+        state: RecognitionState = RecognitionState.INACTIVE,
+        abort: Boolean = false,
+    ) {
+        val session = currentSession
+        if (session == null) {
             soundState = SoundState.INACTIVE
-            sendAudioEnd()
             sendEvent("end", null)
             recognitionState = state
+            return
+        }
+        recognitionState = RecognitionState.STOPPING
+        if (abort) {
+            session.abort(state)
+        } else {
+            session.finish(state)
         }
     }
 
-    private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
+    /**
+     * A recognition intent and the stop mode its extras imply: whether the session it starts ends
+     * by closing the audio source or by calling [SpeechRecognizer.stopListening].
+     */
+    private data class SpeechRequest(
+        val intent: Intent,
+        val stopMode: RecognitionStopMode,
+    )
+
+    private fun createSpeechRequest(options: SpeechRecognitionOptions): SpeechRequest {
+        var stopMode = RecognitionStopMode.SPEECH_RECOGNIZER
         val action = options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH
         val intent = Intent(action)
 
@@ -368,6 +419,7 @@ class ExpoSpeechService(
                         RecognizerIntent.EXTRA_SEGMENTED_SESSION,
                         RecognizerIntent.EXTRA_AUDIO_SOURCE,
                     )
+                    stopMode = RecognitionStopMode.AUDIO_SOURCE_EOF
                 } else {
                     // Non-continuous mode while file recording (Android 13 and above)
                     intent.putExtra(
@@ -429,6 +481,8 @@ class ExpoSpeechService(
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
                     options.audioSource.audioChannels ?: 1,
                 )
+                // stopMode is left alone here: DelayedFileStreamer always plays the file
+                // through to the end, so stop() has no way to close this audio source early.
                 intent.putExtra(
                     RecognizerIntent.EXTRA_SEGMENTED_SESSION,
                     RecognizerIntent.EXTRA_AUDIO_SOURCE,
@@ -490,7 +544,7 @@ class ExpoSpeechService(
             }
         }
 
-        return intent
+        return SpeechRequest(intent, stopMode)
     }
 
     private fun resolveFilePathFromConfig(recordingOptions: RecordingOptions): String {
@@ -591,20 +645,6 @@ class ExpoSpeechService(
     }
 
     override fun onError(error: Int) {
-        // A `client` error during a stop is a teardown artifact of the recognizer closing its own
-        // audio source. Only swallow it if we have a result to send instead.
-        val isStopArtifact =
-            error == SpeechRecognizer.ERROR_CLIENT &&
-                endReason == EndReason.STOP &&
-                (!lastPartialResults.isNullOrEmpty() || isTearingDown)
-
-        if (isStopArtifact) {
-            log("onError() - ignoring client error raised during stop()")
-            teardownAndEnd()
-            return
-        }
-
-        endReason = EndReason.ERROR
         val errorInfo = getErrorInfo(error)
         // Web Speech API:
         // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
@@ -686,29 +726,15 @@ class ExpoSpeechService(
             else -> 0.0f
         }
 
-    /**
-     * Promotes the last interim result to a final "result" event when `stop()` left a segment open
-     * that the recognizer never finalized. Always consumes it, so it can't be emitted twice.
-     */
-    private fun recoverOpenSegment(): Boolean {
-        val recoveredResults = lastPartialResults
-        lastPartialResults = null
+    override fun onResults(results: Bundle?) {
+        val resultsList = getResults(results)
 
-        if (endReason != EndReason.STOP || recoveredResults.isNullOrEmpty()) {
-            return false
-        }
-        log("Recovered open segment from the last interim result")
-        sendEvent("result", mapOf("results" to recoveredResults, "isFinal" to true))
-        return true
-    }
-
-    /**
-     * Emits a final "result" event, falling back to the last interim result when the recognizer
-     * returns an empty final after `stop()` closed its audio source.
-     */
-    private fun emitFinalResults(resultsList: List<Map<String, Any>>) {
-        if (resultsList.isNotEmpty()) {
-            lastPartialResults = null
+        if (resultsList.isEmpty()) {
+            // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
+            // The nomatch event of the Web Speech API is fired
+            // when the speech recognition service returns a final result with no significant recognition.
+            sendEvent("nomatch", null)
+        } else {
             sendEvent(
                 "result",
                 mapOf(
@@ -716,20 +742,10 @@ class ExpoSpeechService(
                     "isFinal" to true,
                 ),
             )
-        } else if (!recoverOpenSegment()) {
-            // https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition/nomatch_event
-            // The nomatch event of the Web Speech API is fired
-            // when the speech recognition service returns a final result with no significant recognition.
-            sendEvent("nomatch", null)
         }
-    }
-
-    override fun onResults(results: Bundle?) {
-        val resultsList = getResults(results)
-        emitFinalResults(resultsList)
         log("onResults(), results: $resultsList")
 
-        teardownAndEnd()
+        currentSession?.finish()
     }
 
     override fun onPartialResults(partialResults: Bundle?) {
@@ -739,7 +755,6 @@ class ExpoSpeechService(
 
         log("onPartialResults(), results: $nonEmptyStrings")
         if (nonEmptyStrings.isNotEmpty()) {
-            lastPartialResults = nonEmptyStrings
             sendEvent("result", mapOf("results" to nonEmptyStrings, "isFinal" to false))
         }
     }
@@ -769,18 +784,23 @@ class ExpoSpeechService(
      */
     override fun onSegmentResults(segmentResults: Bundle) {
         val resultsList = getResults(segmentResults)
-        emitFinalResults(resultsList)
-        log("onSegmentResults(), transcriptions: $resultsList")
-
-        // If the user opted to stop
-        if (recognitionState == RecognitionState.STOPPING) {
-            teardownAndEnd()
+        if (resultsList.isEmpty()) {
+            sendEvent("nomatch", null)
+        } else {
+            sendEvent(
+                "result",
+                mapOf(
+                    "results" to resultsList,
+                    "isFinal" to true,
+                ),
+            )
         }
+        log("onSegmentResults(), transcriptions: $resultsList")
     }
 
     override fun onEndOfSegmentedSession() {
         log("onEndOfSegmentedSession()")
-        teardownAndEnd()
+        currentSession?.finish()
     }
 
     override fun onEvent(
