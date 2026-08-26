@@ -9,14 +9,16 @@ public class MicrophoneRequester: NSObject, EXPermissionsRequester {
     resolver resolve: @escaping EXPromiseResolveBlock, rejecter reject: EXPromiseRejectBlock
   ) {
     AVAudioSession.sharedInstance().requestRecordPermission { authorized in
-      resolve(self.getPermissions())
+      resolve(self.permissionsResult(recordPermission: authorized ? .granted : .denied))
     }
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
-    var status: EXPermissionStatus
+    return permissionsResult(recordPermission: AVAudioSession.sharedInstance().recordPermission)
+  }
 
-    let recordPermission = AVAudioSession.sharedInstance().recordPermission
+  private func permissionsResult(recordPermission: AVAudioSession.RecordPermission) -> [AnyHashable: Any] {
+    var status: EXPermissionStatus
 
     if recordPermission == .granted {
       status = EXPermissionStatusGranted

@@ -10,14 +10,16 @@ public class SpeechRecognizerRequester: NSObject, EXPermissionsRequester {
     resolver resolve: @escaping EXPromiseResolveBlock, rejecter reject: EXPromiseRejectBlock
   ) {
     SFSpeechRecognizer.requestAuthorization { status in
-      resolve(self.getPermissions())
+      resolve(self.permissionsResult(speechPermission: status))
     }
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
-    var status: EXPermissionStatus
+    return permissionsResult(speechPermission: SFSpeechRecognizer.authorizationStatus())
+  }
 
-    let speechPermission = SFSpeechRecognizer.authorizationStatus()
+  private func permissionsResult(speechPermission: SFSpeechRecognizerAuthorizationStatus) -> [AnyHashable: Any] {
+    var status: EXPermissionStatus
 
     if speechPermission == .authorized {
       status = EXPermissionStatusGranted
