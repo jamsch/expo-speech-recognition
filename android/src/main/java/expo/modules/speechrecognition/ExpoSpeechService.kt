@@ -405,7 +405,10 @@ class ExpoSpeechService(
                 is String -> intent.putExtra(fieldValue, value)
                 is List<*> -> {
                     if (value.all { it is String }) {
-                        intent.putExtra(fieldValue, value.filterIsInstance<String>().toTypedArray())
+                        intent.putStringArrayListExtra(
+                            fieldValue,
+                            ArrayList(value.filterIsInstance<String>()),
+                        )
                     }
                 }
                 is Double -> intent.putExtra(fieldValue, value.toInt())

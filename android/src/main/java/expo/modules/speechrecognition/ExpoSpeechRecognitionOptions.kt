@@ -4,7 +4,9 @@ import android.media.AudioFormat
 import android.speech.RecognizerIntent
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import expo.modules.kotlin.types.OptimizedRecord
 
+@OptimizedRecord
 class SpeechRecognitionOptions : Record {
     @Field
     val interimResults: Boolean? = false
@@ -58,6 +60,7 @@ class SpeechRecognitionOptions : Record {
     val iosVoiceProcessingEnabled: Boolean? = false
 }
 
+@OptimizedRecord
 class VolumeChangeEventOptions : Record {
     @Field
     val enabled: Boolean? = false
@@ -66,6 +69,7 @@ class VolumeChangeEventOptions : Record {
     val intervalMillis: Int? = null
 }
 
+@OptimizedRecord
 class RecordingOptions : Record {
     @Field
     val persist: Boolean = false
@@ -83,6 +87,7 @@ class RecordingOptions : Record {
     val outputEncoding: String? = null
 }
 
+@OptimizedRecord
 class AudioSourceOptions : Record {
     @Field
     val uri: String = ""
@@ -100,11 +105,13 @@ class AudioSourceOptions : Record {
     val chunkDelayMillis: Long? = null
 }
 
+@OptimizedRecord
 class GetSupportedLocaleOptions : Record {
     @Field
     val androidRecognitionServicePackage: String? = null
 }
 
+@OptimizedRecord
 class TriggerOfflineModelDownloadOptions : Record {
     @Field
     val locale: String = "en-US"
