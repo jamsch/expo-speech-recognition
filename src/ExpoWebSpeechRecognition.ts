@@ -426,14 +426,14 @@ export class ExpoWebSpeechGrammarList implements SpeechGrammarList {
   }
 
   item(index: number): ExpoWebSpeechGrammar {
-    return this.#grammars[index];
+    return this.#grammars[index]!;
   }
 
   addFromString = (grammar: string, weight?: number) => {
     // TODO: parse grammar to html entities (data:application/xml,....)
     this.#grammars.push(new ExpoWebSpeechGrammar(grammar, weight));
     // Set key on this object for compatibility with web SpeechGrammarList API
-    this[this.length - 1] = this.#grammars[this.length - 1];
+    this[this.length - 1] = this.#grammars[this.length - 1]!;
   };
 }
 
@@ -457,7 +457,7 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
   }
   length: number;
   item(index: number): SpeechRecognitionResult {
-    return this.#results[index];
+    return this.#results[index]!;
   }
   [index: number]: SpeechRecognitionResult;
 
@@ -465,7 +465,7 @@ class ExpoSpeechRecognitionResultList implements SpeechRecognitionResultList {
     this.#results = results;
     this.length = results.length;
     for (let i = 0; i < this.#results.length; i++) {
-      this[i] = this.#results[i];
+      this[i] = this.#results[i]!;
     }
   }
 }
@@ -478,7 +478,7 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
   length: number;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/SpeechRecognitionResult/item) */
   item(index: number): SpeechRecognitionAlternative {
-    return this.#alternatives[index];
+    return this.#alternatives[index]!;
   }
   [index: number]: SpeechRecognitionAlternative;
   [Symbol.iterator](): ArrayIterator<SpeechRecognitionAlternative> {
@@ -495,7 +495,7 @@ class ExpoSpeechRecognitionResult implements SpeechRecognitionResult {
     this.length = alternatives.length;
     this.#alternatives = alternatives;
     for (let i = 0; i < alternatives.length; i++) {
-      this[i] = alternatives[i];
+      this[i] = alternatives[i]!;
     }
   }
 }
