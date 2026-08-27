@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 56.0.3
+
+### Patch Changes
+
+- 386ef0d: (internal) fix TS errors for DOM SpeechRecognition typings
+
 ## 56.0.2
 
 ### Patch Changes
