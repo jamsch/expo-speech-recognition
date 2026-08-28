@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 56.0.4
+
+### Patch Changes
+
+- dd5fd85: Fix Android speech recognition in minified release builds by generating optimized Expo Modules record metadata. Pass string-list intent options using Android's `ArrayList<String>` extra format.
+
 ## 56.0.3
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "expo-speech-recognition",
-  "version": "56.0.3",
+  "version": "56.0.4",
   "description": "Speech Recognition for React Native Expo projects",
   "main": "build/index.js",
   "types": "build/index.d.ts",
