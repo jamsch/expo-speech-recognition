@@ -20,7 +20,46 @@ import kotlin.concurrent.thread
 interface AudioRecorder {
     fun start()
 
-    fun stop()
+    fun stop(onStopped: () -> Unit = {})
+}
+
+internal fun awaitRecordingThreadShutdown(
+    worker: Thread?,
+    gracefulTimeoutMillis: Long,
+    forcedTimeoutMillis: Long,
+    forceUnblock: () -> Unit,
+): Boolean {
+    if (worker == null) {
+        forceUnblock()
+        return true
+    }
+
+    var interrupted = false
+
+    fun joinFor(timeoutMillis: Long): Boolean {
+        try {
+            worker.join(timeoutMillis)
+        } catch (_: InterruptedException) {
+            interrupted = true
+        }
+        return !worker.isAlive
+    }
+
+    try {
+        if (joinFor(gracefulTimeoutMillis)) {
+            return true
+        }
+        try {
+            forceUnblock()
+        } finally {
+            worker.interrupt()
+        }
+        return joinFor(forcedTimeoutMillis)
+    } finally {
+        if (interrupted) {
+            Thread.currentThread().interrupt()
+        }
+    }
 }
 
 /**
@@ -42,6 +81,8 @@ class ExpoAudioRecorder(
     /** The file where the mic stream is being output to */
     private val tempPcmFile: File
     val recordingParcel: ParcelFileDescriptor
+
+    @Volatile
     private var outputStream: AutoCloseOutputStream?
 
     init {
@@ -63,10 +104,14 @@ class ExpoAudioRecorder(
     private val bufferSizeInBytes = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat)
 
     private var recordingThread: Thread? = null
+
+    @Volatile
     private var isRecordingAudio = false
 
     companion object {
         private const val TAG = "ExpoAudioRecorder"
+        private const val GRACEFUL_DRAIN_TIMEOUT_MS = 2_000L
+        private const val FORCED_DRAIN_TIMEOUT_MS = 250L
 
         private fun shortReverseBytes(s: Short): Int =
             java.lang.Short
@@ -161,99 +206,140 @@ class ExpoAudioRecorder(
         }
     }
 
-    override fun stop() {
+    override fun stop(onStopped: () -> Unit) {
         isRecordingAudio = false
-        audioRecorder?.stop()
-        audioRecorder?.release()
-        audioRecorder = null
-        recordingThread = null
-        if (outputFilePath != null) {
+        // Signal AudioRecord before returning so a replacement start cannot capture concurrently.
+        // Draining and releasing it happen off the main thread below.
+        try {
+            audioRecorder?.stop()
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "AudioRecord was not recording when stop was requested", e)
+        }
+        thread(name = "ExpoSpeechAudioStop") {
             try {
-                outputFile =
-                    appendWavHeader(
-                        outputFilePath,
-                        tempPcmFile,
-                        sampleRateInHz,
+                val drained =
+                    awaitRecordingThreadShutdown(
+                        recordingThread,
+                        gracefulTimeoutMillis = GRACEFUL_DRAIN_TIMEOUT_MS,
+                        forcedTimeoutMillis = FORCED_DRAIN_TIMEOUT_MS,
+                        forceUnblock = ::closeOutputStream,
                     )
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to append WAV header", e)
-                e.printStackTrace()
+                recordingThread = null
+
+                try {
+                    audioRecorder?.release()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to release AudioRecord", e)
+                } finally {
+                    audioRecorder = null
+                }
+
+                // The recognizer received its own dup through the intent, so our copy of the
+                // read end is no longer needed.
+                try {
+                    recordingParcel.close()
+                } catch (e: IOException) {
+                    Log.e(TAG, "Failed to close the recording descriptor", e)
+                }
+
+                if (outputFilePath != null && drained) {
+                    try {
+                        outputFile =
+                            appendWavHeader(
+                                outputFilePath,
+                                tempPcmFile,
+                                sampleRateInHz,
+                            )
+                    } catch (e: IOException) {
+                        Log.e(TAG, "Failed to append WAV header", e)
+                    }
+                } else if (!drained) {
+                    Log.e(TAG, "Recording worker did not stop; skipping WAV finalization")
+                }
+            } finally {
+                onStopped()
             }
         }
-        // Close the ParcelFileDescriptor
-        try {
-            recordingParcel.close()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        // And the output stream
+    }
+
+    @Synchronized
+    private fun closeOutputStream() {
         try {
             outputStream?.close()
-            outputStream = null
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to close the recognizer audio stream", e)
+        } finally {
+            outputStream = null
         }
     }
 
     private fun streamAudioToPipe() {
-        val tempFileOutputStream = FileOutputStream(tempPcmFile)
         val data = ByteArray(bufferSizeInBytes)
 
-        while (isRecordingAudio) {
-            val recorder = audioRecorder ?: break
+        try {
+            FileOutputStream(tempPcmFile).use { tempFileOutputStream ->
+                while (isRecordingAudio) {
+                    val recorder = audioRecorder ?: break
 
-            val read =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    // avoid empty reads
-                    recorder.read(data, 0, data.size, AudioRecord.READ_BLOCKING)
-                } else {
-                    recorder.read(data, 0, data.size)
-                }
-
-            when {
-                read > 0 -> {
-                    try {
-                        outputStream?.write(data, 0, read)
-                        outputStream?.flush()
-
-                        // Write to the temp PCM file
-                        if (outputFilePath != null) {
-                            tempFileOutputStream.write(data, 0, read)
-                            tempFileOutputStream.flush()
+                    val read =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            // avoid empty reads
+                            recorder.read(data, 0, data.size, AudioRecord.READ_BLOCKING)
+                        } else {
+                            recorder.read(data, 0, data.size)
                         }
-                    } catch (e: IOException) {
-                        Log.e(TAG, "Failed to write to output stream", e)
-                        e.printStackTrace()
+
+                    when {
+                        read > 0 -> {
+                            // Persist first so a recognizer pipe failure cannot discard the tail.
+                            if (outputFilePath != null) {
+                                tempFileOutputStream.write(data, 0, read)
+                                tempFileOutputStream.flush()
+                            }
+
+                            try {
+                                outputStream?.write(data, 0, read)
+                                outputStream?.flush()
+                            } catch (e: IOException) {
+                                Log.e(TAG, "Failed to write to recognizer audio stream", e)
+                                break
+                            }
+                        }
+
+                        // (this should only happen on API 22 and below)
+                        read == 0 -> {
+                            try {
+                                Thread.sleep(10)
+                            } catch (_: InterruptedException) {}
+                        }
+
+                        read == AudioRecord.ERROR_DEAD_OBJECT -> {
+                            Log.w(TAG, "AudioRecord returned ERROR_DEAD_OBJECT; breaking out of the loop")
+                            // todo: we should probably emit an error event here
+                            break
+                        }
+
+                        read == AudioRecord.ERROR_INVALID_OPERATION || read == AudioRecord.ERROR_BAD_VALUE -> {
+                            Log.w(TAG, "AudioRecord read error: $read; backing off briefly")
+                            try {
+                                Thread.sleep(10)
+                            } catch (_: InterruptedException) {}
+                        }
+
+                        else -> {
+                            // todo: we should probably emit an error event here
+                            Log.w(TAG, "AudioRecord read returned '$read'; breaking out of the loop")
+                            break
+                        }
                     }
                 }
-
-                // (this should only happen on API 22 and below)
-                read == 0 -> {
-                    try {
-                        Thread.sleep(10)
-                    } catch (_: InterruptedException) {}
-                }
-
-                read == AudioRecord.ERROR_DEAD_OBJECT -> {
-                    Log.w(TAG, "AudioRecord returned ERROR_DEAD_OBJECT; breaking out of the loop")
-                    // todo: we should probably emit an error event here
-                    break
-                }
-
-                read == AudioRecord.ERROR_INVALID_OPERATION || read == AudioRecord.ERROR_BAD_VALUE -> {
-                    Log.w(TAG, "AudioRecord read error: $read; backing off briefly")
-                    try {
-                        Thread.sleep(10)
-                    } catch (_: InterruptedException) {}
-                }
-
-                else -> {
-                    // todo: we should probably emit an error event here
-                    Log.w(TAG, "AudioRecord read returned '$read'; breaking out of the loop")
-                    break
-                }
             }
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to persist recorded audio", e)
+        } finally {
+            // Only the worker closes the writer, so the recognizer's EOF always follows the
+            // last write.
+            closeOutputStream()
         }
-        tempFileOutputStream.close()
     }
 }

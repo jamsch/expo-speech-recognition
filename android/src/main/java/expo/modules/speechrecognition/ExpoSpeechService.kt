@@ -65,7 +65,15 @@ class ExpoSpeechService(
 
     var recognitionState = RecognitionState.INACTIVE
 
+    private var currentSession: RecognitionSession? = null
+
     companion object {
+        /**
+         * How long a stop waits for the recognizer's terminal callback before ending the session
+         * itself. Only a recognizer that never reports back should reach this.
+         */
+        private const val TERMINAL_CALLBACK_TIMEOUT_MS = 8_000L
+
         @SuppressLint("QueryPermissionsNeeded")
         fun findComponentNameByPackageName(
             context: Context,
@@ -112,36 +120,84 @@ class ExpoSpeechService(
         return value
     }
 
+    /**
+     * Android may deliver callbacks after a recognizer has been destroyed. Capturing the session
+     * in a dedicated listener keeps those callbacks from mutating whichever session started next.
+     */
+    private fun createRecognitionListener(session: RecognitionSession): RecognitionListener =
+        object : RecognitionListener {
+            private inline fun ifCurrent(block: () -> Unit) {
+                if (currentSession === session && session.acceptsRecognizerCallbacks()) {
+                    block()
+                }
+            }
+
+            override fun onReadyForSpeech(params: Bundle?) =
+                ifCurrent { this@ExpoSpeechService.onReadyForSpeech(params) }
+
+            override fun onBeginningOfSpeech() = ifCurrent { this@ExpoSpeechService.onBeginningOfSpeech() }
+
+            override fun onRmsChanged(rmsdB: Float) = ifCurrent { this@ExpoSpeechService.onRmsChanged(rmsdB) }
+
+            override fun onBufferReceived(buffer: ByteArray?) =
+                ifCurrent { this@ExpoSpeechService.onBufferReceived(buffer) }
+
+            override fun onEndOfSpeech() = ifCurrent { this@ExpoSpeechService.onEndOfSpeech() }
+
+            override fun onError(error: Int) = ifCurrent { this@ExpoSpeechService.onError(error) }
+
+            override fun onResults(results: Bundle?) = ifCurrent { this@ExpoSpeechService.onResults(results) }
+
+            override fun onPartialResults(partialResults: Bundle?) =
+                ifCurrent { this@ExpoSpeechService.onPartialResults(partialResults) }
+
+            override fun onEvent(
+                eventType: Int,
+                params: Bundle?,
+            ) = ifCurrent { this@ExpoSpeechService.onEvent(eventType, params) }
+
+            override fun onSegmentResults(segmentResults: Bundle) =
+                ifCurrent { this@ExpoSpeechService.onSegmentResults(segmentResults) }
+
+            override fun onEndOfSegmentedSession() = ifCurrent { this@ExpoSpeechService.onEndOfSegmentedSession() }
+
+            override fun onLanguageDetection(results: Bundle) =
+                ifCurrent { this@ExpoSpeechService.onLanguageDetection(results) }
+        }
+
     /** Starts speech recognition */
     fun start(options: SpeechRecognitionOptions) {
         this.options = options
         mainHandler.post {
             log("Start recognition.")
 
-            // Destroy any previous SpeechRecognizer / audio recorder
-            speech?.destroy()
+            destroyRecognizerResources()
             audioRecorder?.stop()
             audioRecorder = null
-            delayedFileStreamer?.close()
-            delayedFileStreamer = null
+            currentSession?.deactivate()
+            currentSession = null
             lastDetectedLanguage = null
             lastLanguageConfidence = null
             recognitionState = RecognitionState.STARTING
             soundState = SoundState.INACTIVE
             lastVolumeChangeEventTime = 0L
             try {
-                val intent = createSpeechIntent(options)
+                val request = createSpeechRequest(options)
+                val session = RecognitionSession(request.stopMode, ::handleSessionEffect)
+                currentSession = session
                 speech = createSpeechRecognizer(options)
 
-                // Start the audio recorder
                 audioRecorder?.start()
 
-                // Start listening
-                speech?.setRecognitionListener(this)
-                speech?.startListening(intent)
+                speech?.setRecognitionListener(createRecognitionListener(session))
+                speech?.startListening(request.intent)
 
+                if (currentSession !== session) {
+                    return@post
+                }
                 delayedFileStreamer?.startStreaming()
 
+                session.onAudioStarted()
                 sendEvent(
                     "audiostart",
                     mapOf(
@@ -158,33 +214,68 @@ class ExpoSpeechService(
                 e.printStackTrace()
                 log("Failed to create Speech Recognizer with error: $errorMessage")
                 sendEvent("error", mapOf("error" to "audio-capture", "message" to errorMessage, "code" to -1))
+                if (currentSession == null) {
+                    audioRecorder?.stop()
+                    audioRecorder = null
+                    destroyRecognizerResources()
+                }
                 teardownAndEnd()
             }
         }
     }
 
-    /**
-     * Stops the audio recorder and sends the recorded audio file path to the app.
-     */
-    private fun stopRecording() {
-        audioRecorder?.stop()
-        if (audioRecorder?.outputFile != null) {
-            val uri = audioRecorder?.outputFile?.absolutePath?.let { "file://$it" }
-            sendEvent(
-                "audioend",
-                mapOf(
-                    "uri" to uri,
-                ),
-            )
-        } else {
-            sendEvent(
-                "audioend",
-                mapOf(
-                    "uri" to null,
-                ),
-            )
-        }
+    private fun stopAudioInput(onStopped: (String?) -> Unit) {
+        val recorder = audioRecorder
         audioRecorder = null
+        if (recorder == null) {
+            // Complete on the next loop turn, so this path is as asynchronous as the recorder's.
+            mainHandler.post {
+                onStopped(null)
+            }
+            return
+        }
+        recorder.stop {
+            val uri = recorder.outputFile?.absolutePath?.let { "file://$it" }
+            mainHandler.post {
+                onStopped(uri)
+            }
+        }
+    }
+
+    private fun handleSessionEffect(
+        effect: RecognitionSessionEffect,
+        onAudioStopped: (String?) -> Unit,
+    ) {
+        when (effect) {
+            RecognitionSessionEffect.StopAudioInput -> stopAudioInput(onAudioStopped)
+            RecognitionSessionEffect.StopListening -> {
+                try {
+                    speech?.stopListening()
+                } catch (_: Exception) {}
+            }
+            RecognitionSessionEffect.ReleaseRecognizer -> releaseRecognizer()
+            RecognitionSessionEffect.AwaitTerminalCallback -> armTerminalCallbackWatchdog()
+            is RecognitionSessionEffect.EmitAudioEnd -> {
+                sendEvent("audioend", mapOf("uri" to effect.uri))
+            }
+            is RecognitionSessionEffect.EmitEnd -> {
+                soundState = SoundState.INACTIVE
+                sendEvent("end", null)
+                recognitionState = effect.state
+                currentSession = null
+            }
+        }
+    }
+
+    /** Nothing obliges a recognizer to deliver the terminal callback a stop waits on. */
+    private fun armTerminalCallbackWatchdog() {
+        val session = currentSession ?: return
+        mainHandler.postDelayed({
+            if (currentSession === session) {
+                log("Timed out waiting for the recognizer's final result after stop().")
+                session.finish()
+            }
+        }, TERMINAL_CALLBACK_TIMEOUT_MS)
     }
 
     /**
@@ -193,12 +284,9 @@ class ExpoSpeechService(
      */
     fun stop() {
         mainHandler.post {
+            val session = currentSession ?: return@post
             recognitionState = RecognitionState.STOPPING
-            try {
-                speech?.stopListening()
-            } catch (e: Exception) {
-                // do nothing
-            }
+            session.requestStop()
         }
         // Wait for the onResults() / onError() handlers to be called
         // This is to ensure that the final result is emitted and the end event is sent
@@ -210,7 +298,9 @@ class ExpoSpeechService(
      * final result is emitted.
      */
     fun abort() {
-        teardownAndEnd()
+        mainHandler.post {
+            teardownAndEnd(abort = true)
+        }
     }
 
     /**
@@ -219,31 +309,69 @@ class ExpoSpeechService(
     fun destroy() {
         // Overwrite sendEvent to prevent sending events after destroy
         sendEvent = { _, _ -> }
-        teardownAndEnd()
+        mainHandler.post {
+            teardownAndEnd(abort = true)
+        }
+    }
+
+    /** Destroys the recognizer inline. Only safe outside the recognizer's own listener callbacks. */
+    private fun destroyRecognizerResources() {
+        speech?.destroy()
+        speech = null
+        delayedFileStreamer?.close()
+        delayedFileStreamer = null
+    }
+
+    /**
+     * Detaches the recognizer, then destroys it on a later loop turn: [SpeechRecognizer.destroy]
+     * must not run from inside one of the recognizer's own listener callbacks.
+     */
+    private fun releaseRecognizer() {
+        val recognizer = speech
+        speech = null
+        delayedFileStreamer?.close()
+        delayedFileStreamer = null
+        mainHandler.post {
+            try {
+                recognizer?.cancel()
+            } catch (_: Exception) {}
+            recognizer?.destroy()
+        }
     }
 
     /**
      * Stops speech recognition, recording and updates state
      */
-    private fun teardownAndEnd(state: RecognitionState = RecognitionState.INACTIVE) {
-        recognitionState = RecognitionState.STOPPING
-        mainHandler.post {
-            try {
-                speech?.cancel()
-            } catch (e: Exception) {
-                // do nothing
-            }
-            speech?.destroy()
-            stopRecording()
+    private fun teardownAndEnd(
+        state: RecognitionState = RecognitionState.INACTIVE,
+        abort: Boolean = false,
+    ) {
+        val session = currentSession
+        if (session == null) {
             soundState = SoundState.INACTIVE
             sendEvent("end", null)
             recognitionState = state
-            delayedFileStreamer?.close()
-            delayedFileStreamer = null
+            return
+        }
+        recognitionState = RecognitionState.STOPPING
+        if (abort) {
+            session.abort(state)
+        } else {
+            session.finish(state)
         }
     }
 
-    private fun createSpeechIntent(options: SpeechRecognitionOptions): Intent {
+    /**
+     * A recognition intent and the stop mode its extras imply: whether the session it starts ends
+     * by closing the audio source or by calling [SpeechRecognizer.stopListening].
+     */
+    private data class SpeechRequest(
+        val intent: Intent,
+        val stopMode: RecognitionStopMode,
+    )
+
+    private fun createSpeechRequest(options: SpeechRecognitionOptions): SpeechRequest {
+        var stopMode = RecognitionStopMode.SPEECH_RECOGNIZER
         val action = options.androidIntent ?: RecognizerIntent.ACTION_RECOGNIZE_SPEECH
         val intent = Intent(action)
 
@@ -291,6 +419,7 @@ class ExpoSpeechService(
                         RecognizerIntent.EXTRA_SEGMENTED_SESSION,
                         RecognizerIntent.EXTRA_AUDIO_SOURCE,
                     )
+                    stopMode = RecognitionStopMode.AUDIO_SOURCE_EOF
                 } else {
                     // Non-continuous mode while file recording (Android 13 and above)
                     intent.putExtra(
@@ -352,6 +481,8 @@ class ExpoSpeechService(
                     RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT,
                     options.audioSource.audioChannels ?: 1,
                 )
+                // stopMode is left alone here: DelayedFileStreamer always plays the file
+                // through to the end, so stop() has no way to close this audio source early.
                 intent.putExtra(
                     RecognizerIntent.EXTRA_SEGMENTED_SESSION,
                     RecognizerIntent.EXTRA_AUDIO_SOURCE,
@@ -416,7 +547,7 @@ class ExpoSpeechService(
             }
         }
 
-        return intent
+        return SpeechRequest(intent, stopMode)
     }
 
     private fun resolveFilePathFromConfig(recordingOptions: RecordingOptions): String {
@@ -617,7 +748,7 @@ class ExpoSpeechService(
         }
         log("onResults(), results: $resultsList")
 
-        teardownAndEnd()
+        currentSession?.finish()
     }
 
     override fun onPartialResults(partialResults: Bundle?) {
@@ -668,16 +799,11 @@ class ExpoSpeechService(
             )
         }
         log("onSegmentResults(), transcriptions: $resultsList")
-
-        // If the user opted to stop
-        if (recognitionState == RecognitionState.STOPPING) {
-            teardownAndEnd()
-        }
     }
 
     override fun onEndOfSegmentedSession() {
         log("onEndOfSegmentedSession()")
-        teardownAndEnd()
+        currentSession?.finish()
     }
 
     override fun onEvent(
