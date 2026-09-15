@@ -134,7 +134,11 @@ class ExpoSpeechService(
                 speech = createSpeechRecognizer(options)
 
                 // Start the audio recorder
-                audioRecorder?.start()
+                val recorderStartedAtMillis =
+                    audioRecorder?.let {
+                        it.start()
+                        System.currentTimeMillis()
+                    }
 
                 // Start listening
                 speech?.setRecognitionListener(this)
@@ -146,6 +150,7 @@ class ExpoSpeechService(
                     "audiostart",
                     mapOf(
                         "uri" to audioRecorder?.outputFileUri,
+                        "timestamp" to (recorderStartedAtMillis ?: System.currentTimeMillis()),
                     ),
                 )
             } catch (e: Exception) {
@@ -168,12 +173,14 @@ class ExpoSpeechService(
      */
     private fun stopRecording() {
         audioRecorder?.stop()
+        val timestamp = audioRecorder?.stoppedAtMillis ?: System.currentTimeMillis()
         if (audioRecorder?.outputFile != null) {
             val uri = audioRecorder?.outputFile?.absolutePath?.let { "file://$it" }
             sendEvent(
                 "audioend",
                 mapOf(
                     "uri" to uri,
+                    "timestamp" to timestamp,
                 ),
             )
         } else {
@@ -181,6 +188,7 @@ class ExpoSpeechService(
                 "audioend",
                 mapOf(
                     "uri" to null,
+                    "timestamp" to timestamp,
                 ),
             )
         }
