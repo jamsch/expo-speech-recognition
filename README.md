@@ -428,6 +428,8 @@ useSpeechRecognitionEvent("error", (event) => {
 
 If you would like to persist the recognized audio for later use, you can enable the `recordingOptions.persist` option when calling `start()`. Enabling this setting will emit an `{ uri: string }` event object in the `audiostart` and `audioend` events with the local file path.
 
+Both events also carry `timestamp`, the epoch milliseconds when capturing started or stopped. Use it to line up app events with positions in the recording.
+
 > [!IMPORTANT]
 > This feature is available on Android 13+ and iOS. Call [`supportsRecording()`](#supportsrecording-boolean) to see if it's available before using this feature.
 
