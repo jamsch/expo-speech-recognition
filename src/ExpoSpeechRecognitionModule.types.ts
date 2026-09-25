@@ -678,6 +678,19 @@ export declare class ExpoSpeechRecognitionModuleType extends NativeModule<ExpoSp
      * This will likely be an empty array if the service package is not "com.google.android.as"
      */
     installedLocales: string[];
+    /**
+     * [Android 13+] Languages the recognizer can run on-device, including ones whose model still needs to be downloaded.
+     * Unlike `locales`, this excludes online-only languages. Absent when the platform could not report it (Android 12 and below, iOS, web).
+     */
+    supportedOnDeviceLocales?: string[];
+    /**
+     * [Android 13+] Languages whose on-device model download is currently pending.
+     */
+    pendingOnDeviceLocales?: string[];
+    /**
+     * [Android 13+] Languages that are only available through online recognition.
+     */
+    onlineLocales?: string[];
   }>;
   /**
    * [Android only] Returns an array of package names of speech recognition services that are available on the device.

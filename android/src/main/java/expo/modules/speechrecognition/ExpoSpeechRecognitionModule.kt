@@ -456,6 +456,9 @@ class ExpoSpeechRecognitionModule : Module() {
                             mapOf(
                                 "locales" to locales,
                                 "installedLocales" to installedLocales,
+                                "supportedOnDeviceLocales" to recognitionSupport.supportedOnDeviceLanguages.sorted(),
+                                "pendingOnDeviceLocales" to recognitionSupport.pendingOnDeviceLanguages.sorted(),
+                                "onlineLocales" to recognitionSupport.onlineLanguages.sorted(),
                             ),
                         )
                         recognizer.destroy()

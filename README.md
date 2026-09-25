@@ -1035,7 +1035,7 @@ ExpoSpeechRecognitionModule.getStateAsync().then((state) => {
 ### `getSupportedLocales()`
 
 > [!NOTE]
-> Not supported on Android 12 and below
+> Not supported on Android 12 and below. `supportedOnDeviceLocales`, `pendingOnDeviceLocales` and `onlineLocales` are Android-only and are `undefined` on other platforms.
 
 Get the list of supported locales and the installed locales that can be used for on-device speech recognition.
 
@@ -1058,6 +1058,13 @@ ExpoSpeechRecognitionModule.getSupportedLocales({
       "On-device locales:",
       supportedLocales.installedLocales.join(", "),
     );
+
+    // Android 13+: the same information, separated. `locales` above is the union of
+    // installed, supported-on-device and online-only languages, so it can't tell you
+    // whether a language has an offline model you could download.
+    console.log("Supported on-device:", supportedLocales.supportedOnDeviceLocales); // includes not-yet-downloaded
+    console.log("Download pending:", supportedLocales.pendingOnDeviceLocales);
+    console.log("Online only:", supportedLocales.onlineLocales);
   })
   .catch((error) => {
     // If the service package is not found
