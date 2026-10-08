@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- cf5e435: fix(android): catch IllegalArgumentException on SpeechRecognizer.destroy() and reset speech instance
+- cf5e435: fix(android): catch thrown errors on `SpeechRecognizer.destroy()` - this usually only affects Android 11 and below when service cannot be unbound.
 
 ## 57.1.0
 
