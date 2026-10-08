@@ -119,7 +119,12 @@ class ExpoSpeechService(
             log("Start recognition.")
 
             // Destroy any previous SpeechRecognizer / audio recorder
-            speech?.destroy()
+            try {
+                speech?.destroy()
+            } catch (e: Throwable) {
+                // Ignore Android framework bug where unbindService throws IllegalArgumentException
+            }
+            speech = null
             audioRecorder?.stop()
             audioRecorder = null
             delayedFileStreamer?.close()
@@ -241,7 +246,12 @@ class ExpoSpeechService(
             } catch (e: Exception) {
                 // do nothing
             }
-            speech?.destroy()
+            try {
+                speech?.destroy()
+            } catch (e: Throwable) {
+                // Ignore Android framework bug where unbindService throws IllegalArgumentException
+            }
+            speech = null
             stopRecording()
             soundState = SoundState.INACTIVE
             sendEvent("end", null)

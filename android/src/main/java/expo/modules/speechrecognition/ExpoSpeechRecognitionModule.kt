@@ -458,7 +458,11 @@ class ExpoSpeechRecognitionModule : Module() {
                                 "installedLocales" to installedLocales,
                             ),
                         )
-                        recognizer.destroy()
+                        try {
+                            recognizer.destroy()
+                        } catch (e: Throwable) {
+                            // Ignore Android framework bug where unbindService throws IllegalArgumentException
+                        }
                     }
 
                     override fun onError(error: Int) {
@@ -477,7 +481,11 @@ class ExpoSpeechRecognitionModule : Module() {
                             )
                         }, 50)
 
-                        recognizer.destroy()
+                        try {
+                            recognizer.destroy()
+                        } catch (e: Throwable) {
+                            // Ignore Android framework bug where unbindService throws IllegalArgumentException
+                        }
                     }
                 },
             )
