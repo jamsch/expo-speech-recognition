@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 57.1.1
+
+### Patch Changes
+
+- cf5e435: fix(android): catch IllegalArgumentException on SpeechRecognizer.destroy() and reset speech instance
+
 ## 57.1.0
 
 ### Minor Changes
