@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 57.1.1
+
+### Patch Changes
+
+- cf5e435: fix(android): catch thrown errors on `SpeechRecognizer.destroy()` - this usually only affects Android 11 and below when service cannot be unbound.
+
 ## 57.1.0
 
 ### Minor Changes
