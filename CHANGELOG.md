@@ -1,5 +1,13 @@
 # expo-speech-recognition
 
+## 58.0.0
+
+### Major Changes
+
+- fbefdcb: Align the package version with Expo SDK 58 and upgrade the example app to React Native 0.88 and React 19.3.
+
+  The existing Expo Modules API remains supported. No speech recognition API changes are introduced.
+
 ## 57.1.1
 
 ### Patch Changes
