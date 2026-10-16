@@ -1,17 +1,11 @@
 {
   "expo": {
-    "newArchEnabled": true,
     "name": "expo-speech-recognition-example",
     "slug": "expo-speech-recognition-example",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -60,7 +54,15 @@
         }
       ],
       "expo-build-properties",
-      "expo-splash-screen"
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-status-bar"
     ]
   }
 }
