@@ -1,11 +1,11 @@
-import { ScrollView, StyleSheet, View, ViewProps } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 export function Card<
   TUse extends typeof View | typeof ScrollView = typeof View,
 >(
   props: {
     use?: TUse;
-  } & React.ComponentProps<TUse>,
+  } & React.ComponentPropsWithoutRef<TUse>,
 ) {
   const { use, style, ...rest } = props;
   const Component = use || View;

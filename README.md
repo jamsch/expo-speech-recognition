@@ -64,6 +64,8 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
 npm install expo-speech-recognition
 
 # Or for older SDKs:
+npm install expo-speech-recognition@^57.0.0 # Expo SDK 57
+npm install expo-speech-recognition@^56.0.0 # Expo SDK 56
 npm install expo-speech-recognition@sdk-54
 npm install expo-speech-recognition@sdk-53
 ```
