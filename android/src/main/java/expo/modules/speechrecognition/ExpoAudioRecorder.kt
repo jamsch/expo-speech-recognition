@@ -76,7 +76,7 @@ class ExpoAudioRecorder(
     private var audioRecorder: AudioRecord? = null
 
     var outputFile: File? = null
-    var outputFileUri = "file://$outputFilePath"
+    val outputFileUri = outputFilePath?.let { "file://$it" }
 
     /** The file where the mic stream is being output to */
     private val tempPcmFile: File
@@ -107,6 +107,10 @@ class ExpoAudioRecorder(
 
     @Volatile
     private var isRecordingAudio = false
+
+    /** Epoch milliseconds when the microphone stopped */
+    var stoppedAtMillis: Long? = null
+        private set
 
     companion object {
         private const val TAG = "ExpoAudioRecorder"
@@ -215,6 +219,7 @@ class ExpoAudioRecorder(
         } catch (e: IllegalStateException) {
             Log.w(TAG, "AudioRecord was not recording when stop was requested", e)
         }
+        stoppedAtMillis = System.currentTimeMillis()
         thread(name = "ExpoSpeechAudioStop") {
             try {
                 val drained =

@@ -4,12 +4,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 
+private const val STOPPED_AT_MILLIS = 1_700_000_000_000L
+
 class RecognitionSessionTest {
     private class TestSession(
         stopMode: RecognitionStopMode,
     ) {
         val handledEffects = mutableListOf<RecognitionSessionEffect>()
-        private var completeAudioStop: ((String?) -> Unit)? = null
+        private var completeAudioStop: ((String?, Long) -> Unit)? = null
         val session =
             RecognitionSession(stopMode) { effect, onAudioStopped ->
                 handledEffects += effect
@@ -21,7 +23,7 @@ class RecognitionSessionTest {
         fun completeAudioStop(uri: String?) {
             val completion = checkNotNull(completeAudioStop)
             completeAudioStop = null
-            completion(uri)
+            completion(uri, STOPPED_AT_MILLIS)
         }
     }
 
@@ -84,7 +86,7 @@ class RecognitionSessionTest {
                 RecognitionSessionEffect.StopAudioInput,
                 RecognitionSessionEffect.AwaitTerminalCallback,
                 RecognitionSessionEffect.ReleaseRecognizer,
-                RecognitionSessionEffect.EmitAudioEnd("file://recording.wav"),
+                RecognitionSessionEffect.EmitAudioEnd("file://recording.wav", STOPPED_AT_MILLIS),
                 RecognitionSessionEffect.EmitEnd(RecognitionState.INACTIVE),
             ),
             testSession.handledEffects,
@@ -107,7 +109,7 @@ class RecognitionSessionTest {
                 RecognitionSessionEffect.StopAudioInput,
                 RecognitionSessionEffect.AwaitTerminalCallback,
                 RecognitionSessionEffect.ReleaseRecognizer,
-                RecognitionSessionEffect.EmitAudioEnd("file://recording.wav"),
+                RecognitionSessionEffect.EmitAudioEnd("file://recording.wav", STOPPED_AT_MILLIS),
                 RecognitionSessionEffect.EmitEnd(RecognitionState.INACTIVE),
             ),
             testSession.handledEffects,
@@ -128,7 +130,7 @@ class RecognitionSessionTest {
             listOf(
                 RecognitionSessionEffect.StopAudioInput,
                 RecognitionSessionEffect.ReleaseRecognizer,
-                RecognitionSessionEffect.EmitAudioEnd(null),
+                RecognitionSessionEffect.EmitAudioEnd(null, STOPPED_AT_MILLIS),
                 RecognitionSessionEffect.EmitEnd(RecognitionState.ERROR),
             ),
             testSession.handledEffects,
@@ -162,7 +164,7 @@ class RecognitionSessionTest {
             listOf(
                 RecognitionSessionEffect.ReleaseRecognizer,
                 RecognitionSessionEffect.StopAudioInput,
-                RecognitionSessionEffect.EmitAudioEnd("file://recording.wav"),
+                RecognitionSessionEffect.EmitAudioEnd("file://recording.wav", STOPPED_AT_MILLIS),
                 RecognitionSessionEffect.EmitEnd(RecognitionState.INACTIVE),
             ),
             testSession.handledEffects,

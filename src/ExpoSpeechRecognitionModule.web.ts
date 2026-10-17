@@ -309,8 +309,14 @@ const webToNativeEventMap: {
     ev: SpeechRecognitionEventMap[K],
   ) => ExpoSpeechRecognitionNativeEventMap[K];
 } = {
-  audioend: (ev) => ({ uri: null }),
-  audiostart: (ev) => ({ uri: null }),
+  audioend: (ev) => ({
+    uri: null,
+    timestamp: performance.timeOrigin + ev.timeStamp,
+  }),
+  audiostart: (ev) => ({
+    uri: null,
+    timestamp: performance.timeOrigin + ev.timeStamp,
+  }),
   end: (ev) => null,
   error: (ev) => ({
     // TODO: add "phrases-not-supported" support to the type

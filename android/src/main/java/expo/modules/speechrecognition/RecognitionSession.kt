@@ -20,6 +20,7 @@ internal sealed interface RecognitionSessionEffect {
 
     data class EmitAudioEnd(
         val uri: String?,
+        val timestamp: Long,
     ) : RecognitionSessionEffect
 
     data class EmitEnd(
@@ -30,7 +31,7 @@ internal sealed interface RecognitionSessionEffect {
 internal fun interface RecognitionSessionEffectHandler {
     fun handle(
         effect: RecognitionSessionEffect,
-        onAudioStopped: (String?) -> Unit,
+        onAudioStopped: (uri: String?, timestamp: Long) -> Unit,
     )
 }
 
@@ -64,6 +65,7 @@ internal class RecognitionSession(
 
         data class Stopped(
             val uri: String?,
+            val timestamp: Long,
         ) : Audio
     }
 
@@ -119,13 +121,16 @@ internal class RecognitionSession(
         }
     }
 
-    private fun onAudioStopped(uri: String?): List<RecognitionSessionEffect> {
+    private fun onAudioStopped(
+        uri: String?,
+        timestamp: Long,
+    ): List<RecognitionSessionEffect> {
         if (audio is Audio.Stopped) {
             return emptyList()
         }
-        audio = Audio.Stopped(uri)
+        audio = Audio.Stopped(uri, timestamp)
         return when (phase) {
-            is Phase.Finishing -> finishAfterAudioStops(uri)
+            is Phase.Finishing -> finishAfterAudioStops(uri, timestamp)
             else -> emptyList()
         }
     }
@@ -145,7 +150,7 @@ internal class RecognitionSession(
             when (val current = audio) {
                 Audio.Open -> addAll(beginStoppingAudio())
                 Audio.Stopping -> Unit
-                is Audio.Stopped -> addAll(finishAfterAudioStops(current.uri))
+                is Audio.Stopped -> addAll(finishAfterAudioStops(current.uri, current.timestamp))
             }
         }
     }
@@ -163,9 +168,9 @@ internal class RecognitionSession(
             if (!isActive) {
                 return
             }
-            effectHandler.handle(effect) { uri ->
+            effectHandler.handle(effect) { uri, timestamp ->
                 if (isActive) {
-                    apply(onAudioStopped(uri))
+                    apply(onAudioStopped(uri, timestamp))
                 }
             }
             if (effect is RecognitionSessionEffect.EmitEnd) {
@@ -174,7 +179,10 @@ internal class RecognitionSession(
         }
     }
 
-    private fun finishAfterAudioStops(uri: String?): List<RecognitionSessionEffect> {
+    private fun finishAfterAudioStops(
+        uri: String?,
+        timestamp: Long,
+    ): List<RecognitionSessionEffect> {
         val finishing = phase as? Phase.Finishing ?: return emptyList()
         phase = Phase.Finished
         return buildList {
@@ -182,7 +190,7 @@ internal class RecognitionSession(
                 add(RecognitionSessionEffect.ReleaseRecognizer)
             }
             if (didStartCapturing) {
-                add(RecognitionSessionEffect.EmitAudioEnd(uri))
+                add(RecognitionSessionEffect.EmitAudioEnd(uri, timestamp))
             }
             add(RecognitionSessionEffect.EmitEnd(finishing.state))
         }

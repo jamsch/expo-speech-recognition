@@ -240,20 +240,20 @@ public class ExpoSpeechRecognitionModule: Module {
             speechStartHandler: { [weak self] in
               self?.sendEvent("speechstart")
             },
-            audioStartHandler: { [weak self] filePath in
+            audioStartHandler: { [weak self] filePath, timestamp in
               if let filePath: String {
                 let uri = filePath.hasPrefix("file://") ? filePath : "file://" + filePath
-                self?.sendEvent("audiostart", ["uri": uri])
+                self?.sendEvent("audiostart", ["uri": uri, "timestamp": timestamp])
               } else {
-                self?.sendEvent("audiostart", ["uri": nil])
+                self?.sendEvent("audiostart", ["uri": nil, "timestamp": timestamp])
               }
             },
-            audioEndHandler: { [weak self] filePath in
+            audioEndHandler: { [weak self] filePath, timestamp in
               if let filePath: String {
                 let uri = filePath.hasPrefix("file://") ? filePath : "file://" + filePath
-                self?.sendEvent("audioend", ["uri": uri])
+                self?.sendEvent("audioend", ["uri": uri, "timestamp": timestamp])
               } else {
-                self?.sendEvent("audioend", ["uri": nil])
+                self?.sendEvent("audioend", ["uri": nil, "timestamp": timestamp])
               }
             },
             volumeChangeHandler: { [weak self] value in

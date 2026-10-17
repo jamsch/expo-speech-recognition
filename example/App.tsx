@@ -108,6 +108,14 @@ export default function App() {
     setStatus("idle");
   });
 
+  useSpeechRecognitionEvent("audiostart", (ev) => {
+    console.log("[event]: audiostart", ev);
+  });
+
+  useSpeechRecognitionEvent("audioend", (ev) => {
+    console.log("[event]: audioend", ev);
+  });
+
   useSpeechRecognitionEvent("error", (ev) => {
     console.log(
       "[event]: error",

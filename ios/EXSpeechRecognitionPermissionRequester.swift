@@ -12,20 +12,33 @@ public class EXSpeechRecognitionPermissionRequester: NSObject, EXPermissionsRequ
   ) {
     SFSpeechRecognizer.requestAuthorization { status in
       if status != .authorized {
-        resolve(self.getPermissions())
+        resolve(self.permissionsResult(
+          speechPermission: status,
+          recordPermission: AVAudioSession.sharedInstance().recordPermission
+        ))
         return
       }
       AVAudioSession.sharedInstance().requestRecordPermission { authorized in
-        resolve(self.getPermissions())
+        resolve(self.permissionsResult(
+          speechPermission: status,
+          recordPermission: authorized ? .granted : .denied
+        ))
       }
     }
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
-    var status: EXPermissionStatus
+    return permissionsResult(
+      speechPermission: SFSpeechRecognizer.authorizationStatus(),
+      recordPermission: AVAudioSession.sharedInstance().recordPermission
+    )
+  }
 
-    let recordPermission = AVAudioSession.sharedInstance().recordPermission
-    let speechPermission = SFSpeechRecognizer.authorizationStatus()
+  private func permissionsResult(
+    speechPermission: SFSpeechRecognizerAuthorizationStatus,
+    recordPermission: AVAudioSession.RecordPermission
+  ) -> [AnyHashable: Any] {
+    var status: EXPermissionStatus
 
     if speechPermission == .authorized && recordPermission == .granted {
       status = EXPermissionStatusGranted

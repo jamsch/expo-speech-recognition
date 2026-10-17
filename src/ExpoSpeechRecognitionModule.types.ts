@@ -150,6 +150,16 @@ export type ExpoSpeechRecognitionNativeEventMap = {
      * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav`
      */
     uri: string | null;
+    /**
+     * Epoch milliseconds when audio capturing started, comparable to `Date.now()`.
+     * May have a fractional part.
+     *
+     * With `recordingOptions.persist`, it marks the start of the file to within tens of milliseconds.
+     *
+     * iOS: an audio route change mid-recording, such as connecting headphones, leaves a gap in the file.
+     * Positions after the gap drift from this timestamp.
+     */
+    timestamp: number;
   };
   /** Audio capturing had ended */
   audioend: {
@@ -162,6 +172,14 @@ export type ExpoSpeechRecognitionNativeEventMap = {
      * - iOS: `file:///path/to/Library/Caches/audio_CD5E6C6C-3D9D-4754-9188-D6FAF97D9DF2.wav`
      */
     uri: string | null;
+    /**
+     * Epoch milliseconds when the microphone stopped, comparable to `Date.now()`.
+     * May have a fractional part.
+     *
+     * Native code records this before it finalizes the file, so
+     * `audioend.timestamp - audiostart.timestamp` approximates the recording duration.
+     */
+    timestamp: number;
   };
   end: null;
   soundstart: null;

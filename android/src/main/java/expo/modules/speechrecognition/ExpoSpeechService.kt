@@ -187,7 +187,11 @@ class ExpoSpeechService(
                 currentSession = session
                 speech = createSpeechRecognizer(options)
 
-                audioRecorder?.start()
+                val recorderStartedAtMillis =
+                    audioRecorder?.let {
+                        it.start()
+                        System.currentTimeMillis()
+                    }
 
                 speech?.setRecognitionListener(createRecognitionListener(session))
                 speech?.startListening(request.intent)
@@ -202,6 +206,7 @@ class ExpoSpeechService(
                     "audiostart",
                     mapOf(
                         "uri" to audioRecorder?.outputFileUri,
+                        "timestamp" to (recorderStartedAtMillis ?: System.currentTimeMillis()),
                     ),
                 )
             } catch (e: Exception) {
@@ -224,27 +229,29 @@ class ExpoSpeechService(
         }
     }
 
-    private fun stopAudioInput(onStopped: (String?) -> Unit) {
+    private fun stopAudioInput(onStopped: (String?, Long) -> Unit) {
         val recorder = audioRecorder
         audioRecorder = null
         if (recorder == null) {
+            val timestamp = System.currentTimeMillis()
             // Complete on the next loop turn, so this path is as asynchronous as the recorder's.
             mainHandler.post {
-                onStopped(null)
+                onStopped(null, timestamp)
             }
             return
         }
         recorder.stop {
             val uri = recorder.outputFile?.absolutePath?.let { "file://$it" }
+            val timestamp = recorder.stoppedAtMillis ?: System.currentTimeMillis()
             mainHandler.post {
-                onStopped(uri)
+                onStopped(uri, timestamp)
             }
         }
     }
 
     private fun handleSessionEffect(
         effect: RecognitionSessionEffect,
-        onAudioStopped: (String?) -> Unit,
+        onAudioStopped: (String?, Long) -> Unit,
     ) {
         when (effect) {
             RecognitionSessionEffect.StopAudioInput -> stopAudioInput(onAudioStopped)
@@ -256,7 +263,13 @@ class ExpoSpeechService(
             RecognitionSessionEffect.ReleaseRecognizer -> releaseRecognizer()
             RecognitionSessionEffect.AwaitTerminalCallback -> armTerminalCallbackWatchdog()
             is RecognitionSessionEffect.EmitAudioEnd -> {
-                sendEvent("audioend", mapOf("uri" to effect.uri))
+                sendEvent(
+                    "audioend",
+                    mapOf(
+                        "uri" to effect.uri,
+                        "timestamp" to effect.timestamp,
+                    ),
+                )
             }
             is RecognitionSessionEffect.EmitEnd -> {
                 soundState = SoundState.INACTIVE
@@ -316,7 +329,11 @@ class ExpoSpeechService(
 
     /** Destroys the recognizer inline. Only safe outside the recognizer's own listener callbacks. */
     private fun destroyRecognizerResources() {
-        speech?.destroy()
+        try {
+            speech?.destroy()
+        } catch (e: Throwable) {
+            // Ignore Android framework bug where unbindService throws IllegalArgumentException
+        }
         speech = null
         delayedFileStreamer?.close()
         delayedFileStreamer = null
@@ -335,7 +352,11 @@ class ExpoSpeechService(
             try {
                 recognizer?.cancel()
             } catch (_: Exception) {}
-            recognizer?.destroy()
+            try {
+                recognizer?.destroy()
+            } catch (e: Throwable) {
+                // Ignore Android framework bug where unbindService throws IllegalArgumentException
+            }
         }
     }
 
@@ -536,7 +557,10 @@ class ExpoSpeechService(
                 is String -> intent.putExtra(fieldValue, value)
                 is List<*> -> {
                     if (value.all { it is String }) {
-                        intent.putExtra(fieldValue, value.filterIsInstance<String>().toTypedArray())
+                        intent.putStringArrayListExtra(
+                            fieldValue,
+                            ArrayList(value.filterIsInstance<String>()),
+                        )
                     }
                 }
                 is Double -> intent.putExtra(fieldValue, value.toInt())

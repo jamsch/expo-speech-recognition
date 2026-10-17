@@ -1,5 +1,57 @@
 # expo-speech-recognition
 
+## 58.0.0
+
+### Major Changes
+
+- fbefdcb: Align the package version with Expo SDK 58 and upgrade the example app to React Native 0.88 and React 19.3.
+
+  The existing Expo Modules API remains supported. No speech recognition API changes are introduced.
+
+## 57.1.1
+
+### Patch Changes
+
+- cf5e435: fix(android): catch thrown errors on `SpeechRecognizer.destroy()` - this usually only affects Android 11 and below when service cannot be unbound.
+
+## 57.1.0
+
+### Minor Changes
+
+- 84bc8b6: Add `timestamp` to the `audiostart` and `audioend` events ([#179](https://github.com/jamsch/expo-speech-recognition/issues/179)). It's the epoch time in milliseconds when capturing started or stopped, recorded natively so a busy JS thread can't delay it. Use it to line up app events with positions in a persisted recording.
+
+  Android: `audiostart` reported `uri` as the string `"file://null"` when recording without `recordingOptions.persist`. It's now `null`, matching `audioend` and iOS.
+
+## 57.0.0
+
+### Major Changes
+
+- 05b9ab0: Official support for Expo SDK 57 (React Native 0.86). Install `expo-speech-recognition@^57.0.0`.
+
+  There were no breaking changes in SDK 57/RN 0.86. But still keeping this package version aligned with the Expo SDK versioning.
+
+## 56.0.4
+
+### Patch Changes
+
+- dd5fd85: Fix Android speech recognition in minified release builds by generating optimized Expo Modules record metadata. Pass string-list intent options using Android's `ArrayList<String>` extra format.
+
+## 56.0.3
+
+### Patch Changes
+
+- 386ef0d: (internal) fix TS errors for DOM SpeechRecognition typings
+
+## 56.0.2
+
+### Patch Changes
+
+- f622d3b: fix ios permission requests resolving granted: false right after the user grants
+- a7a6c68: chore: expo bump
+  - Bump expo version to latest
+  - Bump module-scripts to v56 to match expo
+  - Update lockfile to fix vulnerabilities
+
 ## 56.0.1
 
 ### Patch Changes

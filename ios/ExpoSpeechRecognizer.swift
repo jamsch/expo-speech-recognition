@@ -42,12 +42,14 @@ actor ExpoSpeechRecognizer: ObservableObject {
   private var audioSessionRouteChangeObserver: NSObjectProtocol?
   /// Whether the recognizer has been stopped by the user or the timer has timed out
   private var stoppedListening = false
+  /// Epoch milliseconds when the audio engine stopped
+  private var audioEndTimestampMillis: Double?
 
   /// Detection timer, for non-continuous speech recognition
   @MainActor var detectionTimer: Timer?
 
   @MainActor var endHandler: (() -> Void)?
-  @MainActor var audioEndHandler: ((String?) -> Void)?
+  @MainActor var audioEndHandler: ((String?, Double) -> Void)?
   @MainActor var volumeChangeHandler: ((Float) -> Void)?
   @MainActor var errorHandler: ((Error) -> Void)?
 
@@ -129,8 +131,8 @@ actor ExpoSpeechRecognizer: ObservableObject {
     endHandler: (() -> Void)?,
     startHandler: @escaping (() -> Void),
     speechStartHandler: @escaping (() -> Void),
-    audioStartHandler: @escaping (String?) -> Void,
-    audioEndHandler: @escaping (String?) -> Void,
+    audioStartHandler: @escaping (String?, Double) -> Void,
+    audioEndHandler: @escaping (String?, Double) -> Void,
     volumeChangeHandler: @escaping (Float) -> Void
   ) {
     self.endHandler = endHandler
@@ -203,7 +205,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     errorHandler: @escaping (Error) -> Void,
     startHandler: @escaping () -> Void,
     speechStartHandler: @escaping () -> Void,
-    audioStartHandler: @escaping (String?) -> Void
+    audioStartHandler: @escaping (String?, Double) -> Void
   ) {
     // Reset the speech recognizer before starting
     reset(andEmitEnd: false)
@@ -233,6 +235,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       } else {
         try prepareMicrophoneRecognition(request: request, options: options)
       }
+      let audioStartTimestampMillis = Date().timeIntervalSince1970 * 1000
 
       startRecognitionTask(
         with: request,
@@ -248,7 +251,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       startHandler()
 
       // If user has opted in to recording, emit an "audiostart" event with the path
-      audioStartHandler(outputFileUrl?.absoluteString)
+      audioStartHandler(outputFileUrl?.absoluteString, audioStartTimestampMillis)
     } catch {
       errorHandler(error)
       reset(andEmitEnd: true)
@@ -486,10 +489,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
   private func end() {
     let filePath = self.outputFileUrl?.absoluteString
+    let timestamp = audioEndTimestampMillis ?? Date().timeIntervalSince1970 * 1000
     outputFileUrl = nil
     Task {
       await MainActor.run {
-        self.audioEndHandler?(filePath)
+        self.audioEndHandler?(filePath, timestamp)
         self.audioEndHandler = nil
         self.endHandler?()
       }
@@ -509,6 +513,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     }
     if audioEngine?.isRunning ?? false {
       audioEngine?.stop()
+      audioEndTimestampMillis = Date().timeIntervalSince1970 * 1000
       audioEngine?.inputNode.removeTap(onBus: 0)
       audioEngine?.inputNode.reset()
       audioEngine?.reset()
@@ -526,6 +531,9 @@ actor ExpoSpeechRecognizer: ObservableObject {
     stoppedListening = false
     task?.cancel()
     audioEngine?.stop()
+    if audioEngine != nil && audioEndTimestampMillis == nil {
+      audioEndTimestampMillis = Date().timeIntervalSince1970 * 1000
+    }
     // map through all the attached nodes
     // and remove the tap
     audioEngine?.attachedNodes.forEach(
@@ -563,6 +571,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
       }
       end()
     }
+    audioEndTimestampMillis = nil
   }
 
   private static func prepareRequest(

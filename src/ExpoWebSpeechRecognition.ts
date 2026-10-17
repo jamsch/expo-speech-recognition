@@ -76,6 +76,7 @@ const WebListenerTransformers: {
         listener.call(instance, {
           ...createEventData(instance),
           uri: nativeEvent.uri,
+          timestamp: nativeEvent.timestamp,
         });
       },
     };
@@ -87,6 +88,7 @@ const WebListenerTransformers: {
         listener.call(instance, {
           ...createEventData(instance),
           uri: nativeEvent.uri,
+          timestamp: nativeEvent.timestamp,
         });
       },
     };
