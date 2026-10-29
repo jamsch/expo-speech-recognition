@@ -93,6 +93,8 @@ export type ExpoSpeechRecognitionErrorCode =
   | "client"
   /** (Android) No speech input. */
   | "speech-timeout"
+  /** (Android 12+) Too many requests from the same client. */
+  | "too-many-requests"
   /** (Android) Unknown error */
   | "unknown";
 

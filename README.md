@@ -405,6 +405,7 @@ The error code is based on the [Web Speech API error codes](https://developer.mo
 | `busy`                   | The recognizer is busy and cannot accept any new recognition requests.          |
 | `client`                 | An unknown client-side error. Corresponds with `SpeechRecognizer.ERROR_CLIENT`. |
 | `speech-timeout`         | (Android) No speech input.                                                      |
+| `too-many-requests`      | (Android 12+) Too many requests from the same client.                           |
 | `unknown`                | (Android) Unknown error                                                         |
 
 ### Advanced error handling
