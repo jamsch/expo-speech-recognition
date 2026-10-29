@@ -1,5 +1,11 @@
 # expo-speech-recognition
 
+## 58.0.1
+
+### Patch Changes
+
+- d82e88b: fix(types): add missing `"too-many-requests"` to `ExpoSpeechRecognitionErrorCode` (emitted on Android 12+). Thanks @njbrake for reporting!
+
 ## 58.0.0
 
 ### Major Changes
