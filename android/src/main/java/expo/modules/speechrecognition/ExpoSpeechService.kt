@@ -290,11 +290,16 @@ class ExpoSpeechService(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && options.audioSource == null) {
             // Feature: Stream microphone input to SpeechRecognition so the user can access the audio blob
             if (options.recordingOptions?.persist == true) {
-                audioRecorder = ExpoAudioRecorder(reactContext, resolveFilePathFromConfig(options.recordingOptions))
+                audioRecorder =
+                    ExpoAudioRecorder(
+                        reactContext,
+                        resolveFilePathFromConfig(options.recordingOptions),
+                        options.androidAudioInputDeviceId,
+                    )
             } else if (options.continuous == true) {
                 // Feature: Continuous transcription from microphone using `RecognizerIntent.EXTRA_AUDIO_SOURCE`
                 // This also has the side effect of not playing the "beep" sound when starting and stopping recognition
-                audioRecorder = ExpoAudioRecorder(reactContext, null)
+                audioRecorder = ExpoAudioRecorder(reactContext, null, options.androidAudioInputDeviceId)
             }
 
             // Set common intent extras if audioRecorder is initialized

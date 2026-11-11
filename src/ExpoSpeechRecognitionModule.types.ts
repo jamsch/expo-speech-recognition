@@ -254,6 +254,23 @@ export type ExpoSpeechRecognitionOptions = {
    */
   androidIntentOptions?: Partial<AndroidIntentOptions>;
   /**
+   * [Android 13+ only] The id of the microphone to record from, e.g. a wired, USB or Bluetooth headset mic.
+   *
+   * This is the `id` of an input [`AudioDeviceInfo`](https://developer.android.com/reference/android/media/AudioDeviceInfo#getId())
+   * (`AudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)`). It's applied with
+   * [`AudioRecord.setPreferredDevice()`](https://developer.android.com/reference/android/media/AudioRecord#setPreferredDevice(android.media.AudioDeviceInfo))
+   * to the microphone recorder this library opens, which happens on Android 13+ when `continuous` or
+   * `recordingOptions.persist` is enabled and no `audioSource` is set. In other modes the speech
+   * recognition service opens the microphone itself, so this option has no effect.
+   *
+   * If no current input device has this id, the default input is used.
+   *
+   * For a Bluetooth headset (SCO) mic, the headset's call audio link also needs to be active, e.g. by
+   * selecting the headset with `AudioManager.setCommunicationDevice()` (Android 12+); otherwise Android
+   * may keep recording from the built-in mic.
+   */
+  androidAudioInputDeviceId?: number;
+  /**
    * Audio source options to pass to the recognizer.
    *
    * This option can be used to recognize audio from a local or remote file URI.

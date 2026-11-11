@@ -3,6 +3,7 @@ package expo.modules.speechrecognition
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.ParcelFileDescriptor
@@ -33,6 +34,8 @@ class ExpoAudioRecorder(
     private val context: Context,
     // Optional output file path
     private val outputFilePath: String?,
+    // Optional id of the input device (`AudioDeviceInfo.getId()`) to record from
+    private val preferredInputDeviceId: Int? = null,
 ) : AudioRecorder {
     private var audioRecorder: AudioRecord? = null
 
@@ -145,6 +148,37 @@ class ExpoAudioRecorder(
             bufferSizeInBytes,
         )
 
+    /**
+     * Points the recorder at the input device requested with `androidAudioInputDeviceId`
+     * (e.g. a wired, USB or Bluetooth headset mic). Without it, a VOICE_RECOGNITION
+     * AudioRecord keeps the system's default input even when an external mic is connected.
+     * An id that doesn't match a current input leaves the default input in place.
+     */
+    private fun applyPreferredInputDevice(record: AudioRecord) {
+        val deviceId = preferredInputDeviceId ?: return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return
+        }
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+            val device =
+                audioManager
+                    .getDevices(AudioManager.GET_DEVICES_INPUTS)
+                    .firstOrNull { it.id == deviceId }
+            if (device == null) {
+                Log.w(TAG, "No input device with id $deviceId; recording from the default input")
+                return
+            }
+            if (record.setPreferredDevice(device)) {
+                Log.d(TAG, "Recording from input device ${device.productName} (id $deviceId, type ${device.type})")
+            } else {
+                Log.w(TAG, "AudioRecord rejected input device $deviceId; recording from the default input")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply the preferred input device", e)
+        }
+    }
+
     override fun start() {
         createRecorder().apply {
             audioRecorder = this
@@ -154,6 +188,7 @@ class ExpoAudioRecorder(
                 return
             }
 
+            applyPreferredInputDevice(this)
             this.startRecording()
             isRecordingAudio = true
 

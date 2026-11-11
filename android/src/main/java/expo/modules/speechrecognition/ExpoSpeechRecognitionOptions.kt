@@ -36,6 +36,13 @@ class SpeechRecognitionOptions : Record {
     val androidRecognitionServicePackage: String? = null
 
     /**
+     * The id (`AudioDeviceInfo.getId()`) of the input device to record from when the
+     * library captures the microphone itself (Android 13+, continuous or persisted recordings).
+     */
+    @Field
+    val androidAudioInputDeviceId: Int? = null
+
+    /**
      * Provide an audio source (e.g. microphone or file) to use for speech recognition.
      */
     @Field

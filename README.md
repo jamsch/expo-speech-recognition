@@ -24,6 +24,7 @@ expo-speech-recognition implements the iOS [`SFSpeechRecognizer`](https://develo
   - [Volume metering example](#volume-metering-example)
 - [Polyfilling the Web SpeechRecognition API](#polyfilling-the-web-speechrecognition-api)
 - [Muting the beep sound on Android](#muting-the-beep-sound-on-android)
+- [Choosing the microphone on Android](#choosing-the-microphone-on-android)
 - [Improving accuracy of single-word prompts](#improving-accuracy-of-single-word-prompts)
 - [Language Detection](#language-detection)
 - [Platform Compatibility Table](#platform-compatibility-table)
@@ -278,6 +279,10 @@ ExpoSpeechRecognitionModule.start({
   },
   // [Default: undefined] The package name of the speech recognition service to use.
   androidRecognitionServicePackage: "com.google.android.tts",
+  // [Default: undefined] [Android 13+] The id of the microphone (`AudioDeviceInfo.getId()`) to record from.
+  // Only applies when `continuous` or `recordingOptions.persist` is enabled.
+  // See "Choosing the microphone on Android" below.
+  androidAudioInputDeviceId: undefined,
   // [Default: unspecified] The type of speech recognition being performed.
   iosTaskHint: "unspecified", // "unspecified" | "dictation" | "search" | "confirmation"
   // [Default: undefined] The audio session category and options to use.
@@ -739,6 +744,27 @@ ExpoSpeechRecognitionModule.start({
 Under the hood, both of these set the `EXTRA_AUDIO_SOURCE` in the recognizer intent to a custom microphone source instead of using the default microphone setting.
 
 If you intend to use the first option and still want to maintain the same behavior as non-continuous mode, you should listen for a result event with `isFinal: true` and then immediately call `abort()` to stop the recognition.
+
+## Choosing the microphone on Android
+
+On Android 13+, when `continuous` or `recordingOptions.persist` is enabled, this library opens the microphone itself (see [Muting the beep sound on Android](#muting-the-beep-sound-on-android)). That recorder uses the system's default input, so a connected headset or USB microphone may not be picked up. Pass the id of the input you want with `androidAudioInputDeviceId`:
+
+```ts
+ExpoSpeechRecognitionModule.start({
+  lang: "en-US",
+  continuous: true,
+  // The `id` of an input AudioDeviceInfo, e.g. from `AudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)`
+  androidAudioInputDeviceId: 42,
+});
+```
+
+The library applies it with [`AudioRecord.setPreferredDevice()`](<https://developer.android.com/reference/android/media/AudioRecord#setPreferredDevice(android.media.AudioDeviceInfo)>). If no current input has that id, the default input is used.
+
+Notes:
+
+- This library doesn't list input devices. Any API that exposes `AudioDeviceInfo.getId()` works. For example, `expo-audio`'s `recorder.getAvailableInputs()` reports it as the `uid` string on Android, so you can pass `Number(input.uid)`.
+- Bluetooth headset mics (`TYPE_BLUETOOTH_SCO`) only carry audio while the headset's call audio link is up. Select the headset with `AudioManager.setCommunicationDevice()` (Android 12+) before starting, otherwise Android may keep recording from the built-in mic.
+- In other modes (non-continuous recognition without `recordingOptions.persist`, or Android 12 and below) the speech recognition service opens the microphone itself, and this option has no effect.
 
 ## Improving accuracy of single-word prompts
 
