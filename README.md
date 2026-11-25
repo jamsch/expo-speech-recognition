@@ -400,7 +400,7 @@ The error code is based on the [Web Speech API error codes](https://developer.mo
 | `language-not-supported` | Locale is not supported by the speech recognizer.                               |
 | `network`                | Network communication required for completing the recognition failed.           |
 | `no-speech`              | No final speech was detected.                                                   |
-| `not-allowed`            | Permission to use speech recognition or microphone was not granted.             |
+| `not-allowed`            | Permission to use speech recognition or microphone was not granted, or (iOS) `requiresOnDeviceRecognition` is set but on-device recognition is unavailable for the locale. |
 | `service-not-allowed`    | Recognizer is unavailable.                                                      |
 | `busy`                   | The recognizer is busy and cannot accept any new recognition requests.          |
 | `client`                 | An unknown client-side error. Corresponds with `SpeechRecognizer.ERROR_CLIENT`. |

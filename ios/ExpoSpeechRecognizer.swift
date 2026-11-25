@@ -9,6 +9,7 @@ enum RecognizerError: Error {
   case notAuthorizedToRecognize
   case notPermittedToRecord
   case recognizerIsUnavailable
+  case onDeviceRecognitionUnavailable
   case invalidAudioSource
   case audioInputBusy
   case audioSessionInterrupted
@@ -21,6 +22,8 @@ enum RecognizerError: Error {
     case .notAuthorizedToRecognize: return "Not authorized to recognize speech"
     case .notPermittedToRecord: return "Not permitted to record audio"
     case .recognizerIsUnavailable: return "Recognizer is unavailable"
+    case .onDeviceRecognitionUnavailable:
+      return "On-device recognition is unavailable for this locale"
     case .invalidAudioSource: return "Invalid audio source"
     case .audioInputBusy: return "The audio input is busy"
     case .audioSessionInterrupted: return "Audio session was interrupted"
@@ -217,6 +220,12 @@ actor ExpoSpeechRecognizer: ObservableObject {
 
     guard let recognizer, recognizer.isAvailable else {
       errorHandler(RecognizerError.recognizerIsUnavailable)
+      reset(andEmitEnd: true)
+      return
+    }
+
+    if options.requiresOnDeviceRecognition && !recognizer.supportsOnDeviceRecognition {
+      errorHandler(RecognizerError.onDeviceRecognitionUnavailable)
       reset(andEmitEnd: true)
       return
     }
@@ -585,9 +594,7 @@ actor ExpoSpeechRecognizer: ObservableObject {
     // These won't get emitted to the user, however
     request.shouldReportPartialResults = options.interimResults || !options.continuous
 
-    if recognizer.supportsOnDeviceRecognition {
-      request.requiresOnDeviceRecognition = options.requiresOnDeviceRecognition
-    }
+    request.requiresOnDeviceRecognition = options.requiresOnDeviceRecognition
 
     if let taskHint = options.iosTaskHint {
       request.taskHint = taskHint.sfSpeechRecognitionTaskHint
