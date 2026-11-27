@@ -223,7 +223,7 @@ export type ExpoSpeechRecognitionOptions = {
    *   - on iOS 18+ and Android, recognition will run until a result with `isFinal: true` is received.
    */
   continuous?: boolean;
-  /** [Default: false] Prevent device from sending audio over the network. Only enabled if the device supports it.
+  /** [Default: false] Prevent device from sending audio over the network. On iOS, if on-device recognition is unavailable for the locale, `start()` emits an error event with the code `not-allowed` instead of falling back to the network.
    *
    * Use `getSupportedLocales()` to verify if the locale is installed on the device prior to enabling this option.
    */

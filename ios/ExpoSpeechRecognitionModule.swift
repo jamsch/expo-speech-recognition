@@ -540,6 +540,8 @@ public class ExpoSpeechRecognitionModule: Module {
         sendEvent("error", ["error": "not-allowed", "message": recognitionError.message])
       case .recognizerIsUnavailable:
         sendEvent("error", ["error": "service-not-allowed", "message": recognitionError.message])
+      case .onDeviceRecognitionUnavailable:
+        sendEvent("error", ["error": "not-allowed", "message": recognitionError.message])
       case .invalidAudioSource:
         sendEvent("error", ["error": "audio-capture", "message": recognitionError.message])
       case .audioInputBusy:
